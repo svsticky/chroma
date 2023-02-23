@@ -1,0 +1,10 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+import "entity/photo.proto";
+import "entity/album.proto";
+
+message GetAlbumRequest {
+  Album album = 1;
+  repeated Photo photos = 2;
+}

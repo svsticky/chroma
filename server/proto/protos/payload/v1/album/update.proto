@@ -1,0 +1,7 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+message UpdateAlbumRequest {
+  string id = 1;
+  string name = 2;
+}

@@ -1,0 +1,9 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+message Album {
+  string id = 1;
+  string name = 2;
+  uint64 createdAt = 3;
+  string coverPhotoId = 4;
+}
