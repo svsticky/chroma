@@ -4,7 +4,7 @@ package nl.svsticky.chroma;
 import "entity/photo.proto";
 import "entity/album.proto";
 
-message GetAlbumRequest {
+message GetAlbumResponse {
   Album album = 1;
   repeated Photo photos = 2;
 }

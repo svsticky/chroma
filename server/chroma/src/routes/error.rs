@@ -10,6 +10,8 @@ pub enum Error {
     Database(#[from] dal::database::DatabaseError),
     #[error("The requested resource could not be found")]
     NotFound,
+    #[error("Bad request: {0}")]
+    BadRequest(String)
 }
 
 impl ResponseError for Error {
@@ -17,6 +19,7 @@ impl ResponseError for Error {
         match self {
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::NotFound => StatusCode::NOT_FOUND,
+            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
         }
     }
 }

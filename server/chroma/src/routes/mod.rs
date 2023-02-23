@@ -6,6 +6,7 @@ mod error;
 pub mod routable;
 mod v1;
 pub mod appdata;
+mod empty;
 
 pub struct Router;
 

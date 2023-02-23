@@ -1,15 +1,28 @@
+use std::ops::Deref;
 use refinery::config::{Config, ConfigDbType};
 use sqlx::mysql::{MySqlConnectOptions, MySqlPoolOptions};
 use sqlx::{MySql, Pool};
 use thiserror::Error;
 
 mod album;
+pub use album::*;
+
 mod photo;
+pub use photo::*;
 
 pub use sqlx::error::Error as DatabaseError;
 
+pub type DbResult<T> = Result<T, DatabaseError>;
+
 #[derive(Debug, Clone)]
 pub struct Database(Pool<MySql>);
+
+impl Deref for Database {
+    type Target = Pool<MySql>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 mod migrations {
     use refinery::embed_migrations;

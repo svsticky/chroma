@@ -4,3 +4,7 @@ package nl.svsticky.chroma;
 message CreateAlbumRequest {
   string name = 1;
 }
+
+message CreateAlbumResponse {
+  string id = 1;
+}
