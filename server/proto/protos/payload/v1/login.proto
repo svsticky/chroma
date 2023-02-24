@@ -1,0 +1,7 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+message LoginResponse {
+  string sessionId = 1;
+  bool isAdmin = 2;
+}

@@ -2,11 +2,13 @@ use actix_web::web;
 use actix_web::web::ServiceConfig;
 use routable::Routable;
 
-mod error;
-pub mod routable;
-mod v1;
 pub mod appdata;
+pub mod routable;
+mod error;
+mod v1;
 mod empty;
+mod authorization;
+mod redirect;
 
 pub struct Router;
 

@@ -4,6 +4,13 @@ use proto::{CreateAlbumRequest, CreateAlbumResponse};
 use crate::routes::appdata::WebData;
 use crate::routes::error::{Error, WebResult};
 
+/// Create a new empty album.
+/// The album will not contain any photos yet.
+///
+/// # Errors
+///
+/// - If the provided `name`'s length is longer than [Album::MAX_NAME_LENGTH]
+/// - If something went wrong
 pub async fn create(data: WebData, payload: Payload<CreateAlbumRequest>) -> WebResult<Payload<CreateAlbumResponse>> {
     if payload.name.len() > Album::MAX_NAME_LENGTH {
         return Err(Error::BadRequest(format!("Provided value 'name' with length '{}' exceeds the maximum length of '{}'", payload.name.len(), Album::MAX_NAME_LENGTH)));

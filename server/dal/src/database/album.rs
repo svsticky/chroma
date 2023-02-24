@@ -45,11 +45,12 @@ impl<'a> From<Album<'a>> for proto::Album {
 
 impl<'a> Album<'a> {
     pub const MAX_NAME_LENGTH: usize = 64;
+    pub const ID_PREFIX: &'static str = "ALB_";
+    pub const MAX_ID_LEN: usize = 32;
 
     fn generate_id() -> String {
-        const PREFIX: &str = "ALB_";
-        let random: String = rand::thread_rng().sample_iter(rand::distributions::Alphanumeric).take(32 - PREFIX.len()).map(char::from).collect();
-        format!("{PREFIX}{random}")
+        let random: String = rand::thread_rng().sample_iter(rand::distributions::Alphanumeric).take(Self::MAX_ID_LEN - Self::ID_PREFIX.len()).map(char::from).collect();
+        format!("{}{random}", Self::ID_PREFIX)
     }
 
     pub async fn create(db: &'a Database, name: impl Into<Cow<'_, str>>) -> DbResult<Album<'a>> {

@@ -11,7 +11,11 @@ pub enum Error {
     #[error("The requested resource could not be found")]
     NotFound,
     #[error("Bad request: {0}")]
-    BadRequest(String)
+    BadRequest(String),
+    #[error("Internal server error")]
+    S3(#[from] dal::s3::S3Error),
+    #[error("Something went wrong on Koala's end")]
+    Koala(reqwest::Error),
 }
 
 impl ResponseError for Error {
@@ -20,6 +24,8 @@ impl ResponseError for Error {
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::S3(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Koala(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

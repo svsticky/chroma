@@ -1,0 +1,8 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+import "entity/photo.proto";
+
+message GetPhotoResponse {
+  Photo photo = 1;
+}

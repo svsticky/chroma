@@ -5,24 +5,15 @@ use sqlx::{MySql, Pool};
 use thiserror::Error;
 
 mod album;
-pub use album::*;
-
 mod photo;
-pub use photo::*;
+mod user;
 
+pub use album::*;
+pub use photo::*;
+pub use user::*;
 pub use sqlx::error::Error as DatabaseError;
 
 pub type DbResult<T> = Result<T, DatabaseError>;
-
-#[derive(Debug, Clone)]
-pub struct Database(Pool<MySql>);
-
-impl Deref for Database {
-    type Target = Pool<MySql>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 mod migrations {
     use refinery::embed_migrations;
@@ -38,22 +29,34 @@ pub enum DatabaseInitError {
 }
 
 
-pub async fn init_database(host: &str, user: &str, passw: &str, database: &str) -> Result<Database, DatabaseInitError> {
-    let mut cfg = Config::new(ConfigDbType::Mysql)
-        .set_db_host(host)
-        .set_db_name(database)
-        .set_db_user(user)
-        .set_db_pass(passw);
-    migrations::migrations::runner().run(&mut cfg)?;
+#[derive(Debug, Clone)]
+pub struct Database(Pool<MySql>);
 
-    let opts = MySqlConnectOptions::new()
-        .host(host)
-        .database(database)
-        .username(user)
-        .password(passw);
-    let pool = MySqlPoolOptions::new()
-        .connect_with(opts)
-        .await?;
+impl Deref for Database {
+    type Target = Pool<MySql>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-    Ok(Database(pool))
+impl Database {
+    pub async fn new(host: &str, user: &str, passw: &str, database: &str) -> Result<Database, DatabaseInitError> {
+        let mut cfg = Config::new(ConfigDbType::Mysql)
+            .set_db_host(host)
+            .set_db_name(database)
+            .set_db_user(user)
+            .set_db_pass(passw);
+        migrations::migrations::runner().run(&mut cfg)?;
+
+        let opts = MySqlConnectOptions::new()
+            .host(host)
+            .database(database)
+            .username(user)
+            .password(passw);
+        let pool = MySqlPoolOptions::new()
+            .connect_with(opts)
+            .await?;
+
+        Ok(Database(pool))
+    }
 }

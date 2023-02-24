@@ -8,12 +8,15 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use dal::database::Database;
+use dal::s3::S3;
 use crate::config::Config;
 use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
 
 mod routes;
 mod config;
+mod koala;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -26,7 +29,7 @@ async fn main() -> Result<()> {
     let config = Config::parse()?;
 
     info!("Initializing database");
-    let db = dal::database::init_database(
+    let db = Database::new(
         &config.db_host,
         &config.db_username,
         &config.db_password,
@@ -34,8 +37,8 @@ async fn main() -> Result<()> {
     ).await?;
 
     info!("Initializing S3 connection");
-    let s3 = dal::s3::init_s3(
-        config.s3_app_name.clone(),
+    let s3 = S3::new(
+        config.s3_bucket_name.clone(),
         &config.s3_endpoint_url,
         config.s3_region.clone(),
         &config.s3_access_key_id,
