@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
         .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
         .app_data(WebData::new(appdata.clone()))
         .configure(routes::Router::configure)
-    );
+    ).bind("0.0.0.0:8000")?.run().await?;
 
     Ok(())
 }

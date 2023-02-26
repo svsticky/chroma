@@ -16,6 +16,10 @@ pub enum Error {
     S3(#[from] dal::s3::S3Error),
     #[error("Something went wrong on Koala's end")]
     Koala(reqwest::Error),
+    #[error("The requested resource may not be accessed by the authorized user.")]
+    Forbidden,
+    #[error("Failed to parse timestamp")]
+    ChronoParse(#[from] chrono::ParseError)
 }
 
 impl ResponseError for Error {
@@ -26,6 +30,8 @@ impl ResponseError for Error {
             Self::BadRequest(_) => StatusCode::BAD_REQUEST,
             Self::S3(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Koala(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Forbidden => StatusCode::FORBIDDEN,
+            Self::ChronoParse(_) => StatusCode::BAD_GATEWAY
         }
     }
 }

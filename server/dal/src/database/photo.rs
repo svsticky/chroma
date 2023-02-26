@@ -2,6 +2,7 @@ use rand::Rng;
 use sqlx::FromRow;
 use time::OffsetDateTime;
 use crate::database::{Album, Database, DbResult};
+use crate::s3::{S3, S3Error};
 
 pub struct Photo<'a> {
     db: &'a Database,
@@ -31,6 +32,22 @@ impl _Photo {
 impl<'a> Photo<'a> {
     pub const ID_PREFIX: &'static str = "PH_";
     pub const MAX_ID_LEN: usize = 32;
+
+    /// Convert a [Photo] to a [proto::Photo].
+    /// Retrieves the photo's content from S3.
+    ///
+    /// # Errors
+    ///
+    /// If fetching the photo's contents from S3 failed
+    pub async fn photo_to_proto(self, s3: &S3) -> Result<proto::Photo, S3Error> {
+        let photo_bytes = s3.get_photo_by_id(&self.id).await?;
+        Ok(proto::Photo {
+            id: self.id,
+            album_id: self.album_id,
+            created_at: self.created_at,
+            photo_data: photo_bytes
+        })
+    }
 
     fn generate_id() -> String {
         let random: String = rand::thread_rng().sample_iter(rand::distributions::Alphanumeric).take(Self::MAX_ID_LEN - Self::ID_PREFIX.len()).map(char::from).collect();

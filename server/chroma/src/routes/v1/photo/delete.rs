@@ -2,6 +2,7 @@ use actix_multiresponse::Payload;
 use dal::database::Photo;
 use proto::DeletePhotoRequest;
 use crate::routes::appdata::WebData;
+use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 
@@ -13,7 +14,11 @@ use crate::routes::error::{Error, WebResult};
 ///
 /// - If the photo does not exist
 /// - If something went wrong
-pub async fn delete(data: WebData, payload: Payload<DeletePhotoRequest>) -> WebResult<Empty> {
+pub async fn delete(auth: Authorization, data: WebData, payload: Payload<DeletePhotoRequest>) -> WebResult<Empty> {
+    if !auth.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     let photo = Photo::get_by_id(&data.db, &payload.photo_id)
         .await?
         .ok_or(Error::NotFound)?;

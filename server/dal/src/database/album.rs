@@ -112,7 +112,7 @@ impl<'a> Album<'a> {
     }
 
     pub async fn list(db: &'a Database) -> DbResult<Vec<Album<'a>>> {
-        let selfs: Vec<_Album> = sqlx::query_as("SELECT id, name, created_at, cover_album_id FROM album_metadata")
+        let selfs: Vec<_Album> = sqlx::query_as("SELECT id, name, created_at, cover_photo_id FROM album_metadata")
             .fetch_all(&**db)
             .await?;
 

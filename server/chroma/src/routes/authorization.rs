@@ -7,10 +7,11 @@ use actix_web::http::StatusCode;
 use crate::koala::get_koala_login_url;
 use crate::routes::appdata::WebData;
 use thiserror::Error;
+use dal::database::User;
 
 pub struct Authorization {
-    is_admin: bool,
-    name: String,
+    pub user_id: u32,
+    pub is_admin: bool,
 }
 
 impl FromRequest for Authorization {
@@ -28,11 +29,13 @@ impl FromRequest for Authorization {
                 .to_str()
                 .map_err(|_| AuthorizationError::NoHeader(get_koala_login_url(&data.config)))?;
 
-            todo!();
+            let user = User::get_by_session_id(&data.db, authorization)
+                .await?
+                .ok_or(AuthorizationError::InvalidSession(get_koala_login_url(&data.config)))?;
 
-            Ok(Self { // Very much temporary
-                name: String::default(),
-                is_admin: false,
+            Ok(Self {
+                user_id: user.koala_id,
+                is_admin: user.is_admin,
             })
         })
     }
@@ -40,20 +43,28 @@ impl FromRequest for Authorization {
 
 #[derive(Debug, Error)]
 pub enum AuthorizationError {
+    #[error("Internal server error")]
+    Database(#[from] dal::database::DatabaseError),
     #[error("Missing or invalid Authorization header")]
     NoHeader(String),
+    #[error("Invalid session")]
+    InvalidSession(String),
 }
 
 impl ResponseError for AuthorizationError {
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::NoHeader(_) => StatusCode::SEE_OTHER,
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::NoHeader(_) => StatusCode::UNAUTHORIZED,
+            Self::InvalidSession(_) => StatusCode::UNAUTHORIZED,
         }
     }
 
     fn error_response(&self) -> HttpResponse<BoxBody> {
         match self {
-            Self::NoHeader(r) => HttpResponse::build(self.status_code())
+            Self::Database(_) => HttpResponse::build(self.status_code())
+                .body(self.to_string()),
+            Self::NoHeader(r) | Self::InvalidSession(r) => HttpResponse::build(self.status_code())
                 .insert_header(("Location", r.as_str()))
                 .finish()
         }

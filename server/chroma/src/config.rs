@@ -1,7 +1,9 @@
 use serde::Deserialize;
+use tracing::info;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
+    // ANCHOR: config
     /// MySQL database host.
     /// Non-standard ports are not supported and should not be provided.
     pub db_host: String,
@@ -27,11 +29,21 @@ pub struct Config {
     pub koala_client_id: String,
     /// OAuth2 client secret created in Koala.
     pub koala_client_secret: String,
-    /// Koala's base URL.
+    /// Koala's base URL for redirecting a client
+    /// Used to redirect clients to Koala's OAuth.
+    /// Useful if the public route is different from the route from
+    /// the chroma server to koala.
+    /// E.g. in Docker `koala_base_uri` could be equal to `http://host.docker.internal:3000`,
+    /// while `koala_base_redirect_uri` is equal to `http://koala.rails.local:3000`.
+    /// Because `host.docker.internal` isn't accessible outside the container,
+    /// and `koala.rails.local` isn't accessible inside the container.
+    /// If left blank, the value provided in `koala_base_url` will be used.
+    pub koala_base_redirect_uri: Option<String>,
+    /// Koala's base URI.
     /// Used for making requests to Koala.
     /// Should not end with a trailing `/`.
     /// E.g. `https://koala.svsticky.nl`
-    pub koala_base_url: String,
+    pub koala_base_uri: String,
     /// The URI to which Koala should redirect back after login.
     /// This should consist of the base url, i.e. where Chroma is accessed via the browser,
     /// with the path `/api/v1/login` appended to it.
@@ -48,6 +60,7 @@ pub struct Config {
     /// E.g. `https://foo.example.com/logged_in` will become
     /// `https://foo.example.com/logged_in?session_id={AN ID}&is_admin=[true|false]`.
     pub login_complete_redirect_uri: String
+    // ANCHOR_END: config
 }
 
 impl Config {
@@ -60,11 +73,30 @@ impl Config {
     ///
     /// If not all required variables are present
     pub fn parse() -> envy::Result<Self> {
-        envy::from_env()
+        let this: Self = envy::from_env()?;
+
+        if this.koala_base_redirect_uri.is_none() {
+            info!("'koala_base_redirect_uri' is not provided, using 'koala_base_uri' instead");
+        }
+
+        if this.koala_user_agent.is_none() {
+            info!("'koala_user_agent' was not provided, using '{}' as a default.", Self::DEFAULT_KOALA_USER_AGENT);
+        }
+
+        Ok(this)
     }
 
     /// Get the User-Agent to use when sending requests to Koala
+    ///
+    /// See also: `koala_user_agent` fields
     pub fn koala_user_agent(&self) -> &str {
         self.koala_user_agent.as_deref().unwrap_or(Self::DEFAULT_KOALA_USER_AGENT)
+    }
+
+    /// Koala's base URL for redirecting a client.
+    ///
+    /// See also: `koala_base_redirect_uri` field
+    pub fn koala_base_redirect_uri(&self) -> &String {
+        self.koala_base_redirect_uri.as_ref().unwrap_or(&self.koala_base_uri)
     }
 }
