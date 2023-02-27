@@ -7,6 +7,7 @@ edition = "2021"
 actix-cors = "0.6.4"
 actix-multiresponse = "0.4.2"
 actix-web = "4.3.0"
+actix-governor = "0.4.0"
 color-eyre = "0.6.2"
 proto = { version = "0.1.0", path = "../proto" }
 serde = { version = "1.0.152", features = ["derive"] }

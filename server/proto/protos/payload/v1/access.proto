@@ -1,0 +1,6 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+message AccessResponse {
+  bool admin = 1;
+}
