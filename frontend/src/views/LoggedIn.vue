@@ -14,7 +14,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import {checkLoggedIn, getBeforeAuthUrl, KoalaLoginUrl, LoginCheckResult, setAdmin, setSessionId} from "@/api";
+import {checkLoggedIn, Storage, KoalaLoginUrl, LoginCheckResult} from "@/api";
 
 export default Vue.extend({
     async mounted() {
@@ -46,14 +46,14 @@ export default Vue.extend({
             return;
         }
 
-        setSessionId(sessionId);
+        Storage.setSessionId(sessionId);
 
         // This isnt used for access control. just to show or hide portions of the UI
         // Someone could set this manually, and it'll show the UI, but they still cant do anyhing useful.
-        setAdmin(valid.isAdmin);
+        Storage.setAdmin(valid.isAdmin);
 
         // Redirect the user to where they came from, or back to home
-        let beforeAuthUrl = getBeforeAuthUrl();
+        let beforeAuthUrl = Storage.getBeforeAuthUrl();
         if(beforeAuthUrl != null) {
             await this.$router.push(beforeAuthUrl);
         } else {

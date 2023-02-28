@@ -14,11 +14,21 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import {checkLoggedIn, KoalaLoginUrl, LoginCheckResult, setAdmin, setBeforeAuthUrl} from "@/api";
+import {checkLoggedIn, KoalaLoginUrl, LoginCheckResult, Storage} from "@/api";
 
 export default Vue.extend({
+    watch: {
+        async $route (to, from) {
+            await this.performLoginCheck();
+        }
+    },
     async mounted() {
         this.$router.onReady(async () => {
+            await this.performLoginCheck();
+        })
+    },
+    methods: {
+        async performLoginCheck() {
             if(this.$router.currentRoute.path == '/logged_in') {
                 return;
             }
@@ -30,7 +40,7 @@ export default Vue.extend({
             }
 
             if(loggedIn instanceof KoalaLoginUrl) {
-                setBeforeAuthUrl(this.$router.currentRoute.path);
+                Storage.setBeforeAuthUrl(this.$router.currentRoute.path);
                 window.location.href = loggedIn.url;
                 return;
             }
@@ -43,10 +53,10 @@ export default Vue.extend({
 
             // This isnt used for access control. just to show or hide portions of the UI
             // Someone could set this manually, and it'll show the UI, but they still cant do anyhing useful.
-            setAdmin(loggedIn.isAdmin);
+            Storage.setAdmin(loggedIn.isAdmin);
 
             // User is logged in
-        })
+        }
     }
 });
 </script>

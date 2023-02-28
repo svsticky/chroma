@@ -5,32 +5,36 @@ const sessionIdKey = 'sessionid';
 const isAdminKey = 'isadmin';
 const beforeAuthUrlKey = 'beforeauth';
 
-export function getSessionId(): string | null {
-    return window.localStorage.getItem(sessionIdKey);
-}
+export const errorText = "Something went wrong";
 
-export function setSessionId(id: string) {
-    window.localStorage.setItem(sessionIdKey, id);
-}
-
-export function isAdmin(): boolean {
-    return window.localStorage.getItem(isAdminKey) === 'true'
-}
-
-export function setAdmin(admin: boolean) {
-    if(admin) {
-        window.localStorage.setItem(isAdminKey, 'true');
-    } else {
-        window.localStorage.removeItem(isAdminKey);
+export namespace Storage {
+    export function getSessionId(): string | null {
+        return window.localStorage.getItem(sessionIdKey);
     }
-}
 
-export function getBeforeAuthUrl(): string | null {
-    return window.localStorage.getItem(beforeAuthUrlKey);
-}
+    export function setSessionId(id: string) {
+        window.localStorage.setItem(sessionIdKey, id);
+    }
 
-export function setBeforeAuthUrl(url: string) {
-    window.localStorage.setItem(beforeAuthUrlKey, url);
+    export function isAdmin(): boolean {
+        return window.localStorage.getItem(isAdminKey) === 'true'
+    }
+
+    export function setAdmin(admin: boolean) {
+        if(admin) {
+            window.localStorage.setItem(isAdminKey, 'true');
+        } else {
+            window.localStorage.removeItem(isAdminKey);
+        }
+    }
+
+    export function getBeforeAuthUrl(): string | null {
+        return window.localStorage.getItem(beforeAuthUrlKey);
+    }
+
+    export function setBeforeAuthUrl(url: string) {
+        window.localStorage.setItem(beforeAuthUrlKey, url);
+    }
 }
 
 export class LoginCheckResult {

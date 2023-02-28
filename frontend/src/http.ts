@@ -1,6 +1,6 @@
 import {server} from "@/generated/server";
 import * as pb_1 from "google-protobuf";
-import {getSessionId} from "@/api";
+import {Storage} from "@/api";
 
 /**
  * This module contains HTTP abstractions
@@ -29,7 +29,7 @@ export namespace Http {
             headers: {
                 'Content-Type': 'application/protobuf',
                 'Accept': 'application/protobuf',
-                'Authorization': sessionId ?? getSessionId() ?? '',
+                'Authorization': sessionId ?? Storage.getSessionId() ?? '',
             }
         });
     }

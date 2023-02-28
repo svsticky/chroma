@@ -1,6 +1,5 @@
 import Vue from 'vue'
 import VueRouter, { RouteConfig } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 
 Vue.use(VueRouter)
 
@@ -8,6 +7,26 @@ const routes: Array<RouteConfig> = [
   {
     path: '/',
     component: () => import('../views/album/AlbumGridView.vue')
+  },
+  {
+    path: '/album/view',
+    component: () => import('../views/album/AlbumDetailView.vue'),
+  },
+  {
+    path: '/album/create',
+    component: () => import('../views/album/AlbumCreateView.vue'),
+  },
+  {
+    path: '/album/edit',
+    component: () => import('../views/album/AlbumEditView.vue'),
+  },
+  {
+    path: '/photo',
+    component: () => import('../views/photo/PhotoGridView.vue'),
+  },
+  {
+    path: '/photo/view',
+    component: () => import('../views/photo/PhotoDetailView.vue'),
   },
   {
     path: '/logged_in',
