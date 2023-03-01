@@ -24,6 +24,11 @@ pub struct Config {
     pub s3_access_key_id: String,
     /// S3 secret access key
     pub s3_secret_access_key: String,
+    /// Force the use of path style bucket addressing.
+    /// This should be `true` if the S3 endpoint is MinIO,
+    /// but should be `false` or left unspecified when targeting
+    /// Amazon S3.
+    pub s3_force_path_style: Option<bool>,
 
     /// OAuth2 client ID created in Koala
     pub koala_client_id: String,
@@ -98,5 +103,12 @@ impl Config {
     /// See also: `koala_base_redirect_uri` field
     pub fn koala_base_redirect_uri(&self) -> &String {
         self.koala_base_redirect_uri.as_ref().unwrap_or(&self.koala_base_uri)
+    }
+
+    /// Force S3 path styles instead of virtual hosts
+    ///
+    /// See also: `s3_force_path_style` field
+    pub fn s3_force_path_style(&self) -> bool {
+        self.s3_force_path_style.unwrap_or(false)
     }
 }

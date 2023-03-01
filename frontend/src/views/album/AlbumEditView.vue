@@ -45,6 +45,7 @@
                 <PhotoGrid
                     :update="photoGridUpdater"
                     :album-id="getIdInner()"
+                    :edit="true"
                 ></PhotoGrid>
             </v-card-text>
         </v-card>

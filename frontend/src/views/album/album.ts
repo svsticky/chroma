@@ -4,6 +4,7 @@ import {GetAlbumResponse} from "@/generated/payload/v1/album/get";
 import {Album} from "@/generated/entity/album";
 import {CreateAlbumRequest, CreateAlbumResponse} from "@/generated/payload/v1/album/create";
 import {UpdateAlbumRequest} from "@/generated/payload/v1/album/update";
+import {DeleteAlbumRequest} from "@/generated/payload/v1/album/delete";
 
 export interface AlbumModel {
     /**
@@ -30,17 +31,6 @@ function protoAlbumToAlbumModel(album: Album): AlbumModel {
         coverPhotoId: album.hasCoverPhotoId ? album.coverPhotoId : null,
         name: album.name,
     };
-}
-
-/**
- * Upload a photo to an album
- * @param albumId The ID of the album
- * @param photoBytes The bytes of the photo. May be `PNG` or `JPEG` format.
- * @return `true` on success. `undefined` on failure.
- */
-export async function uploadPhoto(albumId: string, photoBytes: Uint8Array): Promise<boolean | undefined> {
-    // TODO;
-    return true;
 }
 
 /**
@@ -110,4 +100,12 @@ export async function createAlbum(name: string): Promise<string | undefined> {
     }
 
     return response.id;
+}
+
+export async function deleteAlbum(id: string): Promise<boolean | undefined> {
+    const result = await Http.del('/api/v1/album', new DeleteAlbumRequest({
+        id
+    }), null);
+
+    return result.ok ? true : undefined;
 }

@@ -17,7 +17,7 @@
             </v-card-text>
             <v-card-actions>
                 <v-btn
-                    @click="$emit('close', false)"
+                    @click="close(false)"
                     color="secondary">
                     Cancel
                 </v-btn>
@@ -35,7 +35,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import {uploadPhoto} from "@/views/album/album";
+import {createPhoto} from "@/views/photo/photo";
 
 interface Data {
     snackbar: string | null,
@@ -60,17 +60,23 @@ export default Vue.extend({
             this.loading = true;
             const results = await Promise.all(this.photos.map(async photoFile => {
                 const photoBytes = new Uint8Array(await photoFile.arrayBuffer());
-                const result = await uploadPhoto(this.albumId, photoBytes);
+                const result = await createPhoto(this.albumId, photoBytes);
                 return result != undefined;
             }));
             this.loading = false;
 
-            const failures = results.filter(result => result);
+            const failures = results.filter(result => !result);
             if(failures.length == 0) {
+                // Success
+                this.close(true);
                 return;
             }
 
             this.snackbar = `Failed to upload ${failures.length} photos.`
+        },
+        close(success: boolean) {
+            this.photos = [];
+            this.$emit('close', success);
         }
     }
 })

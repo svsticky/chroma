@@ -5,10 +5,18 @@
                 v-for="(pair, idx) in chunkedPhotos"
                 :key="idx">
                 <v-col cols="12" sm="12" md="6">
-                    <PhotoCover :bytes="pair[0].photoBytes"></PhotoCover>
+                    <PhotoCover
+                        :can-delete="edit && isAdmin"
+                        :bytes="pair[0].photoBytes"
+                        @deleted="deletePhoto(pair[0])"
+                    ></PhotoCover>
                 </v-col>
                 <v-col v-if="pair.length === 2">
-                    <PhotoCover :bytes="pair[1].photoBytes"></PhotoCover>
+                    <PhotoCover
+                        :can-delete="edit && isAdmin"
+                        :bytes="pair[1].photoBytes"
+                        @deleted="deletePhoto(pair[1])"
+                    ></PhotoCover>
                 </v-col>
             </v-row>
         </div>
@@ -21,9 +29,9 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import {listPhotosInAlbum, PhotoModel} from "@/views/photo/photo";
+import {deletePhoto, listPhotosInAlbum, PhotoModel} from "@/views/photo/photo";
 import PhotoCover from "@/components/PhotoCover.vue";
-import {errorText} from "@/api";
+import {errorText, Storage} from "@/api";
 
 interface Data {
     snackbar: string | null,
@@ -37,6 +45,10 @@ export default Vue.extend({
         albumId: String,
         update: {
             type: Number,
+            required: false,
+        },
+        edit: {
+            type: Boolean,
             required: false,
         }
     },
@@ -53,6 +65,7 @@ export default Vue.extend({
         }
     },
     computed: {
+        isAdmin: () => Storage.isAdmin(),
         chunkedPhotos(): PhotoModel[][] {
             const result = [];
             for(let i = 0; i < this.photos.length; i += 2) {
@@ -77,6 +90,14 @@ export default Vue.extend({
             }
 
             this.photos = result;
+        },
+        async deletePhoto(photo: PhotoModel) {
+            const result = await deletePhoto(photo.id);
+            if(result) {
+                await this.loadPhotos();
+            } else {
+                this.snackbar = errorText;
+            }
         }
     }
 })

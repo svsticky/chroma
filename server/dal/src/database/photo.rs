@@ -1,6 +1,7 @@
 use rand::Rng;
 use sqlx::FromRow;
 use time::OffsetDateTime;
+use tracing::info;
 use crate::database::{Album, Database, DbResult};
 use crate::s3::{S3, S3Error};
 
@@ -74,7 +75,7 @@ impl<'a> Photo<'a> {
     }
 
     pub async fn get_by_id<S: AsRef<str>>(db: &'a Database, id: S) -> DbResult<Option<Photo<'a>>> {
-        let photo: Option<_Photo> = sqlx::query_as("SELECT album_id, created_at FROM photo_metadata WHERE id = ?")
+        let photo: Option<_Photo> = sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata WHERE id = ?")
             .bind(id.as_ref())
             .fetch_optional(&**db)
             .await?;
@@ -85,7 +86,7 @@ impl<'a> Photo<'a> {
     pub async fn delete(self) -> DbResult<()> {
         let mut tx = self.db.begin().await?;
         // Remove the photo from the album cover
-        sqlx::query("UPDATE album_metadata SET cover_photo_id = NULL WHERE album_id = ? AND cover_photo_id = ?")
+        sqlx::query("UPDATE album_metadata SET cover_photo_id = NULL WHERE id = ? AND cover_photo_id = ?")
             .bind(&self.album_id)
             .bind(&self.id)
             .execute(&mut tx)

@@ -9,7 +9,7 @@ use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use dal::database::Database;
-use dal::s3::S3;
+use dal::s3::{S3, S3Config};
 use crate::config::Config;
 use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
@@ -37,13 +37,14 @@ async fn main() -> Result<()> {
     ).await?;
 
     info!("Initializing S3 connection");
-    let s3 = S3::new(
-        config.s3_bucket_name.clone(),
-        &config.s3_endpoint_url,
-        config.s3_region.clone(),
-        &config.s3_access_key_id,
-        &config.s3_secret_access_key
-    ).await?;
+    let s3 = S3::new(S3Config {
+        bucket_name: config.s3_bucket_name.clone(),
+        endpoint_url: config.s3_endpoint_url.clone(),
+        region: config.s3_region.clone(),
+        access_key_id: config.s3_access_key_id.clone(),
+        secret_access_key: config.s3_secret_access_key.clone(),
+        use_path_style: config.s3_force_path_style(),
+    }).await?;
 
     let appdata = AppData {
         db,

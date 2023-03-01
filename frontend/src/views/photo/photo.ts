@@ -1,6 +1,8 @@
 import {Photo} from "@/generated/entity/photo";
 import {Http} from "@/http";
 import {ListPhotoResponse} from "@/generated/payload/v1/photo/list";
+import {CreatePhotoRequest} from "@/generated/payload/v1/photo/create";
+import {DeletePhotoRequest} from "@/generated/payload/v1/photo/delete";
 
 export interface PhotoModel {
     /**
@@ -41,4 +43,27 @@ export async function listPhotosInAlbum(albumId: string): Promise<PhotoModel[] |
     }
 
     return result.photos.map(protoPhotoToPhotoModel);
+}
+
+/**
+ * Create a photo
+ * @param albumId The ID of the album
+ * @param photoData The bytes of the photo. May be `PNG` or `JPEG` format.
+ * @return `true` on success. `undefined` on failure.
+ */
+export async function createPhoto(albumId: string, photoData: Uint8Array): Promise<boolean | undefined> {
+    const result = await Http.post('/api/v1/photo', new CreatePhotoRequest({
+        albumId,
+        photoData
+    }), null);
+
+    return result.ok ? true : undefined;
+}
+
+export async function deletePhoto(photoId: string): Promise<boolean | undefined> {
+    const result = await Http.del('/api/v1/photo', new DeletePhotoRequest({
+        photoId
+    }), null);
+
+    return result.ok ? true : undefined;
 }

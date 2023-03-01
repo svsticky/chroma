@@ -22,10 +22,16 @@
                     v-for="(pair, idx) in chunkedAlbums"
                     :key="idx">
                     <v-col cols="12" sm="12" md="6">
-                        <AlbumCover :album="pair[0]"></AlbumCover>
+                        <AlbumCover
+                            @request-update="loadAlbums"
+                            :album="pair[0]"
+                        ></AlbumCover>
                     </v-col>
                     <v-col v-if="pair.length === 2">
-                        <AlbumCover :album="pair[1]"></AlbumCover>
+                        <AlbumCover
+                            @request-update="loadAlbums"
+                            :album="pair[1]"
+                        ></AlbumCover>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -67,16 +73,21 @@ export default Vue.extend({
         }
     },
     async mounted() {
-        this.loading = true;
-        const albums = await listAlbums();
-        this.loading = false;
+        await this.loadAlbums();
+    },
+    methods: {
+        async loadAlbums() {
+            this.loading = true;
+            const albums = await listAlbums();
+            this.loading = false;
 
-        if(albums == undefined) {
-            this.snackbar = errorText;
-            return;
+            if(albums == undefined) {
+                this.snackbar = errorText;
+                return;
+            }
+
+            this.albums = albums;
         }
-
-        this.albums = albums;
     }
 })
 </script>

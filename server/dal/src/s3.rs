@@ -41,18 +41,28 @@ pub enum S3Error {
     ByteStream(#[from] aws_smithy_http::byte_stream::error::Error),
 }
 
+pub struct S3Config {
+    pub bucket_name: String,
+    pub endpoint_url: String,
+    pub region: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub use_path_style: bool,
+}
+
 impl S3 {
-    pub async fn new(bucket_name: String, endpoint_url: &str, region: String, access_key_id: &str, secret_access_key: &str) -> Result<S3, S3InitError> {
+    pub async fn new(config: S3Config) -> Result<S3, S3InitError> {
         let client = Client::from_conf(Config::builder()
-            .endpoint_url(endpoint_url)
-            .region(Some(Region::new(region)))
-            .credentials_provider(Credentials::from_keys(access_key_id, secret_access_key, None))
+            .force_path_style(config.use_path_style)
+            .endpoint_url(config.endpoint_url)
+            .region(Some(Region::new(config.region)))
+            .credentials_provider(Credentials::from_keys(config.access_key_id, config.secret_access_key, None))
             .build()
         );
 
         Ok(S3 {
             client,
-            bucket_name
+            bucket_name: config.bucket_name
         })
     }
     
@@ -77,6 +87,7 @@ impl S3 {
             .body(byte_stream)
             .send()
             .await?;
+
         Ok(())
     }
 

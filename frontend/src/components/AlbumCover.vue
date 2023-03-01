@@ -5,6 +5,15 @@
             <v-spacer></v-spacer>
             <v-btn
                 v-if="isAdmin"
+                class="mr-1"
+                color="primary"
+                fab
+                small
+                @click="deleteAlbum">
+                <v-icon>mdi-trash-can-outline</v-icon>
+            </v-btn>
+            <v-btn
+                v-if="isAdmin"
                 color="primary"
                 fab
                 small
@@ -45,10 +54,11 @@
 
 <script lang="ts">
 import Vue, {PropType} from 'vue';
-import {AlbumModel} from "@/views/album/album";
-import {Storage} from "@/api";
+import {AlbumModel, deleteAlbum} from "@/views/album/album";
+import {errorText, Storage} from "@/api";
 
 interface Data {
+    snackbar: string | null,
     coverPhotoBytes: Uint8Array | null,
     loading: boolean,
 }
@@ -62,6 +72,7 @@ export default Vue.extend({
     },
     data(): Data {
         return {
+            snackbar: null,
             coverPhotoBytes: null,
             loading: true,
         }
@@ -84,6 +95,17 @@ export default Vue.extend({
     methods: {
         async loadCoverPhoto() {
 
+        },
+        async deleteAlbum() {
+            const result = await deleteAlbum(this.album.id);
+            if(result) {
+                this.requestUpdate();
+            } else {
+                this.snackbar = errorText;
+            }
+        },
+        requestUpdate() {
+            this.$emit('request-update');
         }
     }
 })
