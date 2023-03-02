@@ -1,8 +1,8 @@
-use std::ops::Deref;
 use aws_credential_types::Credentials;
-use aws_sdk_s3::{Client, Config, Region};
 use aws_sdk_s3::error::{DeleteObjectError, GetObjectError, PutObjectError};
 use aws_sdk_s3::types::{ByteStream, SdkError};
+use aws_sdk_s3::{Client, Config, Region};
+use std::ops::Deref;
 use thiserror::Error;
 
 pub mod aws_errors {
@@ -52,22 +52,28 @@ pub struct S3Config {
 
 impl S3 {
     pub async fn new(config: S3Config) -> Result<S3, S3InitError> {
-        let client = Client::from_conf(Config::builder()
-            .force_path_style(config.use_path_style)
-            .endpoint_url(config.endpoint_url)
-            .region(Some(Region::new(config.region)))
-            .credentials_provider(Credentials::from_keys(config.access_key_id, config.secret_access_key, None))
-            .build()
+        let client = Client::from_conf(
+            Config::builder()
+                .force_path_style(config.use_path_style)
+                .endpoint_url(config.endpoint_url)
+                .region(Some(Region::new(config.region)))
+                .credentials_provider(Credentials::from_keys(
+                    config.access_key_id,
+                    config.secret_access_key,
+                    None,
+                ))
+                .build(),
         );
 
         Ok(S3 {
             client,
-            bucket_name: config.bucket_name
+            bucket_name: config.bucket_name,
         })
     }
-    
+
     pub async fn get_photo_by_id<S: AsRef<str>>(&self, photo_id: S) -> Result<Vec<u8>, S3Error> {
-        let photo = self.get_object()
+        let photo = self
+            .get_object()
             .bucket(&self.bucket_name)
             .key(photo_id.as_ref())
             .send()
@@ -79,7 +85,11 @@ impl S3 {
         Ok(bytes)
     }
 
-    pub async fn create_photo<S: AsRef<str>>(&self, photo_id: S, bytes: Vec<u8>) -> Result<(), S3Error> {
+    pub async fn create_photo<S: AsRef<str>>(
+        &self,
+        photo_id: S,
+        bytes: Vec<u8>,
+    ) -> Result<(), S3Error> {
         let byte_stream = ByteStream::from(bytes);
         self.put_object()
             .bucket(&self.bucket_name)
@@ -100,4 +110,3 @@ impl S3 {
         Ok(())
     }
 }
-

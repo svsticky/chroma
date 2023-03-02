@@ -1,8 +1,8 @@
+use crate::database::{Album, Database, DbResult};
+use crate::s3::{S3Error, S3};
 use rand::Rng;
 use sqlx::FromRow;
 use time::OffsetDateTime;
-use crate::database::{Album, Database, DbResult};
-use crate::s3::{S3, S3Error};
 
 pub struct Photo<'a> {
     db: &'a Database,
@@ -45,12 +45,16 @@ impl<'a> Photo<'a> {
             id: self.id,
             album_id: self.album_id,
             created_at: self.created_at,
-            photo_data: photo_bytes
+            photo_data: photo_bytes,
         })
     }
 
     fn generate_id() -> String {
-        let random: String = rand::thread_rng().sample_iter(rand::distributions::Alphanumeric).take(Self::MAX_ID_LEN - Self::ID_PREFIX.len()).map(char::from).collect();
+        let random: String = rand::thread_rng()
+            .sample_iter(rand::distributions::Alphanumeric)
+            .take(Self::MAX_ID_LEN - Self::ID_PREFIX.len())
+            .map(char::from)
+            .collect();
         format!("{}{random}", Self::ID_PREFIX)
     }
 
@@ -69,15 +73,16 @@ impl<'a> Photo<'a> {
             db,
             id,
             album_id: album.id.clone(),
-            created_at
+            created_at,
         })
     }
 
     pub async fn get_by_id<S: AsRef<str>>(db: &'a Database, id: S) -> DbResult<Option<Photo<'a>>> {
-        let photo: Option<_Photo> = sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata WHERE id = ?")
-            .bind(id.as_ref())
-            .fetch_optional(&**db)
-            .await?;
+        let photo: Option<_Photo> =
+            sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata WHERE id = ?")
+                .bind(id.as_ref())
+                .fetch_optional(&**db)
+                .await?;
 
         Ok(photo.map(|photo| photo.to_photo(db)))
     }
@@ -85,11 +90,13 @@ impl<'a> Photo<'a> {
     pub async fn delete(self) -> DbResult<()> {
         let mut tx = self.db.begin().await?;
         // Remove the photo from the album cover
-        sqlx::query("UPDATE album_metadata SET cover_photo_id = NULL WHERE id = ? AND cover_photo_id = ?")
-            .bind(&self.album_id)
-            .bind(&self.id)
-            .execute(&mut tx)
-            .await?;
+        sqlx::query(
+            "UPDATE album_metadata SET cover_photo_id = NULL WHERE id = ? AND cover_photo_id = ?",
+        )
+        .bind(&self.album_id)
+        .bind(&self.id)
+        .execute(&mut tx)
+        .await?;
 
         // Remove the photo metadata
         sqlx::query("DELETE FROM photo_metadata WHERE id = ?")
@@ -103,17 +110,23 @@ impl<'a> Photo<'a> {
     }
 
     pub async fn list(db: &'a Database) -> DbResult<Vec<Photo<'a>>> {
-        let selfs: Vec<_Photo> = sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata")
-            .fetch_all(&**db)
-            .await?;
+        let selfs: Vec<_Photo> =
+            sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata")
+                .fetch_all(&**db)
+                .await?;
         Ok(selfs.into_iter().map(|photo| photo.to_photo(db)).collect())
     }
 
-    pub async fn list_in_album<S: AsRef<str>>(db: &'a Database, album_id: S) -> DbResult<Vec<Photo<'a>>> {
-        let selfs: Vec<_Photo> = sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata WHERE album_id = ?")
-            .bind(album_id.as_ref())
-            .fetch_all(&**db)
-            .await?;
+    pub async fn list_in_album<S: AsRef<str>>(
+        db: &'a Database,
+        album_id: S,
+    ) -> DbResult<Vec<Photo<'a>>> {
+        let selfs: Vec<_Photo> = sqlx::query_as(
+            "SELECT id, album_id, created_at FROM photo_metadata WHERE album_id = ?",
+        )
+        .bind(album_id.as_ref())
+        .fetch_all(&**db)
+        .await?;
         Ok(selfs.into_iter().map(|photo| photo.to_photo(db)).collect())
     }
 }

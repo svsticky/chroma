@@ -64,8 +64,7 @@ pub struct Config {
     /// No existing query parameters should be in the URI.
     /// E.g. `https://foo.example.com/logged_in` will become
     /// `https://foo.example.com/logged_in?session_id={AN ID}&is_admin=[true|false]`.
-    pub login_complete_redirect_uri: String
-    // ANCHOR_END: config
+    pub login_complete_redirect_uri: String, // ANCHOR_END: config
 }
 
 impl Config {
@@ -85,7 +84,10 @@ impl Config {
         }
 
         if this.koala_user_agent.is_none() {
-            info!("'koala_user_agent' was not provided, using '{}' as a default.", Self::DEFAULT_KOALA_USER_AGENT);
+            info!(
+                "'koala_user_agent' was not provided, using '{}' as a default.",
+                Self::DEFAULT_KOALA_USER_AGENT
+            );
         }
 
         Ok(this)
@@ -95,14 +97,18 @@ impl Config {
     ///
     /// See also: `koala_user_agent` fields
     pub fn koala_user_agent(&self) -> &str {
-        self.koala_user_agent.as_deref().unwrap_or(Self::DEFAULT_KOALA_USER_AGENT)
+        self.koala_user_agent
+            .as_deref()
+            .unwrap_or(Self::DEFAULT_KOALA_USER_AGENT)
     }
 
     /// Koala's base URL for redirecting a client.
     ///
     /// See also: `koala_base_redirect_uri` field
     pub fn koala_base_redirect_uri(&self) -> &String {
-        self.koala_base_redirect_uri.as_ref().unwrap_or(&self.koala_base_uri)
+        self.koala_base_redirect_uri
+            .as_ref()
+            .unwrap_or(&self.koala_base_uri)
     }
 
     /// Force S3 path styles instead of virtual hosts

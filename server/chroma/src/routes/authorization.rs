@@ -1,14 +1,14 @@
-use std::future::Future;
-use std::pin::Pin;
-use actix_web::{FromRequest, HttpRequest, HttpResponse, ResponseError};
+use crate::koala::{get_koala_login_url, get_token_info};
+use crate::routes::appdata::WebData;
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::StatusCode;
-use crate::koala::{get_koala_login_url, get_token_info};
-use crate::routes::appdata::WebData;
+use actix_web::{FromRequest, HttpRequest, HttpResponse, ResponseError};
+use dal::database::User;
+use std::future::Future;
+use std::pin::Pin;
 use thiserror::Error;
 use tracing::info;
-use dal::database::User;
 
 pub struct Authorization {
     pub user_id: u32,
@@ -24,15 +24,20 @@ impl FromRequest for Authorization {
         Box::pin(async move {
             let data: &WebData = req.app_data().unwrap();
 
-            let authorization = req.headers()
+            let authorization = req
+                .headers()
                 .get("authorization")
-                .ok_or(AuthorizationError::NoHeader(get_koala_login_url(&data.config)))?
+                .ok_or(AuthorizationError::NoHeader(get_koala_login_url(
+                    &data.config,
+                )))?
                 .to_str()
                 .map_err(|_| AuthorizationError::NoHeader(get_koala_login_url(&data.config)))?;
 
             let user = User::get_by_session_id(&data.db, authorization)
                 .await?
-                .ok_or(AuthorizationError::InvalidSession(get_koala_login_url(&data.config)))?;
+                .ok_or(AuthorizationError::InvalidSession(get_koala_login_url(
+                    &data.config,
+                )))?;
 
             // Check if the access token is still valid
             // E.g. it could have been revoked by Koala
@@ -42,7 +47,7 @@ impl FromRequest for Authorization {
                     Some(v) if v.as_u16() == 401 => {
                         info!("Stored session was valid, tokens for koala were not.");
                         AuthorizationError::InvalidSession(get_koala_login_url(&data.config))
-                    },
+                    }
                     Some(v) if v.as_u16() == 403 => AuthorizationError::Forbidden,
                     _ => AuthorizationError::KoalaUpstream,
                 })?;
@@ -85,8 +90,7 @@ impl ResponseError for AuthorizationError {
             Self::NoHeader(r) | Self::InvalidSession(r) => HttpResponse::build(self.status_code())
                 .insert_header(("Location", r.as_str()))
                 .finish(),
-            _ => HttpResponse::build(self.status_code())
-                .body(self.to_string()),
+            _ => HttpResponse::build(self.status_code()).body(self.to_string()),
         }
     }
 }

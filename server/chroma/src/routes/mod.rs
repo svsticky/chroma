@@ -3,19 +3,17 @@ use actix_web::web::ServiceConfig;
 use routable::Routable;
 
 pub mod appdata;
-pub mod routable;
-mod error;
-mod v1;
-mod empty;
 mod authorization;
+mod empty;
+mod error;
 mod redirect;
+pub mod routable;
+mod v1;
 
 pub struct Router;
 
 impl Routable for Router {
     fn configure(config: &mut ServiceConfig) {
-        config.service(web::scope("/api")
-            .configure(v1::Router::configure)
-        );
+        config.service(web::scope("/api").configure(v1::Router::configure));
     }
 }

@@ -11,7 +11,10 @@ fn main() -> Result<()> {
     config.type_attribute(".", r#"#[derive(serde::Serialize, serde::Deserialize)]"#);
 
     let proto_files = discover("protos/")?;
-    let stringified_paths = proto_files.into_iter().map(|x| x.to_string_lossy().to_string()).collect::<Vec<_>>();
+    let stringified_paths = proto_files
+        .into_iter()
+        .map(|x| x.to_string_lossy().to_string())
+        .collect::<Vec<_>>();
 
     config.compile_protos(&stringified_paths, &["protos/"])?;
 

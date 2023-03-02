@@ -1,6 +1,6 @@
+use crate::routes::authorization::Authorization;
 use actix_multiresponse::Payload;
 use proto::AccessResponse;
-use crate::routes::authorization::Authorization;
 
 /// Check if a session ID is still valid.
 /// This endpoint should have proper ratelimiting to ensure an
@@ -14,6 +14,6 @@ pub async fn access(auth: Authorization) -> Payload<AccessResponse> {
     // We only need to return the information here.
 
     Payload(AccessResponse {
-        admin: auth.is_admin
+        admin: auth.is_admin,
     })
 }

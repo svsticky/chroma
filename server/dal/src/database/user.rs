@@ -1,7 +1,7 @@
+use crate::database::{Database, DbResult};
 use rand::Rng;
 use sqlx::FromRow;
 use time::{Duration, OffsetDateTime};
-use crate::database::{Database, DbResult};
 
 pub struct User<'a> {
     db: &'a Database,
@@ -44,19 +44,25 @@ impl<'a> User<'a> {
     pub const SESSION_ID_LEN: usize = 32;
     pub const SESSION_DEFAULT_EXPIRY: Duration = Duration::days(15);
 
-    pub async fn create(db: &'a Database, koala_id: u32, oauth: OAuthAccess, admin: bool) -> DbResult<User<'a>> {
+    pub async fn create(
+        db: &'a Database,
+        koala_id: u32,
+        oauth: OAuthAccess,
+        admin: bool,
+    ) -> DbResult<User<'a>> {
         sqlx::query(
             "INSERT INTO users \
                     (koala_id, access_token, refresh_token, expires_at, is_admin) \
                 VALUES \
-                    (?, ?, ?, ?, ?)")
-            .bind(koala_id)
-            .bind(&oauth.access_token)
-            .bind(&oauth.refresh_token)
-            .bind(oauth.expires_at)
-            .bind(admin)
-            .execute(&**db)
-            .await?;
+                    (?, ?, ?, ?, ?)",
+        )
+        .bind(koala_id)
+        .bind(&oauth.access_token)
+        .bind(&oauth.refresh_token)
+        .bind(oauth.expires_at)
+        .bind(admin)
+        .execute(&**db)
+        .await?;
 
         Ok(Self {
             db,
@@ -65,7 +71,6 @@ impl<'a> User<'a> {
             refresh_token: oauth.refresh_token,
             oauth_expires_at: oauth.expires_at,
             is_admin: admin,
-
         })
     }
 
@@ -78,7 +83,11 @@ impl<'a> User<'a> {
     }
 
     pub async fn create_session(&self) -> DbResult<String> {
-        let session_id: String = rand::thread_rng().sample_iter(rand::distributions::Alphanumeric).take(Self::SESSION_ID_LEN).map(char::from).collect();
+        let session_id: String = rand::thread_rng()
+            .sample_iter(rand::distributions::Alphanumeric)
+            .take(Self::SESSION_ID_LEN)
+            .map(char::from)
+            .collect();
         let expires_at = OffsetDateTime::now_utc() + Self::SESSION_DEFAULT_EXPIRY;
 
         sqlx::query("INSERT INTO user_sessions (id, koala_id, expires_at) VALUES (?, ?, ?)")
@@ -91,17 +100,21 @@ impl<'a> User<'a> {
         Ok(session_id)
     }
 
-    pub async fn get_by_session_id<S: AsRef<str>>(db: &'a Database, session_id: S) -> DbResult<Option<User<'a>>> {
+    pub async fn get_by_session_id<S: AsRef<str>>(
+        db: &'a Database,
+        session_id: S,
+    ) -> DbResult<Option<User<'a>>> {
         #[derive(FromRow)]
         struct _Session {
             koala_id: u32,
             expires_at: i64,
         }
 
-        let session: Option<_Session> = sqlx::query_as("SELECT koala_id, expires_at FROM user_sessions WHERE id = ?")
-            .bind(session_id.as_ref())
-            .fetch_optional(&**db)
-            .await?;
+        let session: Option<_Session> =
+            sqlx::query_as("SELECT koala_id, expires_at FROM user_sessions WHERE id = ?")
+                .bind(session_id.as_ref())
+                .fetch_optional(&**db)
+                .await?;
 
         let session = match session {
             Some(s) => s,
@@ -119,7 +132,12 @@ impl<'a> User<'a> {
         User::get_by_id(db, session.koala_id).await
     }
 
-    pub async fn set_tokens(&mut self, access: String, refresh: String, expires_at: i64) -> DbResult<()> {
+    pub async fn set_tokens(
+        &mut self,
+        access: String,
+        refresh: String,
+        expires_at: i64,
+    ) -> DbResult<()> {
         sqlx::query("UPDATE users SET access_token = ?, refresh_token = ?, expires_at = ? WHERE koala_id = ?")
             .bind(&access)
             .bind(&refresh)

@@ -1,10 +1,11 @@
+use crate::config::Config;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use crate::config::Config;
 
 /// Get the URL to redirect a client to when they should log in with Koala
 pub fn get_koala_login_url(config: &Config) -> String {
-    format!("{}/api/oauth/authorize?client_id={}&redirect_uri={}&response_type=code",
+    format!(
+        "{}/api/oauth/authorize?client_id={}&redirect_uri={}&response_type=code",
         config.koala_base_redirect_uri(),
         config.koala_client_id,
         config.koala_oauth_redirect_uri,
@@ -41,7 +42,7 @@ struct ExchangeRequest<'a> {
 #[serde(rename_all = "snake_case")]
 enum GrantType {
     /// OAuth authorization_code flow
-    AuthorizationCode
+    AuthorizationCode,
 }
 
 /// Get the URl to use to exchange an access code for an OAuth token pair,
@@ -50,7 +51,10 @@ fn get_koala_token_url(config: &Config) -> String {
     format!("{}/api/oauth/token", config.koala_base_uri)
 }
 
-pub async fn exchange_code<S: AsRef<str>>(config: &Config, code: S) -> Result<ExchangeResponse, reqwest::Error> {
+pub async fn exchange_code<S: AsRef<str>>(
+    config: &Config,
+    code: S,
+) -> Result<ExchangeResponse, reqwest::Error> {
     Client::new()
         .post(get_koala_token_url(config))
         .header("User-Agent", config.koala_user_agent())
@@ -80,7 +84,10 @@ fn get_token_info_url(config: &Config) -> String {
     format!("{}/api/oauth/token/info", config.koala_base_uri)
 }
 
-pub async fn get_token_info<S: AsRef<str>>(config: &Config, access_token: S) -> Result<TokenInfo, reqwest::Error> {
+pub async fn get_token_info<S: AsRef<str>>(
+    config: &Config,
+    access_token: S,
+) -> Result<TokenInfo, reqwest::Error> {
     Client::new()
         .get(get_token_info_url(config))
         .header("User-Agent", config.koala_user_agent())

@@ -1,22 +1,22 @@
-use actix_cors::Cors;
-use actix_web::{App, HttpServer};
-use color_eyre::Result;
-use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
-use tracing::info;
-use tracing_actix_web::TracingLogger;
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::fmt::layer;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use dal::database::Database;
-use dal::s3::{S3, S3Config};
 use crate::config::Config;
 use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
+use actix_cors::Cors;
+use actix_web::{App, HttpServer};
+use color_eyre::Result;
+use dal::database::Database;
+use dal::s3::{S3Config, S3};
+use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
+use tracing::info;
+use tracing_actix_web::TracingLogger;
+use tracing_subscriber::fmt::layer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
 
-mod routes;
 mod config;
 mod koala;
+mod routes;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -33,8 +33,9 @@ async fn main() -> Result<()> {
         &config.db_host,
         &config.db_username,
         &config.db_password,
-        &config.db_database
-    ).await?;
+        &config.db_database,
+    )
+    .await?;
 
     info!("Initializing S3 connection");
     let s3 = S3::new(S3Config {
@@ -44,21 +45,22 @@ async fn main() -> Result<()> {
         access_key_id: config.s3_access_key_id.clone(),
         secret_access_key: config.s3_secret_access_key.clone(),
         use_path_style: config.s3_force_path_style(),
-    }).await?;
+    })
+    .await?;
 
-    let appdata = AppData {
-        db,
-        s3,
-        config
-    };
+    let appdata = AppData { db, s3, config };
 
     info!("Starting web server");
-    HttpServer::new(move || App::new()
-        .wrap(Cors::permissive())
-        .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
-        .app_data(WebData::new(appdata.clone()))
-        .configure(routes::Router::configure)
-    ).bind("0.0.0.0:8000")?.run().await?;
+    HttpServer::new(move || {
+        App::new()
+            .wrap(Cors::permissive())
+            .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
+            .app_data(WebData::new(appdata.clone()))
+            .configure(routes::Router::configure)
+    })
+    .bind("0.0.0.0:8000")?
+    .run()
+    .await?;
 
     Ok(())
 }

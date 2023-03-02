@@ -1,8 +1,8 @@
-use std::borrow::Cow;
+use crate::database::{Database, DbResult, Photo};
 use rand::Rng;
 use sqlx::FromRow;
+use std::borrow::Cow;
 use time::OffsetDateTime;
-use crate::database::{Database, DbResult, Photo};
 
 pub struct Album<'a> {
     db: &'a Database,
@@ -49,7 +49,11 @@ impl<'a> Album<'a> {
     pub const MAX_ID_LEN: usize = 32;
 
     fn generate_id() -> String {
-        let random: String = rand::thread_rng().sample_iter(rand::distributions::Alphanumeric).take(Self::MAX_ID_LEN - Self::ID_PREFIX.len()).map(char::from).collect();
+        let random: String = rand::thread_rng()
+            .sample_iter(rand::distributions::Alphanumeric)
+            .take(Self::MAX_ID_LEN - Self::ID_PREFIX.len())
+            .map(char::from)
+            .collect();
         format!("{}{random}", Self::ID_PREFIX)
     }
 
@@ -74,11 +78,16 @@ impl<'a> Album<'a> {
         })
     }
 
-    pub async fn get_by_id<S: AsRef<str> + Sync>(db: &'a Database, id: S) -> DbResult<Option<Album<'a>>> {
-        let album: Option<_Album> = sqlx::query_as("SELECT id, name, created_at, cover_photo_id FROM album_metadata WHERE id = ?")
-            .bind(id.as_ref())
-            .fetch_optional(&**db)
-            .await?;
+    pub async fn get_by_id<S: AsRef<str> + Sync>(
+        db: &'a Database,
+        id: S,
+    ) -> DbResult<Option<Album<'a>>> {
+        let album: Option<_Album> = sqlx::query_as(
+            "SELECT id, name, created_at, cover_photo_id FROM album_metadata WHERE id = ?",
+        )
+        .bind(id.as_ref())
+        .fetch_optional(&**db)
+        .await?;
 
         Ok(album.map(|x| x.to_album(db)))
     }
@@ -131,9 +140,10 @@ impl<'a> Album<'a> {
     }
 
     pub async fn list(db: &'a Database) -> DbResult<Vec<Album<'a>>> {
-        let selfs: Vec<_Album> = sqlx::query_as("SELECT id, name, created_at, cover_photo_id FROM album_metadata")
-            .fetch_all(&**db)
-            .await?;
+        let selfs: Vec<_Album> =
+            sqlx::query_as("SELECT id, name, created_at, cover_photo_id FROM album_metadata")
+                .fetch_all(&**db)
+                .await?;
 
         Ok(selfs.into_iter().map(|x| x.to_album(db)).collect())
     }
