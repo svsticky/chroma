@@ -3,7 +3,7 @@
         v-model="enabled"
         max-width="600">
         <v-card flat>
-            <v-card-title>Upload photo</v-card-title>
+            <v-card-title>Upload photo(s)</v-card-title>
             <v-card-subtitle>PNG or JPEG</v-card-subtitle>
             <v-card-text>
                 <v-file-input

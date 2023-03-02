@@ -19,7 +19,9 @@ pub enum Error {
     #[error("The requested resource may not be accessed by the authorized user.")]
     Forbidden,
     #[error("Failed to parse timestamp")]
-    ChronoParse(#[from] chrono::ParseError)
+    ChronoParse(#[from] chrono::ParseError),
+    #[error("Failed to encode image to PNG")]
+    ImageEncoding,
 }
 
 impl ResponseError for Error {
@@ -31,7 +33,8 @@ impl ResponseError for Error {
             Self::S3(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Koala(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Forbidden => StatusCode::FORBIDDEN,
-            Self::ChronoParse(_) => StatusCode::BAD_GATEWAY
+            Self::ChronoParse(_) => StatusCode::BAD_GATEWAY,
+            Self::ImageEncoding => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

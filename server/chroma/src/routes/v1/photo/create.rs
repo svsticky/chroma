@@ -1,4 +1,7 @@
+use std::io::Cursor;
 use actix_multiresponse::Payload;
+use image::{ImageFormat, ImageOutputFormat};
+use image::io::Reader;
 use dal::database::{Album, Photo};
 use proto::CreatePhotoRequest;
 use crate::routes::appdata::WebData;
@@ -21,12 +24,35 @@ pub async fn create(auth: Authorization, data: WebData, payload: Payload<CreateP
         .await?
         .ok_or(Error::NotFound)?;
 
+
+    let photo_size = payload.photo_data.len();
+    let cursor = Cursor::new(payload.photo_data.clone());
+    let image = Reader::new(cursor)
+        .with_guessed_format()
+        .unwrap(); // Cannot fail when using a Cursor
+
+    // Convert to PNG if the current format is JPEG
+    let png_image = match image.format() {
+        Some(ImageFormat::Png) => image.into_inner().into_inner(),
+        Some(ImageFormat::Jpeg) => {
+            let decoded = image.decode()
+                .map_err(|e| Error::BadRequest(format!("Failed to decode image. Is the format PNG or JPEG? The error is as follows: {e}")))?;
+
+            let mut cursor = Cursor::new(Vec::with_capacity(photo_size));
+            decoded.write_to(&mut cursor, ImageOutputFormat::Png)
+                .map_err(|_| Error::ImageEncoding)?;
+
+            cursor.into_inner()
+        },
+        _ => return Err(Error::BadRequest("Invalid image or non JPEG/PNG image provided".into())),
+    };
+
     // Create the photo metadata in the DB
     let photo = Photo::create(&data.db, &album).await?;
 
     // Upload the photo to S3
     // If this fails, remove the metadata again
-    if let Err(e) = data.s3.create_photo(&photo.id, payload.photo_data.clone()).await {
+    if let Err(e) = data.s3.create_photo(&photo.id, png_image).await {
         photo.delete().await?;
         return Err(e.into());
     }

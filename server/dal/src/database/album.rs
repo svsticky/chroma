@@ -107,6 +107,14 @@ impl<'a> Album<'a> {
 
     pub async fn delete(self) -> DbResult<()> {
         let mut tx = self.db.begin().await?;
+
+        // Must satisfy the foreign key constraint
+        // So unset the cover photo before removing all photoss
+        sqlx::query("UPDATE album_metadata SET cover_photo_id = NULL WHERE id = ?")
+            .bind(&self.id)
+            .execute(&mut tx)
+            .await?;
+
         sqlx::query("DELETE FROM photo_metadata WHERE album_id = ?")
             .bind(&self.id)
             .execute(&mut tx)
