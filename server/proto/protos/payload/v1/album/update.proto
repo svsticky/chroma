@@ -3,5 +3,6 @@ package nl.svsticky.chroma;
 
 message UpdateAlbumRequest {
   string id = 1;
-  string name = 2;
+  optional string name = 2;
+  optional string coverPhotoId = 3;
 }

@@ -1,15 +1,15 @@
 <template>
-  <v-app>
-    <v-app-bar
-      app
-      color="primary"
-      dark>
-        <v-card-title>Chroma</v-card-title>
-    </v-app-bar>
-    <v-main>
-      <router-view/>
-    </v-main>
-  </v-app>
+    <v-app>
+        <v-app-bar
+            app
+            color="primary"
+            dark>
+            <v-card-title>Chroma</v-card-title>
+        </v-app-bar>
+        <v-main>
+            <router-view/>
+        </v-main>
+    </v-app>
 </template>
 
 <script lang="ts">
@@ -18,7 +18,7 @@ import {checkLoggedIn, KoalaLoginUrl, LoginCheckResult, Storage} from "@/api";
 
 export default Vue.extend({
     watch: {
-        async $route (to, from) {
+        async $route(to, from) {
             await this.performLoginCheck();
         }
     },
@@ -29,23 +29,23 @@ export default Vue.extend({
     },
     methods: {
         async performLoginCheck() {
-            if(this.$router.currentRoute.path == '/logged_in') {
+            if (this.$router.currentRoute.path == '/logged_in') {
                 return;
             }
 
             let loggedIn = await checkLoggedIn();
-            if(loggedIn == null) {
+            if (loggedIn == null) {
                 // TODO something went wrong
                 return;
             }
 
-            if(loggedIn instanceof KoalaLoginUrl) {
+            if (loggedIn instanceof KoalaLoginUrl) {
                 Storage.setBeforeAuthUrl(this.$router.currentRoute.path);
                 window.location.href = loggedIn.url;
                 return;
             }
 
-            if(!(loggedIn instanceof LoginCheckResult)) {
+            if (!(loggedIn instanceof LoginCheckResult)) {
                 // Future proofing
                 console.error("Variable 'item' is not a valid type");
                 return;

@@ -1,7 +1,6 @@
 use rand::Rng;
 use sqlx::FromRow;
 use time::OffsetDateTime;
-use tracing::info;
 use crate::database::{Album, Database, DbResult};
 use crate::s3::{S3, S3Error};
 

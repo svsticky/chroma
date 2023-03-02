@@ -7,6 +7,7 @@ use actix_web::http::StatusCode;
 use crate::koala::{get_koala_login_url, get_token_info};
 use crate::routes::appdata::WebData;
 use thiserror::Error;
+use tracing::info;
 use dal::database::User;
 
 pub struct Authorization {
@@ -38,7 +39,10 @@ impl FromRequest for Authorization {
             let _token_info = get_token_info(&data.config, &user.access_token)
                 .await
                 .map_err(|e| match e.status() {
-                    Some(v) if v.as_u16() == 401 => AuthorizationError::InvalidSession(get_koala_login_url(&data.config)),
+                    Some(v) if v.as_u16() == 401 => {
+                        info!("Stored session was valid, tokens for koala were not.");
+                        AuthorizationError::InvalidSession(get_koala_login_url(&data.config))
+                    },
                     Some(v) if v.as_u16() == 403 => AuthorizationError::Forbidden,
                     _ => AuthorizationError::KoalaUpstream,
                 })?;

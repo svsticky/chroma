@@ -1,5 +1,4 @@
 use actix_multiresponse::Payload;
-use tracing::{debug, info};
 use dal::database::{Album, Photo};
 use proto::CreatePhotoRequest;
 use crate::routes::appdata::WebData;
@@ -27,7 +26,6 @@ pub async fn create(auth: Authorization, data: WebData, payload: Payload<CreateP
 
     // Upload the photo to S3
     // If this fails, remove the metadata again
-    info!("{:?}", data.s3);
     if let Err(e) = data.s3.create_photo(&photo.id, payload.photo_data.clone()).await {
         photo.delete().await?;
         return Err(e.into());

@@ -26,6 +26,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
     let oauth_tokens = crate::koala::exchange_code(&data.config, &query.code).await
         .map_err(|e| Error::Koala(e))?;
 
+
     let is_admin = oauth_tokens.credentials_type == CredentialsType::Admin;
 
     let created_at_epoch = chrono::DateTime::parse_from_rfc3339(&oauth_tokens.created_at)?.timestamp();

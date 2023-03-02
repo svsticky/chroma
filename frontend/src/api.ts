@@ -60,6 +60,10 @@ export async function checkLoggedIn(sessionId: string | null = null): Promise<Lo
         return new LoginCheckResult(r.admin);
     } else {
         switch(r.status) {
+            case 200:
+                // Need to perform the status 200 check, as protobuf will return an empty
+                // response if the value isAdmin is falses
+                return new LoginCheckResult(false);
             case 401:
                 let loginUrl = r.headers.get('location');
                 return new KoalaLoginUrl(loginUrl!);

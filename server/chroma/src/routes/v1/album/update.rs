@@ -1,5 +1,5 @@
 use actix_multiresponse::Payload;
-use dal::database::Album;
+use dal::database::{Album, Photo};
 use proto::UpdateAlbumRequest;
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
@@ -7,26 +7,45 @@ use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 
 /// Update the metadata of an existing album.
-/// Currently, only the name can be updated.
+/// Currently, only the following properties can be updated:
+/// - The name
+/// - The cover photo
 ///
 /// # Errors
 ///
 /// - If the new name's length is longer than [Album::MAX_NAME_LENGTH]
 /// - If the album to be updated could not be found
+/// - If the provided cover photo does not exist
+/// - If the provided cover photo is not part of the specified album
 /// - If something went wrong
 pub async fn update(auth: Authorization, data: WebData, payload: Payload<UpdateAlbumRequest>) -> WebResult<Empty> {
     if !auth.is_admin {
         return Err(Error::Forbidden);
     }
 
-    if payload.name.len() > Album::MAX_NAME_LENGTH {
-        return Err(Error::BadRequest(format!("Provided value 'name' with length '{}' exceeds the maximum length of '{}'", payload.name.len(), Album::MAX_NAME_LENGTH)));
+    let mut album = Album::get_by_id(&data.db, &payload.id)
+        .await?
+        .ok_or(Error::NotFound)?;
+
+    if let Some(name) = &payload.name {
+        if name.len() > Album::MAX_NAME_LENGTH {
+            return Err(Error::BadRequest(format!("Provided value 'name' with length '{}' exceeds the maximum length of '{}'", name.len(), Album::MAX_NAME_LENGTH)));
+        }
+
+        album.update_name(name).await?;
     }
 
-    Album::get_by_id(&data.db, &payload.id)
-        .await?
-        .ok_or(Error::NotFound)?
-        .update_name(&payload.name).await?;
+    if let Some(cover_photo_id) = &payload.cover_photo_id {
+        let photo = Photo::get_by_id(&data.db, &cover_photo_id)
+            .await?
+            .ok_or(Error::BadRequest(format!("Cover photo with ID '{cover_photo_id}' does not exist")))?;
+
+        if photo.album_id.ne(&album.id) {
+            return Err(Error::BadRequest(format!("Cover photo with ID '{cover_photo_id}' is not in album with ID '{}'", album.id)));
+        }
+
+        album.update_cover_photo(&photo).await?;
+    }
 
     Ok(Empty)
 }

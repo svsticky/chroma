@@ -18,22 +18,28 @@
                 </v-btn>
             </v-card-title>
             <v-card-text>
-                <v-row
-                    v-for="(pair, idx) in chunkedAlbums"
-                    :key="idx">
-                    <v-col cols="12" sm="12" md="6">
-                        <AlbumCover
-                            @request-update="loadAlbums"
-                            :album="pair[0]"
-                        ></AlbumCover>
-                    </v-col>
-                    <v-col v-if="pair.length === 2">
-                        <AlbumCover
-                            @request-update="loadAlbums"
-                            :album="pair[1]"
-                        ></AlbumCover>
-                    </v-col>
-                </v-row>
+                <div v-if="albums.length > 0">
+                    <v-row
+                        v-for="(pair, idx) in chunkedAlbums"
+                        :key="idx">
+                        <v-col cols="12" sm="12" md="6">
+                            <AlbumCover
+                                @request-update="loadAlbums"
+                                :album="pair[0]"
+                            ></AlbumCover>
+                        </v-col>
+                        <v-col v-if="pair.length === 2">
+                            <AlbumCover
+                                @request-update="loadAlbums"
+                                :album="pair[1]"
+                            ></AlbumCover>
+                        </v-col>
+                    </v-row>
+                </div>
+
+                <div v-else>
+                    There are no albums yet..
+                </div>
             </v-card-text>
         </v-card>
     </v-container>

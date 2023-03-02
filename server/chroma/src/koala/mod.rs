@@ -51,7 +51,7 @@ fn get_koala_token_url(config: &Config) -> String {
 }
 
 pub async fn exchange_code<S: AsRef<str>>(config: &Config, code: S) -> Result<ExchangeResponse, reqwest::Error> {
-    reqwest::Client::new()
+    Client::new()
         .post(get_koala_token_url(config))
         .header("User-Agent", config.koala_user_agent())
         .header("Accept", "application/json")

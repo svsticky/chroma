@@ -3,6 +3,7 @@ import {Http} from "@/http";
 import {ListPhotoResponse} from "@/generated/payload/v1/photo/list";
 import {CreatePhotoRequest} from "@/generated/payload/v1/photo/create";
 import {DeletePhotoRequest} from "@/generated/payload/v1/photo/delete";
+import {GetPhotoResponse} from "@/generated/payload/v1/photo/get";
 
 export interface PhotoModel {
     /**
@@ -66,4 +67,18 @@ export async function deletePhoto(photoId: string): Promise<boolean | undefined>
     }), null);
 
     return result.ok ? true : undefined;
+}
+
+export async function getPhoto(photoId: string): Promise<PhotoModel | null | undefined> {
+    const result = await Http.getBody<GetPhotoResponse>(`/api/v1/photo?id=${photoId}`, null, GetPhotoResponse);
+
+    if(result instanceof Response) {
+        if(result.status == 404) {
+            return null;
+        } else {
+            return;
+        }
+    }
+
+    return protoPhotoToPhotoModel(result.photo);
 }

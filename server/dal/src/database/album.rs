@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use rand::Rng;
 use sqlx::FromRow;
 use time::OffsetDateTime;
-use crate::database::{Database, DbResult};
+use crate::database::{Database, DbResult, Photo};
 
 pub struct Album<'a> {
     db: &'a Database,
@@ -81,6 +81,17 @@ impl<'a> Album<'a> {
             .await?;
 
         Ok(album.map(|x| x.to_album(db)))
+    }
+
+    pub async fn update_cover_photo(&mut self, cover_photo: &Photo<'_>) -> DbResult<()> {
+        sqlx::query("UPDATE album_metadata SET cover_photo_id = ? WHERE id = ?")
+            .bind(&cover_photo.id)
+            .bind(&self.id)
+            .execute(&**self.db)
+            .await?;
+
+        self.cover_photo_id = Some(cover_photo.id.clone());
+        Ok(())
     }
 
     pub async fn update_name(&mut self, new_name: impl Into<Cow<'_, str>>) -> DbResult<()> {

@@ -37,6 +37,7 @@ function protoAlbumToAlbumModel(album: Album): AlbumModel {
  * Save an edited album.
  * The following values are updated:
  * - `name`
+ * - `coverPhotoId`
  * @param album The edited album
  * @return `true` on success. `undefined` on failures
  */
@@ -44,6 +45,7 @@ export async function saveEditedAlbum(album: AlbumModel): Promise<boolean | unde
     const result = await Http.patch('/api/v1/album', new UpdateAlbumRequest({
         id: album.id,
         name: album.name,
+        coverPhotoId: album.coverPhotoId ?? undefined, // Convert `null` to `undefined`
     }), null);
 
     if(result instanceof Response && !result.ok) {

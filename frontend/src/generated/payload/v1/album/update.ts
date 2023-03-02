@@ -5,11 +5,14 @@
  * git: https://github.com/thesayyn/protoc-gen-ts */
 import * as pb_1 from "google-protobuf";
 export class UpdateAlbumRequest extends pb_1.Message {
-    #one_of_decls: number[][] = [];
-    constructor(data?: any[] | {
+    #one_of_decls: number[][] = [[2], [3]];
+    constructor(data?: any[] | ({
         id?: string;
+    } & (({
         name?: string;
-    }) {
+    }) | ({
+        coverPhotoId?: string;
+    })))) {
         super();
         pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
         if (!Array.isArray(data) && typeof data == "object") {
@@ -18,6 +21,9 @@ export class UpdateAlbumRequest extends pb_1.Message {
             }
             if ("name" in data && data.name != undefined) {
                 this.name = data.name;
+            }
+            if ("coverPhotoId" in data && data.coverPhotoId != undefined) {
+                this.coverPhotoId = data.coverPhotoId;
             }
         }
     }
@@ -31,11 +37,42 @@ export class UpdateAlbumRequest extends pb_1.Message {
         return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
     }
     set name(value: string) {
-        pb_1.Message.setField(this, 2, value);
+        pb_1.Message.setOneofField(this, 2, this.#one_of_decls[0], value);
+    }
+    get hasName() {
+        return pb_1.Message.getField(this, 2) != null;
+    }
+    get coverPhotoId() {
+        return pb_1.Message.getFieldWithDefault(this, 3, "") as string;
+    }
+    set coverPhotoId(value: string) {
+        pb_1.Message.setOneofField(this, 3, this.#one_of_decls[1], value);
+    }
+    get hasCoverPhotoId() {
+        return pb_1.Message.getField(this, 3) != null;
+    }
+    get _name() {
+        const cases: {
+            [index: number]: "none" | "name";
+        } = {
+            0: "none",
+            2: "name"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [2])];
+    }
+    get _coverPhotoId() {
+        const cases: {
+            [index: number]: "none" | "coverPhotoId";
+        } = {
+            0: "none",
+            3: "coverPhotoId"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [3])];
     }
     static fromObject(data: {
         id?: string;
         name?: string;
+        coverPhotoId?: string;
     }): UpdateAlbumRequest {
         const message = new UpdateAlbumRequest({});
         if (data.id != null) {
@@ -44,18 +81,25 @@ export class UpdateAlbumRequest extends pb_1.Message {
         if (data.name != null) {
             message.name = data.name;
         }
+        if (data.coverPhotoId != null) {
+            message.coverPhotoId = data.coverPhotoId;
+        }
         return message;
     }
     toObject() {
         const data: {
             id?: string;
             name?: string;
+            coverPhotoId?: string;
         } = {};
         if (this.id != null) {
             data.id = this.id;
         }
         if (this.name != null) {
             data.name = this.name;
+        }
+        if (this.coverPhotoId != null) {
+            data.coverPhotoId = this.coverPhotoId;
         }
         return data;
     }
@@ -65,8 +109,10 @@ export class UpdateAlbumRequest extends pb_1.Message {
         const writer = w || new pb_1.BinaryWriter();
         if (this.id.length)
             writer.writeString(1, this.id);
-        if (this.name.length)
+        if (this.hasName)
             writer.writeString(2, this.name);
+        if (this.hasCoverPhotoId)
+            writer.writeString(3, this.coverPhotoId);
         if (!w)
             return writer.getResultBuffer();
     }
@@ -81,6 +127,9 @@ export class UpdateAlbumRequest extends pb_1.Message {
                     break;
                 case 2:
                     message.name = reader.readString();
+                    break;
+                case 3:
+                    message.coverPhotoId = reader.readString();
                     break;
                 default: reader.skipField();
             }

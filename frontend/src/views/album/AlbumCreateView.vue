@@ -83,7 +83,7 @@ export default Vue.extend({
             }
 
             this.snackbar = 'Album created';
-            await this.$router.push(`/album/view?id=${result}`);
+            await this.$router.push(`/album/edit?id=${result}`);
         }
     }
 })

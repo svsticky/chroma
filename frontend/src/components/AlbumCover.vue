@@ -21,7 +21,7 @@
                 <v-icon>mdi-pencil-outline</v-icon>
             </v-btn>
         </v-card-title>
-        <v-card-text>
+        <v-card-text @click="openAlbum">
             <v-img
                 v-if="album.coverPhotoId == null"
                 class="mx-auto"
@@ -33,8 +33,8 @@
             <v-img
                 v-else
                 class="mx-auto"
-                width="30%"
-                aspect-ratio="1"
+                width="80%"
+                aspect-ratio="1.7778"
                 cover
                 lazy-src="@/assets/hoofd_outline_kleur.svg"
                 :src="coverPhotoUrl">
@@ -56,6 +56,7 @@
 import Vue, {PropType} from 'vue';
 import {AlbumModel, deleteAlbum} from "@/views/album/album";
 import {errorText, Storage} from "@/api";
+import {getPhoto} from "@/views/photo/photo";
 
 interface Data {
     snackbar: string | null,
@@ -94,7 +95,19 @@ export default Vue.extend({
     },
     methods: {
         async loadCoverPhoto() {
+            if(this.album.coverPhotoId == null) {
+                return;
+            }
 
+            this.loading = true;
+            const result = await getPhoto(this.album.coverPhotoId);
+            this.loading = false;
+            if(result == undefined) {
+                this.snackbar = errorText;
+                return;
+            }
+
+            this.coverPhotoBytes = result.photoBytes;
         },
         async deleteAlbum() {
             const result = await deleteAlbum(this.album.id);
@@ -106,6 +119,9 @@ export default Vue.extend({
         },
         requestUpdate() {
             this.$emit('request-update');
+        },
+        openAlbum() {
+            this.$router.push(`/album/view?id=${this.album.id}`)
         }
     }
 })

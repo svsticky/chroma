@@ -6,15 +6,19 @@
                 :key="idx">
                 <v-col cols="12" sm="12" md="6">
                     <PhotoCover
-                        :can-delete="edit && isAdmin"
+                        :can-edit="edit && isAdmin"
+                        :is-cover="albumModel?.coverPhotoId === pair[0].id"
                         :bytes="pair[0].photoBytes"
+                        @select-cover="selectCover(pair[0])"
                         @deleted="deletePhoto(pair[0])"
                     ></PhotoCover>
                 </v-col>
                 <v-col v-if="pair.length === 2">
                     <PhotoCover
-                        :can-delete="edit && isAdmin"
+                        :can-edit="edit && isAdmin"
+                        :is-cover="albumModel?.coverPhotoId === pair[1].id"
                         :bytes="pair[1].photoBytes"
+                        @select-cover="selectCover(pair[1])"
                         @deleted="deletePhoto(pair[1])"
                     ></PhotoCover>
                 </v-col>
@@ -32,11 +36,13 @@ import Vue from 'vue';
 import {deletePhoto, listPhotosInAlbum, PhotoModel} from "@/views/photo/photo";
 import PhotoCover from "@/components/PhotoCover.vue";
 import {errorText, Storage} from "@/api";
+import {AlbumModel, getAlbum, saveEditedAlbum} from "@/views/album/album";
 
 interface Data {
     snackbar: string | null,
     photos: PhotoModel[],
     loading: boolean,
+    albumModel: AlbumModel | null,
 }
 
 export default Vue.extend({
@@ -57,6 +63,7 @@ export default Vue.extend({
             snackbar: null,
             photos: [],
             loading: true,
+            albumModel: null,
         }
     },
     watch: {
@@ -77,6 +84,7 @@ export default Vue.extend({
     },
     async mounted() {
         await this.loadPhotos();
+        await this.loadCoverData();
     },
     methods: {
         async loadPhotos() {
@@ -91,10 +99,30 @@ export default Vue.extend({
 
             this.photos = result;
         },
+        async loadCoverData() {
+            const result = await getAlbum(this.albumId);
+
+            if(result == undefined) {
+                this.snackbar = errorText;
+                return;
+            }
+
+            this.albumModel = result;
+        },
         async deletePhoto(photo: PhotoModel) {
             const result = await deletePhoto(photo.id);
             if(result) {
                 await this.loadPhotos();
+            } else {
+                this.snackbar = errorText;
+            }
+        },
+        async selectCover(photo: PhotoModel) {
+            this.albumModel!.coverPhotoId = photo.id;
+            const result = await saveEditedAlbum(this.albumModel!);
+
+            if(result) {
+                this.snackbar = "Cover updated";
             } else {
                 this.snackbar = errorText;
             }
