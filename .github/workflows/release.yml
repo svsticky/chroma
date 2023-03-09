@@ -1,0 +1,111 @@
+name: release
+on:
+  push: {}
+#    tags:
+#    - '**'
+
+jobs:
+  server-fmt:
+    name: server-fmt
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        profile: minimal
+        components: rustfmt
+    - uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all --check --manifest-path server/Cargo.toml
+
+  create-release:
+    name: create-release
+    needs: server-fmt
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+  build-server-musl:
+    name: build-server-musl
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: sudo apt install gcc musl-tools cmake clang protobuf-compiler
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        profile: minimal
+        target: x86_64-unknown-linux-musl
+    - uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release --target x86_64-unknown-linux-musl --manifest-path server/Cargo.toml
+
+  build-server-gnu:
+    name: build-server-gnu
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: sudo apt install gcc cmake clang protobuf-compiler
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        profile: minimal
+        target: x86_64-unknown-linux-gnu
+    - uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release --target x86_64-unknown-linux-gnu --manifest-path server/Cargo.toml
+
+  build-docs:
+    name: build-docs
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+    - run: sudo apt install gcc cmake clang
+    - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+    - uses: actions-rs/cargo
+      with:
+        command: install
+        args: mdbook
+    - run: cd docs && mdbook build
+
+  build-frontend:
+    name: build-frontend
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set Node.js 16.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16.x
+    - name: Run install
+        uses: borales/actions-yarn@v4
+        with:
+          dir: frontend
+          cmd: install
+    - name: Build
+        uses: borales/actions-yarn@v4
+        with:
+          dir: frontend
+          cmd: build

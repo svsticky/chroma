@@ -64,7 +64,8 @@ pub struct Config {
     /// No existing query parameters should be in the URI.
     /// E.g. `https://foo.example.com/logged_in` will become
     /// `https://foo.example.com/logged_in?session_id={AN ID}&is_admin=[true|false]`.
-    pub login_complete_redirect_uri: String, // ANCHOR_END: config
+    pub login_complete_redirect_uri: String, 
+    // ANCHOR_END: config
 }
 
 impl Config {
