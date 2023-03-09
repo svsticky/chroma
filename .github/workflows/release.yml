@@ -16,7 +16,7 @@ jobs:
         profile: minimal
         components: rustfmt
     - run: cargo fmt --all --check
-      working-directory: server 
+      working-directory: ../server 
 
   create-release:
     name: create-release
