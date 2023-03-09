@@ -54,11 +54,12 @@ impl Database {
 
         let pool = PgPoolOptions::new()
             .max_connections(5)
-            .connect_with(PgConnectOptions::new()
-                .host(host)
-                .database(database)
-                .username(user)
-                .password(passw)
+            .connect_with(
+                PgConnectOptions::new()
+                    .host(host)
+                    .database(database)
+                    .username(user)
+                    .password(passw),
             )
             .await?;
 
