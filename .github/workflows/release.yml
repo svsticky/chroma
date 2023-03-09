@@ -83,7 +83,7 @@ jobs:
         toolchain: stable
         profile: minimal
         override: true
-    - uses: actions-rs/cargo
+    - uses: actions-rs/cargo@v1
       with:
         command: install
         args: mdbook
