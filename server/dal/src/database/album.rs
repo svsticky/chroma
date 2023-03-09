@@ -62,7 +62,7 @@ impl<'a> Album<'a> {
         let id = Self::generate_id();
         let created_at = OffsetDateTime::now_utc().unix_timestamp();
 
-        sqlx::query("INSERT INTO album_metadata (id, name, created_at) VALUES (?, ?, ?)")
+        sqlx::query("INSERT INTO album_metadata (id, name, created_at) VALUES ($1, $2, $3)")
             .bind(&id)
             .bind(&name)
             .bind(created_at)
@@ -83,7 +83,7 @@ impl<'a> Album<'a> {
         id: S,
     ) -> DbResult<Option<Album<'a>>> {
         let album: Option<_Album> = sqlx::query_as(
-            "SELECT id, name, created_at, cover_photo_id FROM album_metadata WHERE id = ?",
+            "SELECT id, name, created_at, cover_photo_id FROM album_metadata WHERE id = $1",
         )
         .bind(id.as_ref())
         .fetch_optional(&**db)
@@ -93,7 +93,7 @@ impl<'a> Album<'a> {
     }
 
     pub async fn update_cover_photo(&mut self, cover_photo: &Photo<'_>) -> DbResult<()> {
-        sqlx::query("UPDATE album_metadata SET cover_photo_id = ? WHERE id = ?")
+        sqlx::query("UPDATE album_metadata SET cover_photo_id = $1 WHERE id = $2")
             .bind(&cover_photo.id)
             .bind(&self.id)
             .execute(&**self.db)
@@ -105,7 +105,7 @@ impl<'a> Album<'a> {
 
     pub async fn update_name(&mut self, new_name: impl Into<Cow<'_, str>>) -> DbResult<()> {
         let new_name = new_name.into();
-        sqlx::query("UPDATE album_metadata SET name = ? WHERE id = ?")
+        sqlx::query("UPDATE album_metadata SET name = $1 WHERE id = $2")
             .bind(&new_name)
             .bind(&self.id)
             .execute(&**self.db)
@@ -119,17 +119,17 @@ impl<'a> Album<'a> {
 
         // Must satisfy the foreign key constraint
         // So unset the cover photo before removing all photoss
-        sqlx::query("UPDATE album_metadata SET cover_photo_id = NULL WHERE id = ?")
+        sqlx::query("UPDATE album_metadata SET cover_photo_id = NULL WHERE id = $1")
             .bind(&self.id)
             .execute(&mut tx)
             .await?;
 
-        sqlx::query("DELETE FROM photo_metadata WHERE album_id = ?")
+        sqlx::query("DELETE FROM photo_metadata WHERE album_id = $1")
             .bind(&self.id)
             .execute(&mut tx)
             .await?;
 
-        sqlx::query("DELETE FROM album_metadata WHERE id = ?")
+        sqlx::query("DELETE FROM album_metadata WHERE id = $1")
             .bind(&self.id)
             .execute(&mut tx)
             .await?;

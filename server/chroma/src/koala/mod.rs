@@ -20,7 +20,8 @@ pub struct ExchangeResponse {
     pub created_at: String,
     pub email: String,
     pub credentials_type: CredentialsType,
-    pub credentials_id: u32,
+    /// Koala ID
+    pub credentials_id: i32,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
@@ -75,7 +76,7 @@ pub async fn exchange_code<S: AsRef<str>>(
 
 #[derive(Debug, Deserialize)]
 pub struct TokenInfo {
-    pub resource_owner_id: u32,
+    pub resource_owner_id: i32,
     pub expires_in: i64,
     pub created_at: i64,
 }

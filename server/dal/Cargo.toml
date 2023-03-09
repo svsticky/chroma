@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-refinery = { version = "0.8.7", default-features = false, features = ["mysql"] }
-sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "mysql"] }
+refinery = { version = "0.8.7", default-features = false, features = ["tokio-postgres"] }
+sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "postgres"] }
 thiserror = "1.0.38"
 aws-types = "0.54.1"
 aws-credential-types = { version = "0.54.1", features = ["hardcoded-credentials"] }

@@ -1,6 +1,5 @@
 use refinery::config::{Config, ConfigDbType};
-use sqlx::mysql::{MySqlConnectOptions, MySqlPoolOptions};
-use sqlx::{MySql, Pool};
+use sqlx::{Pool, Postgres};
 use std::ops::Deref;
 use thiserror::Error;
 
@@ -11,6 +10,7 @@ mod user;
 pub use album::*;
 pub use photo::*;
 pub use sqlx::error::Error as DatabaseError;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 pub use user::*;
 
 pub type DbResult<T> = Result<T, DatabaseError>;
@@ -29,10 +29,10 @@ pub enum DatabaseInitError {
 }
 
 #[derive(Debug, Clone)]
-pub struct Database(Pool<MySql>);
+pub struct Database(Pool<Postgres>);
 
 impl Deref for Database {
-    type Target = Pool<MySql>;
+    type Target = Pool<Postgres>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -45,19 +45,22 @@ impl Database {
         passw: &str,
         database: &str,
     ) -> Result<Database, DatabaseInitError> {
-        let mut cfg = Config::new(ConfigDbType::Mysql)
+        let mut cfg = Config::new(ConfigDbType::Postgres)
             .set_db_host(host)
             .set_db_name(database)
             .set_db_user(user)
             .set_db_pass(passw);
-        migrations::migrations::runner().run(&mut cfg)?;
+        migrations::migrations::runner().run_async(&mut cfg).await?;
 
-        let opts = MySqlConnectOptions::new()
-            .host(host)
-            .database(database)
-            .username(user)
-            .password(passw);
-        let pool = MySqlPoolOptions::new().connect_with(opts).await?;
+        let pool = PgPoolOptions::new()
+            .max_connections(5)
+            .connect_with(PgConnectOptions::new()
+                .host(host)
+                .database(database)
+                .username(user)
+                .password(passw)
+            )
+            .await?;
 
         Ok(Database(pool))
     }

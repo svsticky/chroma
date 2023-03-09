@@ -38,37 +38,37 @@ services:
     networks:
       - chroma
 
-  chroma:
-    container_name: chroma
-    image: chroma:latest
-    restart: always
-    # Koala is a pain, just use host networking to make my life easiers
-    network_mode: host
-    build: ./
-    ports:
-      - "8000:8000"
-    # TODO: Find a good alternative to this
-    # Probably some kind of healthcheck on the DB
-    entrypoint: ["sh", "-c", "sleep 2 && /usr/local/bin/chroma"]
-    environment:
-      - "DB_HOST=localhost"
-      - "DB_USERNAME=sticky_chroma"
-      - "DB_PASSWORD=sticky_chroma"
-      - "DB_DATABASE=sticky_chroma"
-      - "S3_BUCKET_NAME=sticky-chroma"
-      - "S3_REGION=us-east-1" # MinIO default
-      - "S3_ENDPOINT_URL=https://localhost:9000"
-      - "KOALA_BASE_REDIRECT_URI=http://koala.rails.local:3000"
-      - "KOALA_BASE_URI=http://koala.rails.local:3000"
-      - "KOALA_OAUTH_REDIRECT_URI=http://localhost:8000/api/v1/login"
-      - "LOGIN_COMPLETE_REDIRECT_URI=https://localhost:4943x  0/logged_in"
-
-      # Configure manually
-      - "RUST_LOG=INFO"
-      - "S3_ACCESS_KEY_ID=sticky_chroma"
-      - "S3_SECRET_ACCESS_KEY=sticky_chroma"
-      - "KOALA_CLIENT_ID=N_z3sAWuQWNZ03gNTTaIw0RvK49D11vx_W1WrsZJUic"
-      - "KOALA_CLIENT_SECRET=HWCo678-c3l33eYGQi9ASvc5Hz59GYBl6QZxauEZcO0"
-    depends_on:
-      - minio
-      - mariadb
+#  chroma:
+#    container_name: chroma
+#    image: chroma:latest
+#    restart: always
+#    # Koala is a pain, just use host networking to make my life easiers
+#    network_mode: host
+#    build: ./
+#    ports:
+#      - "8000:8000"
+#    # TODO: Find a good alternative to this
+#    # Probably some kind of healthcheck on the DB
+#    entrypoint: ["sh", "-c", "sleep 2 && /usr/local/bin/chroma"]
+#    environment:
+#      - "DB_HOST=localhost"
+#      - "DB_USERNAME=sticky_chroma"
+#      - "DB_PASSWORD=sticky_chroma"
+#      - "DB_DATABASE=sticky_chroma"
+#      - "S3_BUCKET_NAME=sticky-chroma"
+#      - "S3_REGION=us-east-1" # MinIO default
+#      - "S3_ENDPOINT_URL=https://localhost:9000"
+#      - "KOALA_BASE_REDIRECT_URI=http://koala.rails.local:3000"
+#      - "KOALA_BASE_URI=http://koala.rails.local:3000"
+#      - "KOALA_OAUTH_REDIRECT_URI=http://localhost:8000/api/v1/login"
+#      - "LOGIN_COMPLETE_REDIRECT_URI=https://localhost:4943x  0/logged_in"
+#
+#      # Configure manually
+#      - "RUST_LOG=INFO"
+#      - "S3_ACCESS_KEY_ID=sticky_chroma"
+#      - "S3_SECRET_ACCESS_KEY=sticky_chroma"
+#      - "KOALA_CLIENT_ID=N_z3sAWuQWNZ03gNTTaIw0RvK49D11vx_W1WrsZJUic"
+#      - "KOALA_CLIENT_SECRET=HWCo678-c3l33eYGQi9ASvc5Hz59GYBl6QZxauEZcO0"
+#    depends_on:
+#      - minio
+#      - mariadb

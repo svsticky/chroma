@@ -62,7 +62,7 @@ impl<'a> Photo<'a> {
         let id = Self::generate_id();
         let created_at = OffsetDateTime::now_utc().unix_timestamp();
 
-        sqlx::query("INSERT INTO photo_metadata (id, album_id, created_at) VALUES (?, ?, ?)")
+        sqlx::query("INSERT INTO photo_metadata (id, album_id, created_at) VALUES ($1, $2, $3)")
             .bind(&id)
             .bind(&album.id)
             .bind(created_at)
@@ -79,7 +79,7 @@ impl<'a> Photo<'a> {
 
     pub async fn get_by_id<S: AsRef<str>>(db: &'a Database, id: S) -> DbResult<Option<Photo<'a>>> {
         let photo: Option<_Photo> =
-            sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata WHERE id = ?")
+            sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata WHERE id = $1")
                 .bind(id.as_ref())
                 .fetch_optional(&**db)
                 .await?;
@@ -91,7 +91,7 @@ impl<'a> Photo<'a> {
         let mut tx = self.db.begin().await?;
         // Remove the photo from the album cover
         sqlx::query(
-            "UPDATE album_metadata SET cover_photo_id = NULL WHERE id = ? AND cover_photo_id = ?",
+            "UPDATE album_metadata SET cover_photo_id = NULL WHERE id = $1 AND cover_photo_id = $2",
         )
         .bind(&self.album_id)
         .bind(&self.id)
@@ -99,7 +99,7 @@ impl<'a> Photo<'a> {
         .await?;
 
         // Remove the photo metadata
-        sqlx::query("DELETE FROM photo_metadata WHERE id = ?")
+        sqlx::query("DELETE FROM photo_metadata WHERE id = $1")
             .bind(&self.id)
             .execute(&mut tx)
             .await?;
@@ -122,7 +122,7 @@ impl<'a> Photo<'a> {
         album_id: S,
     ) -> DbResult<Vec<Photo<'a>>> {
         let selfs: Vec<_Photo> = sqlx::query_as(
-            "SELECT id, album_id, created_at FROM photo_metadata WHERE album_id = ?",
+            "SELECT id, album_id, created_at FROM photo_metadata WHERE album_id = $1",
         )
         .bind(album_id.as_ref())
         .fetch_all(&**db)
