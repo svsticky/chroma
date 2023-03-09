@@ -15,10 +15,8 @@ jobs:
         override: true
         profile: minimal
         components: rustfmt
-    - uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: --all --check --manifest-path server/Cargo.toml
+    - run: cargo fmt --all --check
+      working-directory: server 
 
   create-release:
     name: create-release
@@ -49,10 +47,8 @@ jobs:
         override: true
         profile: minimal
         target: x86_64-unknown-linux-musl
-    - uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release --target x86_64-unknown-linux-musl --manifest-path server/Cargo.toml
+    - run: cargo build --release --target x86_64-unknown-linux-musl
+      working-directory: server
 
   build-server-gnu:
     name: build-server-gnu
@@ -67,10 +63,8 @@ jobs:
         override: true
         profile: minimal
         target: x86_64-unknown-linux-gnu
-    - uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release --target x86_64-unknown-linux-gnu --manifest-path server/Cargo.toml
+    - run: cargo build --release --target x86_64-unknown-linux-gnu
+      working-directory: server
 
   build-docs:
     name: build-docs
@@ -87,7 +81,8 @@ jobs:
       with:
         command: install
         args: mdbook
-    - run: cd docs && mdbook build
+    - run: mdbook build
+      working-directory: docs
 
   build-frontend:
     name: build-frontend
