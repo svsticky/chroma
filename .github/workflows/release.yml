@@ -50,6 +50,15 @@ jobs:
         target: x86_64-unknown-linux-musl
     - run: cargo build --release --target x86_64-unknown-linux-musl
       working-directory: server
+    - name: Upload artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./server/target/x86_64-unknown-linux-musl/release/chroma
+        asset_name: server-x86_64-unknown-linux-musl
+        asset_content_type: application/octet-stream
 
   build-server-gnu:
     name: build-server-gnu
@@ -66,12 +75,22 @@ jobs:
         target: x86_64-unknown-linux-gnu
     - run: cargo build --release --target x86_64-unknown-linux-gnu
       working-directory: server
+    - name: Upload artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./server/target/x86_64-unknown-linux-gnu/release/chroma
+        asset_name: server-x86_64-unknown-linux-gnu
+        asset_content_type: application/octet-stream
 
   build-docs:
     name: build-docs
     needs: create-release
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v3
     - run: sudo apt install gcc cmake clang
     - uses: actions-rs/toolchain@v1
       with:
