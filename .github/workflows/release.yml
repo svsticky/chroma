@@ -79,10 +79,10 @@ jobs:
     steps:
     - run: sudo apt install gcc cmake clang
     - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
     - uses: actions-rs/cargo
       with:
         command: install
@@ -100,12 +100,12 @@ jobs:
       with:
         node-version: 16.x
     - name: Run install
-        uses: borales/actions-yarn@v4
-        with:
-          dir: frontend
-          cmd: install
+      uses: borales/actions-yarn@v4
+      with:
+        dir: frontend
+        cmd: install
     - name: Build
-        uses: borales/actions-yarn@v4
-        with:
-          dir: frontend
-          cmd: build
+      uses: borales/actions-yarn@v4
+      with:
+        dir: frontend
+        cmd: build
