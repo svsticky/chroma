@@ -19,25 +19,9 @@ jobs:
     - run: cargo fmt --all --check
       working-directory: server
 
-  create-release:
-    name: create-release
-    needs: server-fmt
-    runs-on: ubuntu-latest
-    steps:
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@latest
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-
   build-server-musl:
     name: build-server-musl
-    needs: create-release
+    needs: server-fmt
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -51,18 +35,14 @@ jobs:
     - run: cargo build --release --target x86_64-unknown-linux-musl
       working-directory: server
     - name: Upload artifact
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
+      uses: actions/upload-artifact@v3
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./server/target/x86_64-unknown-linux-musl/release/chroma
-        asset_name: server-x86_64-unknown-linux-musl
-        asset_content_type: application/octet-stream
+        name: server-x86_64-unknown-linux-musl
+        path: ./server/target/x86_64-unknown-linux-musl/release/chroma
 
   build-server-gnu:
     name: build-server-gnu
-    needs: create-release
+    needs: server-fmt
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -76,22 +56,19 @@ jobs:
     - run: cargo build --release --target x86_64-unknown-linux-gnu
       working-directory: server
     - name: Upload artifact
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
+      uses: actions/upload-artifact@v3
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./server/target/x86_64-unknown-linux-gnu/release/chroma
-        asset_name: server-x86_64-unknown-linux-gnu
-        asset_content_type: application/octet-stream
+        name: server-x86_64-unknown-linux-gnu
+        path: ./server/target/x86_64-unknown-linux-gnu/release/chroma
+
 
   build-docs:
     name: build-docs
-    needs: create-release
+    needs: server-fmt
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - run: sudo apt install gcc cmake clang
+    - run: sudo apt install gcc cmake clang gzip tar
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
@@ -103,10 +80,18 @@ jobs:
         args: mdbook
     - run: mdbook build
       working-directory: docs
+    - run: tar -czf docs.tar.gz book/*
+      working-directory: docs 
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: docs.tar.gz
+        path: ./docs/docs.tar.gz
+
 
   build-frontend:
     name: build-frontend
-    needs: create-release
+    needs: server-fmt
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -124,3 +109,41 @@ jobs:
       with:
         dir: frontend
         cmd: build
+    - run: tar -czf frontend.tar.gz dist/*
+      working-directory: frontend
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend.tar.gz
+        path: ./frontend/frontend.tar.gz
+
+
+  create-release:
+    name: create-release
+    needs:
+    - build-server-musl
+    - build-server-gnu
+    - build-docs
+    - build-frontend
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download all workflow run artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@latest
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          server-x86_64-unknown-linux-musl
+          server-x86_64-unknown-linux-gnu
+          docs.tar.gz
+          frontend.tar.gz
