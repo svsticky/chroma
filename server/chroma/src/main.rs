@@ -58,7 +58,10 @@ async fn main() -> Result<()> {
             .app_data(WebData::new(appdata.clone()))
             .configure(routes::Router::configure)
     })
-    .bind("0.0.0.0:8000")?
+    .bind(&format!(
+        "0.0.0.0:{}",
+        std::env::var("HTTP_PORT").unwrap_or("8080".into())
+    ))?
     .run()
     .await?;
 
