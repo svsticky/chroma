@@ -175,6 +175,10 @@ jobs:
         tag_name: ${{ github.ref }}
         release_name: Release ${{ github.ref }}
         draft: false
+    
+    - name: ls
+      run: ls -la
+
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
