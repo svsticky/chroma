@@ -5,7 +5,7 @@ networks:
     external: false
 
 volumes:
-  mariadb_data:
+  postgres_data_chroma:
     driver: local
   minio_data:
     driver: local
@@ -23,18 +23,18 @@ services:
     networks:
       - chroma
 
-  mariadb:
-    container_name: chroma_mariadb
-    image: mariadb
+  postgres:
+    container_name: chroma_postgres
+    image: postgres
     volumes:
-      - "mariadb_data:/var/lib/mysql:rw"
+      - "postgres_data_chroma:/var/lib/postgresql/data/pgdata:rw"
     ports:
-      - "3306:3306"
+      - "5432:5432"
     environment:
-      - "MARIADB_ROOT_PASSWORD=secure123"
-      - "MARIADB_DATABASE=sticky_chroma"
-      - "MARIADB_USER=sticky_chroma"
-      - "MARIADB_PASSWORD=sticky_chroma"
+      - "POSTGRES_DB=sticky_chroma"
+      - "POSTGRES_USER=sticky_chroma"
+      - "POSTGRES_PASSWORD=sticky_chroma"
+      - "PGDATA=/var/lib/postgresql/data/pgdata"
     networks:
       - chroma
 
