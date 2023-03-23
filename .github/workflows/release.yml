@@ -179,7 +179,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          server-x86_64-unknown-linux-musl
-          server-x86_64-unknown-linux-gnu
-          docs.tar.gz
-          frontend.tar.gz
+          server-x86_64-unknown-linux-musl/server-x86_64-unknown-linux-musl
+          server-x86_64-unknown-linux-gnu/server-x86_64-unknown-linux-gnu
+          docs.tar.gz/docs.tar.gz
+          frontend.tar.gz/frontend.tar.gz
