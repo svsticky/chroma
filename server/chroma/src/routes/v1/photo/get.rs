@@ -6,6 +6,7 @@ use actix_web::web;
 use dal::database::Photo;
 use proto::GetPhotoResponse;
 use serde::Deserialize;
+use dal::s3::PhotoQuality;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -29,6 +30,6 @@ pub async fn get(
         .ok_or(Error::NotFound)?;
 
     Ok(Payload(GetPhotoResponse {
-        photo: Some(photo.photo_to_proto(&data.s3).await?),
+        photo: Some(photo.photo_to_proto(&data.s3, PhotoQuality::Original).await?),
     }))
 }

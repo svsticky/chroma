@@ -5,9 +5,13 @@ use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use dal::database::{Album, Photo};
 use image::io::Reader;
-use image::{ImageFormat, ImageOutputFormat};
+use image::{DynamicImage, GenericImageView, ImageFormat, ImageOutputFormat};
 use proto::CreatePhotoRequest;
 use std::io::Cursor;
+use image::codecs::png::PngDecoder;
+use image::imageops::FilterType;
+use tracing::{info, warn};
+use dal::s3::PhotoQuality;
 
 /// Create a new photo in an existing album.
 ///
@@ -58,10 +62,71 @@ pub async fn create(
 
     // Upload the photo to S3
     // If this fails, remove the metadata again
-    if let Err(e) = data.s3.create_photo(&photo.id, png_image).await {
+    if let Err(e) = data.s3.create_photo(&photo.id, png_image.clone(), PhotoQuality::Original).await {
         photo.delete().await?;
         return Err(e.into());
     }
 
+    // Spawn a job to create thumbnails
+    let data = data.clone();
+    tokio::spawn(async move {
+        let id = photo.id;
+        let photo = png_image;
+
+        let cursor = Cursor::new(photo);
+
+        let decoder = match PngDecoder::new(cursor) {
+            Ok(d) => d,
+            Err(e) => {
+                warn!("Failed to create PNG decoder: {e}");
+                return;
+            }
+        };
+
+        let img = match DynamicImage::from_decoder(decoder) {
+            Ok(img) => img,
+            Err(e) => {
+                warn!("Failed to open DynamicImage from decoder: {e}");
+                return;
+            }
+        };
+
+        match convert_quality(&img, 400) {
+            Ok(w400) => match data.s3.create_photo(&id, w400, PhotoQuality::W400).await {
+                Ok(_) => {},
+                Err(e) => warn!("Failed to upload W400 photo: {e}"),
+            },
+            Err(e) => warn!("Failed to scale to W400: {e}"),
+        }
+
+        match convert_quality(&img, 1600) {
+            Ok(w1600) => match data.s3.create_photo(&id, w1600, PhotoQuality::W1600).await {
+                Ok(_) => {},
+                Err(e) => warn!("Failed to upload W1600 photo: {e}"),
+            },
+            Err(e) => warn!("Failed to scale to W1600: {e}"),
+        }
+    });
+
     Ok(Empty)
+}
+
+fn convert_quality(img: &DynamicImage, target_width: u32) -> color_eyre::Result<Vec<u8>> {
+    let (width, height) = img.dimensions();
+
+    info!("Converting {width}x{height} to W{target_width}");
+
+    let target_height = (height as f32 / (width as f32 / target_width as f32)).round() as u32;
+    let scaled = if target_width > width {
+        img.resize(target_width, target_height, FilterType::Nearest)
+    } else {
+        img.thumbnail(target_width, target_height)
+    };
+
+    let mut cursor = Cursor::new(Vec::with_capacity((target_width * target_height) as usize));
+    scaled
+        .write_to(&mut cursor, ImageOutputFormat::Png)
+        .map_err(|_| Error::ImageEncoding)?;
+
+    Ok(cursor.into_inner())
 }

@@ -1,5 +1,5 @@
 use crate::database::{Album, Database, DbResult};
-use crate::s3::{S3Error, S3};
+use crate::s3::{S3Error, S3, PhotoQuality};
 use rand::Rng;
 use sqlx::FromRow;
 use time::OffsetDateTime;
@@ -39,8 +39,8 @@ impl<'a> Photo<'a> {
     /// # Errors
     ///
     /// If fetching the photo's contents from S3 failed
-    pub async fn photo_to_proto(self, s3: &S3) -> Result<proto::Photo, S3Error> {
-        let photo_bytes = s3.get_photo_by_id(&self.id).await?;
+    pub async fn photo_to_proto(self, s3: &S3, quality_preference: PhotoQuality) -> Result<proto::Photo, S3Error> {
+        let photo_bytes = s3.get_photo_by_id(&self.id, quality_preference).await?;
         Ok(proto::Photo {
             id: self.id,
             album_id: self.album_id,
