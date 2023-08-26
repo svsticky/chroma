@@ -1,9 +1,10 @@
 [workspace]
+resolver = "2"
 members = [
 	"chroma",
 	"proto",
 	"dal",
 ]
 
-[patch.crates-io]
-libc = { git = 'https://github.com/rust-lang/libc.git', rev = "e71a4c0b1fd40050f50844e2a752576bcb6b5edb" }
+#[patch.crates-io]
+#libc = { git = 'https://github.com/rust-lang/libc.git', rev = "e71a4c0b1fd40050f50844e2a752576bcb6b5edb" }

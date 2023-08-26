@@ -4,7 +4,8 @@ use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::{Album, Photo};
-use dal::s3::{PhotoQuality, S3Error};
+use dal::storage_engine::PhotoQuality;
+use dal::storage_engine::StorageEngineError;
 use futures::future::join_all;
 use proto::GetAlbumResponse;
 use serde::Deserialize;
@@ -34,11 +35,11 @@ pub async fn get(
     let photos = join_all(
         photos
             .into_iter()
-            .map(|photo| photo.photo_to_proto(&data.s3, PhotoQuality::Original)),
+            .map(|photo| photo.photo_to_proto(&data.storage, PhotoQuality::Original)),
     )
     .await
     .into_iter()
-    .collect::<Result<Vec<_>, S3Error>>()?;
+    .collect::<Result<Vec<_>, StorageEngineError>>()?;
 
     Ok(Payload(GetAlbumResponse {
         photos,
