@@ -60,7 +60,7 @@ async fn main() -> Result<()> {
     })
     .bind(&format!(
         "0.0.0.0:{}",
-        std::env::var("HTTP_PORT").unwrap_or("8080".into())
+        std::env::var("HTTP_PORT").unwrap_or("8000".into())
     ))?
     .run()
     .await?;
