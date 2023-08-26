@@ -30,7 +30,9 @@ pub async fn delete(
     let id = photo.id.clone();
     photo.delete().await?;
 
-    data.storage.delete_photo(&id, PhotoQuality::Original).await?;
+    data.storage
+        .delete_photo(&id, PhotoQuality::Original)
+        .await?;
     data.storage.delete_photo(&id, PhotoQuality::W1600).await?;
     data.storage.delete_photo(&id, PhotoQuality::W400).await?;
 

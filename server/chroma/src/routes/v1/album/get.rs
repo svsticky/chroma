@@ -4,11 +4,11 @@ use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::{Album, Photo};
+use dal::storage_engine::PhotoQuality;
 use dal::storage_engine::StorageEngineError;
 use futures::future::join_all;
 use proto::GetAlbumResponse;
 use serde::Deserialize;
-use dal::storage_engine::PhotoQuality;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {

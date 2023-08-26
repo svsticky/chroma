@@ -1,9 +1,9 @@
 use crate::s3::{S3Config, S3Error, S3InitError, S3};
+use aws_sdk_s3::error::GetObjectErrorKind;
+use aws_smithy_http::result::SdkError;
 use std::io;
 use std::io::ErrorKind;
 use std::path::PathBuf;
-use aws_sdk_s3::error::GetObjectErrorKind;
-use aws_smithy_http::result::SdkError;
 use strum_macros::Display;
 use thiserror::Error;
 use tokio::fs;
@@ -69,41 +69,35 @@ impl StorageEngine {
         let quality_id = fmt_id_with_quality(photo_id.as_ref(), &quality_preference);
 
         match &self.0 {
-            StorageEngineMode::S3(s3) => {
-                match s3.get_photo_by_id(quality_id).await {
-                    Ok(photo) => Ok(photo),
-                    Err(S3Error::GetObject(e)) => {
-                        match &e {
-                            SdkError::ServiceError(svc_e) => match svc_e.err().kind {
-                                GetObjectErrorKind::NoSuchKey(_) => {
-                                    if quality_preference == PhotoQuality::Original {
-                                        Err(StorageEngineError::S3(S3Error::GetObject(e)))
-                                    } else {
-                                        Ok(s3.get_photo_by_id(photo_id.as_ref()).await?)
-                                    }
-                                },
-                                _ => Err(StorageEngineError::S3(S3Error::GetObject(e)))
-                            },
-                            _ => Err(StorageEngineError::S3(S3Error::GetObject(e)))
-                        }
-                    },
-                    Err(e) => Err(StorageEngineError::S3(e)),
-                }
-            },
-            StorageEngineMode::File(engine) => {
-                match engine.get_photo_by_id(quality_id).await {
-                    Ok(photo) => Ok(photo),
-                    Err(e) => match e.kind() {
-                        ErrorKind::NotFound => {
+            StorageEngineMode::S3(s3) => match s3.get_photo_by_id(quality_id).await {
+                Ok(photo) => Ok(photo),
+                Err(S3Error::GetObject(e)) => match &e {
+                    SdkError::ServiceError(svc_e) => match svc_e.err().kind {
+                        GetObjectErrorKind::NoSuchKey(_) => {
                             if quality_preference == PhotoQuality::Original {
-                                Err(e.into())
+                                Err(StorageEngineError::S3(S3Error::GetObject(e)))
                             } else {
-                                Ok(engine.get_photo_by_id(photo_id.as_ref()).await?)
+                                Ok(s3.get_photo_by_id(photo_id.as_ref()).await?)
                             }
-                        },
-                        _ => Err(e.into())
+                        }
+                        _ => Err(StorageEngineError::S3(S3Error::GetObject(e))),
+                    },
+                    _ => Err(StorageEngineError::S3(S3Error::GetObject(e))),
+                },
+                Err(e) => Err(StorageEngineError::S3(e)),
+            },
+            StorageEngineMode::File(engine) => match engine.get_photo_by_id(quality_id).await {
+                Ok(photo) => Ok(photo),
+                Err(e) => match e.kind() {
+                    ErrorKind::NotFound => {
+                        if quality_preference == PhotoQuality::Original {
+                            Err(e.into())
+                        } else {
+                            Ok(engine.get_photo_by_id(photo_id.as_ref()).await?)
+                        }
                     }
-                }
+                    _ => Err(e.into()),
+                },
             },
         }
     }
@@ -113,7 +107,12 @@ impl StorageEngine {
     /// # Errors
     ///
     /// If the storage operation failed
-    pub async fn create_photo<S: AsRef<str>>(&self, photo_id: S, bytes: Vec<u8>, quality: PhotoQuality) -> Result<(), StorageEngineError> {
+    pub async fn create_photo<S: AsRef<str>>(
+        &self,
+        photo_id: S,
+        bytes: Vec<u8>,
+        quality: PhotoQuality,
+    ) -> Result<(), StorageEngineError> {
         let quality_id = fmt_id_with_quality(photo_id.as_ref(), &quality);
         Ok(match &self.0 {
             StorageEngineMode::S3(s3) => s3.create_photo(quality_id, bytes).await?,
@@ -126,7 +125,11 @@ impl StorageEngine {
     /// # Errors
     ///
     /// If the storage operation failed
-    pub async fn delete_photo<S: AsRef<str>>(&self, photo_id: S, quality: PhotoQuality) -> Result<(), StorageEngineError> {
+    pub async fn delete_photo<S: AsRef<str>>(
+        &self,
+        photo_id: S,
+        quality: PhotoQuality,
+    ) -> Result<(), StorageEngineError> {
         let quality_id = fmt_id_with_quality(photo_id.as_ref(), &quality);
         Ok(match &self.0 {
             StorageEngineMode::S3(s3) => s3.delete_photo(quality_id).await?,

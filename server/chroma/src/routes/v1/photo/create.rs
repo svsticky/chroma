@@ -4,14 +4,14 @@ use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use dal::database::{Album, Photo};
+use dal::storage_engine::PhotoQuality;
+use image::codecs::png::PngDecoder;
+use image::imageops::FilterType;
 use image::io::Reader;
 use image::{DynamicImage, GenericImageView, ImageFormat, ImageOutputFormat};
 use proto::CreatePhotoRequest;
 use std::io::Cursor;
-use image::codecs::png::PngDecoder;
-use image::imageops::FilterType;
 use tracing::{info, warn};
-use dal::storage_engine::PhotoQuality;
 
 /// Create a new photo in an existing album.
 ///
@@ -62,7 +62,11 @@ pub async fn create(
 
     // Upload the photo to S3
     // If this fails, remove the metadata again
-    if let Err(e) = data.storage.create_photo(&photo.id, png_image.clone(), PhotoQuality::Original).await {
+    if let Err(e) = data
+        .storage
+        .create_photo(&photo.id, png_image.clone(), PhotoQuality::Original)
+        .await
+    {
         photo.delete().await?;
         return Err(e.into());
     }
@@ -92,16 +96,24 @@ pub async fn create(
         };
 
         match convert_quality(&img, 400) {
-            Ok(w400) => match data.storage.create_photo(&id, w400, PhotoQuality::W400).await {
-                Ok(_) => {},
+            Ok(w400) => match data
+                .storage
+                .create_photo(&id, w400, PhotoQuality::W400)
+                .await
+            {
+                Ok(_) => {}
                 Err(e) => warn!("Failed to upload W400 photo: {e}"),
             },
             Err(e) => warn!("Failed to scale to W400: {e}"),
         }
 
         match convert_quality(&img, 1600) {
-            Ok(w1600) => match data.storage.create_photo(&id, w1600, PhotoQuality::W1600).await {
-                Ok(_) => {},
+            Ok(w1600) => match data
+                .storage
+                .create_photo(&id, w1600, PhotoQuality::W1600)
+                .await
+            {
+                Ok(_) => {}
                 Err(e) => warn!("Failed to upload W1600 photo: {e}"),
             },
             Err(e) => warn!("Failed to scale to W1600: {e}"),

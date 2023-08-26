@@ -42,9 +42,11 @@ impl<'a> Photo<'a> {
     pub async fn photo_to_proto(
         self,
         storage: &StorageEngine,
-        quality_preference: PhotoQuality
+        quality_preference: PhotoQuality,
     ) -> Result<proto::Photo, StorageEngineError> {
-        let photo_bytes = storage.get_photo_by_id(&self.id, quality_preference).await?;
+        let photo_bytes = storage
+            .get_photo_by_id(&self.id, quality_preference)
+            .await?;
         Ok(proto::Photo {
             id: self.id,
             album_id: self.album_id,

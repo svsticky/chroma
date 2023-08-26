@@ -1,9 +1,9 @@
+use async_recursion::async_recursion;
 use aws_credential_types::Credentials;
 use aws_sdk_s3::error::{DeleteObjectError, GetObjectError, PutObjectError};
 use aws_sdk_s3::types::{ByteStream, SdkError};
 use aws_sdk_s3::{Client, Config, Region};
 use std::ops::Deref;
-use async_recursion::async_recursion;
 use thiserror::Error;
 
 pub mod aws_errors {
@@ -73,7 +73,10 @@ impl S3 {
     }
 
     #[async_recursion]
-    pub async fn get_photo_by_id<S: AsRef<str> + Send + Sync>(&self, photo_id: S) -> Result<Vec<u8>, S3Error> {
+    pub async fn get_photo_by_id<S: AsRef<str> + Send + Sync>(
+        &self,
+        photo_id: S,
+    ) -> Result<Vec<u8>, S3Error> {
         let photo = self
             .get_object()
             .bucket(&self.bucket_name)
@@ -90,7 +93,7 @@ impl S3 {
     pub async fn create_photo<S: AsRef<str>>(
         &self,
         photo_id: S,
-        bytes: Vec<u8>
+        bytes: Vec<u8>,
     ) -> Result<(), S3Error> {
         let byte_stream = ByteStream::from(bytes);
 

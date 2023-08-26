@@ -14,7 +14,7 @@ pub struct Query {
     /// The ID of the album to list all photos from
     album_id: Option<String>,
     #[serde(default)]
-    quality_preference: Quality
+    quality_preference: Quality,
 }
 
 #[derive(Debug, Default, Deserialize)]
