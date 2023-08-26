@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -14,21 +14,34 @@ pub struct Config {
     /// MySQL database password
     pub db_password: String,
 
+    /// The storage engine to be used
+    #[serde(default = "default_storage_engine")]
+    pub storage_engine: StorageEngine,
+
     /// The name of the S3 bucket that should be used
-    pub s3_bucket_name: String,
+    /// Required if `storage_engine` is set to [StorageEngine::S3].
+    pub s3_bucket_name: Option<String>,
     /// The S3 region the endpoint is located in
-    pub s3_region: String,
+    /// Required if `storage_engine` is set to [StorageEngine::S3].
+    pub s3_region: Option<String>,
     /// S3 endpoint URL
-    pub s3_endpoint_url: String,
+    /// Required if `storage_engine` is set to [StorageEngine::S3].
+    pub s3_endpoint_url: Option<String>,
     /// S3 secret key ID
-    pub s3_access_key_id: String,
+    /// Required if `storage_engine` is set to [StorageEngine::S3].
+    pub s3_access_key_id: Option<String>,
     /// S3 secret access key
-    pub s3_secret_access_key: String,
+    /// Required if `storage_engine` is set to [StorageEngine::S3].
+    pub s3_secret_access_key: Option<String>,
     /// Force the use of path style bucket addressing.
     /// This should be `true` if the S3 endpoint is MinIO,
     /// but should be `false` or left unspecified when targeting
     /// Amazon S3.
     pub s3_force_path_style: Option<bool>,
+
+    /// The base path for storage.
+    /// Required if `storage_engine` is set to [StorageEngine::File].
+    pub file_base: Option<String>,
 
     /// OAuth2 client ID created in Koala
     pub koala_client_id: String,
@@ -66,6 +79,16 @@ pub struct Config {
     /// `https://foo.example.com/logged_in?session_id={AN ID}&is_admin=[true|false]`.
     pub login_complete_redirect_uri: String,
     // ANCHOR_END: config
+}
+
+const fn default_storage_engine() -> StorageEngine {
+    StorageEngine::S3
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum StorageEngine {
+    S3,
+    File,
 }
 
 impl Config {
@@ -117,5 +140,32 @@ impl Config {
     /// See also: `s3_force_path_style` field
     pub fn s3_force_path_style(&self) -> bool {
         self.s3_force_path_style.unwrap_or(false)
+    }
+
+    /// Check if the configuration is valid.
+    /// Returns `true` if it is, `false` if it is not.
+    pub fn validate(&self) -> bool {
+        match self.storage_engine {
+            StorageEngine::File => {
+                if self.file_base.is_none() {
+                    warn!("Config validation failed on File fields");
+                    return false;
+                }
+            }
+            StorageEngine::S3 => {
+                let result = self.s3_bucket_name.is_some()
+                    ^ self.s3_region.is_some()
+                    ^ self.s3_endpoint_url.is_some()
+                    ^ self.s3_access_key_id.is_some()
+                    ^ self.s3_secret_access_key.is_some();
+
+                if !result {
+                    warn!("Config validation failed on S3 fields.");
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 }

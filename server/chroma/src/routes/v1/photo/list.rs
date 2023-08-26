@@ -4,7 +4,7 @@ use crate::routes::error::WebResult;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
-use dal::s3::{PhotoQuality, S3Error};
+use dal::storage_engine::{PhotoQuality, StorageEngineError};
 use futures::future::join_all;
 use proto::ListPhotoResponse;
 use serde::Deserialize;
@@ -53,10 +53,10 @@ pub async fn list(
         photos: join_all(
             photos
                 .into_iter()
-                .map(|photo| photo.photo_to_proto(&data.s3, quality_preference.clone())),
+                .map(|photo| photo.photo_to_proto(&data.storage, quality_preference.clone())),
         )
         .await
         .into_iter()
-        .collect::<Result<Vec<_>, S3Error>>()?,
+        .collect::<Result<Vec<_>, StorageEngineError>>()?,
     }))
 }

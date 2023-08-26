@@ -4,6 +4,7 @@ use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use dal::database::Photo;
+use dal::storage_engine::PhotoQuality;
 use proto::DeletePhotoRequest;
 
 /// Delete a photo.
@@ -29,7 +30,9 @@ pub async fn delete(
     let id = photo.id.clone();
     photo.delete().await?;
 
-    data.s3.delete_photo(id).await?;
+    data.storage.delete_photo(&id, PhotoQuality::Original).await?;
+    data.storage.delete_photo(&id, PhotoQuality::W1600).await?;
+    data.storage.delete_photo(&id, PhotoQuality::W400).await?;
 
     Ok(Empty)
 }

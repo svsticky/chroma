@@ -13,7 +13,7 @@ proto = { version = "0.1.0", path = "../proto" }
 serde = { version = "1.0.152", features = ["derive"] }
 thiserror = "1.0.38"
 tracing = "0.1.37"
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1.29.1", features = ["full"] }
 tracing-actix-web = "0.7.2"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 dal = { version = "0.1.0", path = "../dal" }

@@ -3,10 +3,13 @@ use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
+use color_eyre::eyre::Error;
 use color_eyre::Result;
 use dal::database::Database;
-use dal::s3::{S3Config, S3};
+use dal::s3::S3Config;
+use dal::storage_engine::StorageEngine;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
+use std::path::PathBuf;
 use tracing::info;
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
@@ -28,6 +31,10 @@ async fn main() -> Result<()> {
     info!("Parsing config");
     let config = Config::parse()?;
 
+    if !config.validate() {
+        return Err(Error::msg("Config is not valid."));
+    }
+
     info!("Initializing database");
     let db = Database::new(
         &config.db_host,
@@ -37,18 +44,29 @@ async fn main() -> Result<()> {
     )
     .await?;
 
-    info!("Initializing S3 connection");
-    let s3 = S3::new(S3Config {
-        bucket_name: config.s3_bucket_name.clone(),
-        endpoint_url: config.s3_endpoint_url.clone(),
-        region: config.s3_region.clone(),
-        access_key_id: config.s3_access_key_id.clone(),
-        secret_access_key: config.s3_secret_access_key.clone(),
-        use_path_style: config.s3_force_path_style(),
-    })
-    .await?;
+    info!("Initializing storage engine");
+    let storage = match config.storage_engine {
+        config::StorageEngine::S3 => {
+            StorageEngine::new_s3(S3Config {
+                bucket_name: config.s3_bucket_name.clone().unwrap(),
+                endpoint_url: config.s3_endpoint_url.clone().unwrap(),
+                region: config.s3_region.clone().unwrap(),
+                access_key_id: config.s3_access_key_id.clone().unwrap(),
+                secret_access_key: config.s3_secret_access_key.clone().unwrap(),
+                use_path_style: config.s3_force_path_style(),
+            })
+            .await?
+        }
+        config::StorageEngine::File => {
+            StorageEngine::new_file(PathBuf::from(config.file_base.clone().unwrap())).await?
+        }
+    };
 
-    let appdata = AppData { db, s3, config };
+    let appdata = AppData {
+        db,
+        storage,
+        config,
+    };
 
     info!("Starting web server");
     HttpServer::new(move || {

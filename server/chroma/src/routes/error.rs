@@ -13,7 +13,7 @@ pub enum Error {
     #[error("Bad request: {0}")]
     BadRequest(String),
     #[error("Internal server error")]
-    S3(#[from] dal::s3::S3Error),
+    StorageEngine(#[from] dal::storage_engine::StorageEngineError),
     #[error("Something went wrong on Koala's end")]
     Koala(reqwest::Error),
     #[error("The requested resource may not be accessed by the authorized user.")]
@@ -30,7 +30,7 @@ impl ResponseError for Error {
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::BadRequest(_) => StatusCode::BAD_REQUEST,
-            Self::S3(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::StorageEngine(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Koala(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::ChronoParse(_) => StatusCode::BAD_GATEWAY,
