@@ -5,6 +5,7 @@ use crate::routes::redirect::Redirect;
 use actix_web::web;
 use dal::database::{OAuthAccess, User};
 use serde::Deserialize;
+use tracing::trace;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -23,17 +24,21 @@ pub struct Query {
 /// - If something went wrong
 pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirect> {
     // Complete the OAuth2 flow by exchanging the code for a token pair
+    trace!("Exchanging received code for Oauth2 tokens with Koala");
     let oauth_tokens = crate::koala::exchange_code(&data.config, &query.code)
         .await
         .map_err(|e| Error::Koala(e))?;
 
     let is_admin = oauth_tokens.credentials_type == CredentialsType::Admin;
+    trace!("Is signed-in user admin?: {is_admin}");
 
     let created_at_epoch =
         chrono::DateTime::parse_from_rfc3339(&oauth_tokens.created_at)?.timestamp();
     let expires_at = created_at_epoch - oauth_tokens.expires_in;
     let user = match User::get_by_id(&data.db, oauth_tokens.credentials_id).await? {
         Some(mut u) => {
+            trace!("User already exists in database, setting new OAuth2 tokens");
+
             // Update the tokens for this user
             u.set_tokens(
                 oauth_tokens.access_token,
@@ -45,6 +50,8 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         }
         // No user exists yet, create one
         None => {
+            trace!("User does not yet exist in database, creating new user.");
+
             User::create(
                 &data.db,
                 oauth_tokens.credentials_id,
@@ -59,6 +66,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         }
     };
 
+    trace!("Creating new session for user.");
     let session_id = user.create_session().await?;
     let redirect_to = format!(
         "{}?session_id={}&is_admin={}",

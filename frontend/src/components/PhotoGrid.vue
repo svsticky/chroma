@@ -89,7 +89,7 @@ export default Vue.extend({
     methods: {
         async loadPhotos() {
             this.loading = true;
-            const result = await listPhotosInAlbum(this.albumId);
+            const result = await listPhotosInAlbum(this.albumId, true);
             this.loading = false;
 
             if(result == undefined) {
@@ -100,7 +100,7 @@ export default Vue.extend({
             this.photos = result;
         },
         async loadCoverData() {
-            const result = await getAlbum(this.albumId);
+            const result = await getAlbum(this.albumId, true);
 
             if(result == undefined) {
                 this.snackbar = errorText;

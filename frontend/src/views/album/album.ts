@@ -72,10 +72,16 @@ export async function listAlbums(): Promise<AlbumModel[] | undefined> {
 /**
  * Get an album by ID
  * @param id The id of the album
+ * @param without_photos Do not retrieve the album's photos
  * @return If the album was found, the album. If the album was not found, `null`. `undefined` on failure.
  */
-export async function getAlbum(id: string): Promise<AlbumModel | null | undefined> {
-    const album = await Http.getBody<GetAlbumResponse>(`/api/v1/album?id=${id}`, null, GetAlbumResponse);
+export async function getAlbum(id: string, without_photos: boolean = false): Promise<AlbumModel | null | undefined> {
+    let query = `id=${id}`;
+    if(without_photos) {
+        query = query.concat("&without_photos=true");
+    }
+
+    const album = await Http.getBody<GetAlbumResponse>(`/api/v1/album?${query}`, null, GetAlbumResponse);
     if(album instanceof Response) {
         if(album.status == 404) {
             return null;

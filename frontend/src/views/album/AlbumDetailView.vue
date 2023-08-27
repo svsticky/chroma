@@ -65,7 +65,7 @@ export default Vue.extend({
         async loadAlbum() {
             this.loading = true;
             const id = await this.getId();
-            const result = await getAlbum(id);
+            const result = await getAlbum(id, true);
             this.loading = false;
 
             if(result == undefined) {

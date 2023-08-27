@@ -3,6 +3,7 @@ use actix_governor::governor::middleware::StateInformationMiddleware;
 use actix_governor::{Governor, GovernorConfig, GovernorConfigBuilder, PeerIpKeyExtractor};
 use actix_web::web;
 use actix_web::web::ServiceConfig;
+use serde::Deserialize;
 use std::time::Duration;
 
 mod access;
@@ -10,8 +11,25 @@ mod album;
 mod login;
 mod photo;
 
-pub struct Router;
+#[derive(Debug, Default, Clone, Deserialize)]
+pub enum PhotoQuality {
+    #[default]
+    Original,
+    W400,
+    W1600,
+}
 
+impl From<PhotoQuality> for dal::storage_engine::PhotoQuality {
+    fn from(value: PhotoQuality) -> Self {
+        match value {
+            PhotoQuality::Original => Self::Original,
+            PhotoQuality::W1600 => Self::W1600,
+            PhotoQuality::W400 => Self::W400,
+        }
+    }
+}
+
+pub struct Router;
 impl Routable for Router {
     fn configure(config: &mut ServiceConfig) {
         config.service(

@@ -7,8 +7,9 @@ use actix_web::{FromRequest, HttpRequest, HttpResponse, ResponseError};
 use dal::database::User;
 use std::future::Future;
 use std::pin::Pin;
+use tap::TapFallible;
 use thiserror::Error;
-use tracing::info;
+use tracing::{info, trace};
 
 pub struct Authorization {
     pub user_id: i32,
@@ -29,15 +30,20 @@ impl FromRequest for Authorization {
                 .get("authorization")
                 .ok_or(AuthorizationError::NoHeader(get_koala_login_url(
                     &data.config,
-                )))?
+                )))
+                .tap_err(|_| trace!("Request is missing authorization header"))?
                 .to_str()
-                .map_err(|_| AuthorizationError::NoHeader(get_koala_login_url(&data.config)))?;
+                .map_err(|_| AuthorizationError::NoHeader(get_koala_login_url(&data.config)))
+                .tap_err(|_| {
+                    trace!("Value of authorization header could not be converter to UTF-8 String")
+                })?;
 
             let user = User::get_by_session_id(&data.db, authorization)
                 .await?
                 .ok_or(AuthorizationError::InvalidSession(get_koala_login_url(
                     &data.config,
-                )))?;
+                )))
+                .tap_err(|_| trace!("Invalid session ID provided ('{authorization}')"))?;
 
             // Check if the access token is still valid
             // E.g. it could have been revoked by Koala

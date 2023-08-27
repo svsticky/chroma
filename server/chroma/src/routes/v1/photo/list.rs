@@ -1,10 +1,11 @@
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::WebResult;
+use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
-use dal::storage_engine::{PhotoQuality, StorageEngineError};
+use dal::storage_engine::StorageEngineError;
 use futures::future::join_all;
 use proto::ListPhotoResponse;
 use serde::Deserialize;
@@ -13,16 +14,10 @@ use serde::Deserialize;
 pub struct Query {
     /// The ID of the album to list all photos from
     album_id: Option<String>,
+    /// A preference for the quality of a photo.
+    /// If the requested quality does not exist, the photo's original resolution will be returned.
     #[serde(default)]
-    quality_preference: Quality,
-}
-
-#[derive(Debug, Default, Deserialize)]
-pub enum Quality {
-    #[default]
-    Original,
-    W400,
-    W1600,
+    quality_preference: PhotoQuality,
 }
 
 /// List all photos, either all known or all from one album.
@@ -43,18 +38,10 @@ pub async fn list(
         Photo::list(&data.db).await?
     };
 
-    let quality_preference = match query.quality_preference {
-        Quality::Original => PhotoQuality::Original,
-        Quality::W1600 => PhotoQuality::W1600,
-        Quality::W400 => PhotoQuality::W400,
-    };
-
     Ok(Payload(ListPhotoResponse {
-        photos: join_all(
-            photos
-                .into_iter()
-                .map(|photo| photo.photo_to_proto(&data.storage, quality_preference.clone())),
-        )
+        photos: join_all(photos.into_iter().map(|photo| {
+            photo.photo_to_proto(&data.storage, query.quality_preference.clone().into())
+        }))
         .await
         .into_iter()
         .collect::<Result<Vec<_>, StorageEngineError>>()?,

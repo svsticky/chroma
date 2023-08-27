@@ -33,8 +33,13 @@ function protoPhotoToPhotoModel(photo: Photo): PhotoModel {
  * @param albumId The ID of the album
  * @return The photos in the album on success. `undefined` on failure.
  */
-export async function listPhotosInAlbum(albumId: string): Promise<PhotoModel[] | undefined> {
-    const result = await Http.getBody<ListPhotoResponse>(`/api/v1/photo/list?album_id=${albumId}`, null, ListPhotoResponse);
+export async function listPhotosInAlbum(albumId: string, low_res: boolean = false): Promise<PhotoModel[] | undefined> {
+    let query = `album_id=${albumId}`;
+    if(low_res) {
+        query = query.concat("&quality_preference=W400");
+    }
+
+    const result = await Http.getBody<ListPhotoResponse>(`/api/v1/photo/list?${query}`, null, ListPhotoResponse);
     if(result instanceof Response) {
         if(result.ok) {
             return [];
@@ -69,9 +74,13 @@ export async function deletePhoto(photoId: string): Promise<boolean | undefined>
     return result.ok ? true : undefined;
 }
 
-export async function getPhoto(photoId: string): Promise<PhotoModel | null | undefined> {
-    const result = await Http.getBody<GetPhotoResponse>(`/api/v1/photo?id=${photoId}`, null, GetPhotoResponse);
+export async function getPhoto(photoId: string, low_res: boolean = false): Promise<PhotoModel | null | undefined> {
+    let query = `id=${photoId}`;
+    if(low_res) {
+        query = query.concat("&quality_preference=W400");
+    }
 
+    const result = await Http.getBody<GetPhotoResponse>(`/api/v1/photo?${query}`, null, GetPhotoResponse);
     if(result instanceof Response) {
         if(result.status == 404) {
             return null;

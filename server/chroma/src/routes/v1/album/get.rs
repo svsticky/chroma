@@ -14,6 +14,8 @@ use serde::Deserialize;
 pub struct Query {
     /// The ID of the album to retrieve
     id: String,
+    /// Do not include the pictures of the album in the response.
+    without_photos: Option<bool>,
 }
 
 /// Retrieve an album and all its photos by its ID.
@@ -31,15 +33,23 @@ pub async fn get(
         .await?
         .ok_or(Error::NotFound)?;
 
-    let photos = Photo::list_in_album(&data.db, &album.id).await?;
-    let photos = join_all(
-        photos
+    // If the user requests that photos are not returned, return an empty list.
+    let photos = match query.without_photos {
+        Some(true) => vec![],
+        Some(false) | None => {
+            let photos = Photo::list_in_album(&data.db, &album.id).await?;
+
+            // Convert the DAL format to Proto format
+            join_all(
+                photos
+                    .into_iter()
+                    .map(|photo| photo.photo_to_proto(&data.storage, PhotoQuality::Original)),
+            )
+            .await
             .into_iter()
-            .map(|photo| photo.photo_to_proto(&data.storage, PhotoQuality::Original)),
-    )
-    .await
-    .into_iter()
-    .collect::<Result<Vec<_>, StorageEngineError>>()?;
+            .collect::<Result<Vec<_>, StorageEngineError>>()?
+        }
+    };
 
     Ok(Payload(GetAlbumResponse {
         photos,

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "vue-cli-service serve",
+    "serve": "vue-cli-service serve --port 8008",
     "build": "vue-cli-service build",
     "protos": "find ../server/proto/protos -type f -name \\*.proto -exec protoc -I ../server/proto/protos --ts_opt=json_names --ts_opt=esModuleInterop=true --ts_opt=no_namespace --ts_out=./src/generated {} \\;"
   },

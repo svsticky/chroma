@@ -100,7 +100,7 @@ export default Vue.extend({
             }
 
             this.loading = true;
-            const result = await getPhoto(this.album.coverPhotoId);
+            const result = await getPhoto(this.album.coverPhotoId, true);
             this.loading = false;
             if(result == undefined) {
                 this.snackbar = errorText;
