@@ -10,7 +10,7 @@ use dal::s3::S3Config;
 use dal::storage_engine::StorageEngine;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -33,6 +33,10 @@ async fn main() -> Result<()> {
 
     if !config.validate() {
         return Err(Error::msg("Config is not valid."));
+    }
+
+    if !config.service_tokens.is_empty() {
+        warn!("There are service tokens configured, Make sure these are, and stay, confidential!");
     }
 
     info!("Initializing database");
