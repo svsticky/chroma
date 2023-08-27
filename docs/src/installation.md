@@ -4,13 +4,8 @@
 Chroma is packaged as one application. The backend webserver serves the API routes, of course. But it also serves the UI, which is bundled during compilation.
 
 It has the following runtime dependencies:
-- A MySQL database
-- An S3-compatible storage bucket (E.g. [MinIO](https://min.io) works toos)
-
-Chroma can be deployed as a Docker container.
-```yaml
-{{#include ../../server/docker-compose.yml}}
-```
+- A Postgres datrabase
+- An S3-compatible storage bucket (E.g. [MinIO](https://min.io) works too)
 
 Before starting the container, one must make sure to create an OAuth client in Koala.
 If Koala is running locally, you can navigate to [http://koala.rails.local:3000/api/oauth/applications](http://koala.rails.local:3000/api/oauth/applications) and create a new client.

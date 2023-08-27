@@ -50,7 +50,7 @@ E.g. to convert `dal::Photo` to `proto::Photo`.
 The `proto` crate holds all protobuf files, in the `protos/` subdirectory.
 It contains only 1 line of code:
 ```rust,no_run,noplayground
-{{#include ../../../server/proto/src/lib.rs}}
+{{#include ../../../../server/proto/src/lib.rs}}
 ```
 This line includes the auto generated Rust code, generated from the protobuf files, at compile time.
 You might've noticed there's also a file `build.rs`. This is a program compiled and executed at compile time.
