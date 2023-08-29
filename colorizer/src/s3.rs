@@ -1,6 +1,6 @@
 use aws_credential_types::Credentials;
-use aws_sdk_s3::{Client, Config};
 use aws_sdk_s3::error::GetObjectError;
+use aws_sdk_s3::{Client, Config};
 use aws_smithy_http::result::SdkError;
 use aws_types::region::Region;
 use thiserror::Error;

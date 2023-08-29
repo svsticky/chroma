@@ -52,7 +52,7 @@ impl FromRequest for Authorization {
                     })
                 } else {
                     Err(AuthorizationError::InvalidServiceToken)
-                }
+                };
             }
 
             let user = User::get_by_session_id(&data.db, authorization)

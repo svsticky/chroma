@@ -1,19 +1,19 @@
-use clap::Parser;
-use tracing::info;
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::fmt::layer;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use uuid::Uuid;
 use crate::args::Args;
 use crate::chroma::Chroma;
 use crate::pxl::PxlMetadata;
-use crate::s3::{S3, S3Config};
+use crate::s3::{S3Config, S3};
+use clap::Parser;
+use tracing::info;
+use tracing_subscriber::fmt::layer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
+use uuid::Uuid;
 
 mod args;
-mod s3;
 mod chroma;
 mod pxl;
+mod s3;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -46,7 +46,11 @@ async fn main() -> color_eyre::Result<()> {
 
     // We could parellize this, but to keep the server load in check and avoid HTTP 429's, we don't.
     for album in metadata.albums {
-        info!("Processing album {}. {} Images.", album.name_display, album.images.len());
+        info!(
+            "Processing album {}. {} Images.",
+            album.name_display,
+            album.images.len()
+        );
         let album_id = chroma.create_album(album.name_display).await?;
 
         for photo in album.images {

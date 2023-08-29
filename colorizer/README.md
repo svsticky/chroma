@@ -14,17 +14,18 @@ cargo install --git https://github.com/svsticky/chroma.git colorizer
 ## Usage
 >Warning: Take a backup of Chroma's current S3 and database state!
 
-Simple: 
+The following environmental variables must be set:
+- `CHROMA_SERVICE_TOKEN`: Valid service token for the Chroma API.
+- `S3_ACCESS_KEY_ID`: The access key ID of the Pxl S3 bucket.
+- `S3_SECRET_ACCESS_KEY`: The secret access key of the Pxl S3 bucket.
+ 
 ```bash
 ./colorizer \
   --pxl-metadadata-file <Name of the metadata file on S3> \
   --chroma-api <URL to Chroma, e.g. https://chroma.svsticky.nl> \
-  --chroma-service-token <Your service token> \
   --s3-bucket-name <The name of the Pxl bucket> \
   --s3-region <The region of the Pxl bucket> \
   --s3-endpoint-url <The URL of the Pxl bucket> \
-  --s3-access-key-id <The access key ID of the Pxl bucket> \
-  --s3-secret-access-key <The secret access key of the Pxl bucket> \
   --s3-force-path-style <Optional, if using MinIO, set this to true>
 ```
 

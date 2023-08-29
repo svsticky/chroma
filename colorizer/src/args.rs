@@ -11,7 +11,8 @@ pub struct Args {
     #[clap(long)]
     pub chroma_api: String,
     /// The service token for the Chroma API.
-    #[clap(long)]
+    /// Must be provided via an environmental variable.
+    #[clap(env)]
     pub chroma_service_token: String,
 
     /// The name of the S3 bucket that should be used
@@ -23,11 +24,13 @@ pub struct Args {
     /// S3 endpoint URL
     #[clap(long)]
     pub s3_endpoint_url: String,
-    /// S3 secret key ID
-    #[clap(long)]
+    /// S3 access key ID.
+    /// Must be provided via an environmental variable.
+    #[clap(env)]
     pub s3_access_key_id: String,
     /// S3 secret access key
-    #[clap(long)]
+    /// Must be provided via an environmental variable.
+    #[clap(env)]
     pub s3_secret_access_key: String,
     /// Force the use of path style bucket addressing.
     /// This should be `true` if the S3 endpoint is MinIO,

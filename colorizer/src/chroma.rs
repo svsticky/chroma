@@ -1,9 +1,12 @@
-use std::fmt::{Display, Formatter};
 use color_eyre::Result;
-use proto::{AccessResponse, CreateAlbumRequest, CreateAlbumResponse, CreatePhotoRequest, CreatePhotoResponse};
-use reqwest::Client;
+use proto::{
+    AccessResponse, CreateAlbumRequest, CreateAlbumResponse, CreatePhotoRequest,
+    CreatePhotoResponse,
+};
 use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::Client;
 use reqwest_protobuf::{ProtobufRequestExt, ProtobufResponseExt};
+use std::fmt::{Display, Formatter};
 
 pub struct Chroma {
     api_url: String,
@@ -18,17 +21,14 @@ impl Chroma {
         let mut headers = HeaderMap::new();
         headers.append(
             "Authorization",
-            HeaderValue::from_str(&format!("Service {service_token}"))?
+            HeaderValue::from_str(&format!("Service {service_token}"))?,
         );
 
         let client = Client::builder()
             .default_headers(headers)
             .user_agent("Colorizer Pxl-To-Chroma migrator")
             .build()?;
-        Ok(Self {
-            api_url,
-            client,
-        })
+        Ok(Self { api_url, client })
     }
 
     fn path(&self, path: &str) -> String {
@@ -36,10 +36,10 @@ impl Chroma {
     }
 
     pub async fn create_album(&self, name: String) -> Result<AlbumId> {
-        let response: CreateAlbumResponse = self.client.post(self.path("/api/v1/album"))
-            .protobuf(CreateAlbumRequest {
-                name
-            })?
+        let response: CreateAlbumResponse = self
+            .client
+            .post(self.path("/api/v1/album"))
+            .protobuf(CreateAlbumRequest { name })?
             .send()
             .await?
             .error_for_status()?
@@ -50,7 +50,9 @@ impl Chroma {
     }
 
     pub async fn create_photo(&self, album: &AlbumId, data: Vec<u8>) -> Result<PhotoId> {
-        let response: CreatePhotoResponse = self.client.post(self.path("/api/v1/photo"))
+        let response: CreatePhotoResponse = self
+            .client
+            .post(self.path("/api/v1/photo"))
             .protobuf(CreatePhotoRequest {
                 album_id: album.0.clone(),
                 photo_data: data,
@@ -65,7 +67,9 @@ impl Chroma {
     }
 
     pub async fn access(&self) -> Result<bool> {
-        let response: AccessResponse = self.client.post("/access")
+        let response: AccessResponse = self
+            .client
+            .post("/access")
             .send()
             .await?
             .error_for_status()?
