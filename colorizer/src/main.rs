@@ -44,7 +44,7 @@ async fn main() -> color_eyre::Result<()> {
 
     info!("Processing {} albums.", metadata.albums.len());
 
-    // We could parellize this, but to keep the server load in check and avoid HTTP 429's, we don't.
+    // We could parallelize this, but to keep the server load in check and avoid HTTP 429's, we don't.
     for album in metadata.albums {
         info!(
             "Processing album {}. {} Images.",
