@@ -2,6 +2,8 @@ use crate::config::Config;
 use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
+use actix_governor::governor::middleware::NoOpMiddleware;
+use actix_governor::{Governor, GovernorConfig, GovernorConfigBuilder, PeerIpKeyExtractor};
 use actix_web::{App, HttpServer};
 use color_eyre::eyre::Error;
 use color_eyre::Result;
@@ -73,10 +75,12 @@ async fn main() -> Result<()> {
     };
 
     info!("Starting web server");
+    let governor_config = configure_governor()?;
     HttpServer::new(move || {
         App::new()
             .wrap(Cors::permissive())
             .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
+            .wrap(Governor::new(&governor_config))
             .app_data(WebData::new(appdata.clone()))
             .configure(routes::Router::configure)
     })
@@ -88,6 +92,14 @@ async fn main() -> Result<()> {
     .await?;
 
     Ok(())
+}
+
+fn configure_governor() -> Result<GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>> {
+    GovernorConfigBuilder::default()
+        .per_second(3)
+        .burst_size(10)
+        .finish()
+        .ok_or(Error::msg("Governor config is invalid."))
 }
 
 fn install_tracing() {
