@@ -78,6 +78,16 @@ pub struct Config {
     /// E.g. `https://foo.example.com/logged_in` will become
     /// `https://foo.example.com/logged_in?session_id={AN ID}&is_admin=[true|false]`.
     pub login_complete_redirect_uri: String,
+
+    /// Comma-seperated list of service tokens.
+    /// When making a request, use the following for the `Authorization` header:
+    /// ```
+    /// Authorization: Service <YOUR TOKEN>
+    /// ```
+    ///
+    /// # Warning
+    /// Service tokens can access all APIs, even admin ones!
+    pub service_tokens: String,
     // ANCHOR_END: config
 }
 
@@ -142,9 +152,15 @@ impl Config {
         self.s3_force_path_style.unwrap_or(false)
     }
 
+    /// Get configured service tokens
+    pub fn service_tokens(&self) -> Vec<&str> {
+        self.service_tokens.split(",").collect()
+    }
+
     /// Check if the configuration is valid.
     /// Returns `true` if it is, `false` if it is not.
     pub fn validate(&self) -> bool {
+        // Validate storage engine options
         match self.storage_engine {
             StorageEngine::File => {
                 if self.file_base.is_none() {

@@ -5,3 +5,7 @@ message CreatePhotoRequest {
   string albumId = 1;
   bytes photoData = 2;
 }
+
+message CreatePhotoResponse {
+  string photoId = 1;
+}
