@@ -12,8 +12,13 @@ use thiserror::Error;
 use tracing::{info, trace};
 
 pub struct Authorization {
-    pub user_id: i32,
+    pub user: AuthorizedUser,
     pub is_admin: bool,
+}
+
+pub enum AuthorizedUser {
+    Koala { koala_id: i32 },
+    Service { token: String },
 }
 
 impl FromRequest for Authorization {
@@ -48,7 +53,7 @@ impl FromRequest for Authorization {
                 return if data.config.service_tokens().contains(&token.as_str()) {
                     Ok(Self {
                         is_admin: true,
-                        user_id: 0,
+                        user: AuthorizedUser::Service { token },
                     })
                 } else {
                     Err(AuthorizationError::InvalidServiceToken)
@@ -76,7 +81,9 @@ impl FromRequest for Authorization {
                 })?;
 
             Ok(Self {
-                user_id: user.koala_id,
+                user: AuthorizedUser::Koala {
+                    koala_id: user.koala_id,
+                },
                 is_admin: user.is_admin,
             })
         })
