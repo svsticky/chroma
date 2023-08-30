@@ -6,7 +6,7 @@ use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
 use image::io::Reader;
-use image::ImageOutputFormat;
+use image::{DynamicImage, ImageOutputFormat};
 use proto::GetPhotoResponse;
 use serde::Deserialize;
 use std::io::Cursor;
@@ -29,6 +29,7 @@ pub struct Query {
 pub enum ImageFormat {
     #[default]
     Png,
+    Jpeg,
     WebP,
 }
 
@@ -69,17 +70,35 @@ fn convert_format(bytes: Vec<u8>, format: &ImageFormat) -> WebResult<Vec<u8>> {
         ImageFormat::WebP => Ok(bytes),
         ImageFormat::Png => {
             let byte_count = bytes.len();
-
-            let cursor = Cursor::new(bytes);
-            let reader = Reader::with_format(cursor, image::ImageFormat::WebP);
-            let decoded = reader.decode().map_err(|_| Error::ImageEncoding)?;
-
-            let mut cursor = Cursor::new(Vec::with_capacity(byte_count));
-            decoded
-                .write_to(&mut cursor, ImageOutputFormat::Png)
-                .map_err(|_| Error::ImageEncoding)?;
-
-            Ok(cursor.into_inner())
+            reencode_dynamic_image(decode_image(bytes)?, ImageOutputFormat::Png, byte_count)
+        }
+        ImageFormat::Jpeg => {
+            let byte_count = bytes.len();
+            reencode_dynamic_image(
+                decode_image(bytes)?,
+                ImageOutputFormat::Jpeg(100.0),
+                byte_count,
+            )
         }
     }
+}
+
+fn reencode_dynamic_image(
+    image: DynamicImage,
+    format: ImageOutputFormat,
+    byte_count: usize,
+) -> WebResult<Vec<u8>> {
+    let mut cursor = Cursor::new(Vec::with_capacity(byte_count));
+    image
+        .write_to(&mut cursor, format)
+        .map_err(|_| Error::ImageEncoding)?;
+
+    Ok(cursor.into_inner())
+}
+
+fn decode_image(bytes: Vec<u8>) -> WebResult<DynamicImage> {
+    let cursor = Cursor::new(bytes);
+    let reader = Reader::with_format(cursor, image::ImageFormat::WebP);
+
+    reader.decode().map_err(|_| Error::ImageEncoding)
 }

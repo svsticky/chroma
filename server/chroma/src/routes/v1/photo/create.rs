@@ -127,7 +127,7 @@ pub async fn create(
 fn convert_image_format(dynamic_image: DynamicImage) -> WebResult<Vec<u8>> {
     let encoder = Encoder::from_image(&dynamic_image).map_err(|_| Error::ImageEncoding)?;
 
-    let encoded_webp = encoder.encode(65.0);
+    let encoded_webp = encoder.encode(100.0);
 
     Ok(encoded_webp.as_bytes().to_vec())
 }
