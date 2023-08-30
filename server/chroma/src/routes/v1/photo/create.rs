@@ -9,6 +9,7 @@ use image::codecs::png::PngDecoder;
 use image::imageops::FilterType;
 use image::io::Reader;
 use image::{DynamicImage, EncodableLayout, GenericImageView, ImageFormat};
+use img_parts::{Bytes, DynImage, ImageEXIF};
 use proto::CreatePhotoRequest;
 use std::io::Cursor;
 use tap::TapFallible;
@@ -125,11 +126,24 @@ pub async fn create(
 }
 
 fn convert_image_format(dynamic_image: DynamicImage) -> WebResult<Vec<u8>> {
+    // Convert to webp
     let encoder = Encoder::from_image(&dynamic_image).map_err(|_| Error::ImageEncoding)?;
-
     let encoded_webp = encoder.encode(100.0);
 
-    Ok(encoded_webp.as_bytes().to_vec())
+    let mut bytes = encoded_webp.as_bytes().to_vec();
+
+    // Strip EXIF
+    let mut dyn_img = DynImage::from_bytes(Bytes::from(bytes.clone()))
+        .map_err(|_| Error::ImageEncoding)?
+        .unwrap();
+
+    dyn_img.set_exif(None);
+    dyn_img
+        .encoder()
+        .write_to(&mut bytes)
+        .map_err(|_| Error::ImageEncoding)?;
+
+    Ok(bytes)
 }
 
 fn convert_quality(img: &DynamicImage, target_width: u32) -> color_eyre::Result<Vec<u8>> {

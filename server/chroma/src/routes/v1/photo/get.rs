@@ -76,7 +76,7 @@ fn convert_format(bytes: Vec<u8>, format: &ImageFormat) -> WebResult<Vec<u8>> {
             let byte_count = bytes.len();
             reencode_dynamic_image(
                 decode_image(bytes)?,
-                ImageOutputFormat::Jpeg(100.0),
+                ImageOutputFormat::Jpeg(100),
                 byte_count,
             )
         }
