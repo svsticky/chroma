@@ -5,8 +5,11 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
+use image::io::Reader;
+use image::ImageOutputFormat;
 use proto::GetPhotoResponse;
 use serde::Deserialize;
+use std::io::Cursor;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -16,6 +19,17 @@ pub struct Query {
     /// If the requested quality does not exist, the photo's original resolution will be returned.
     #[serde(default)]
     quality_preference: PhotoQuality,
+    /// The format of the image.
+    /// E.g., WebP or PNG
+    #[serde(default)]
+    format: ImageFormat,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub enum ImageFormat {
+    #[default]
+    Png,
+    WebP,
 }
 
 /// Retrieve a photo by its ID.
@@ -33,11 +47,39 @@ pub async fn get(
         .await?
         .ok_or(Error::NotFound)?;
 
+    let photo_bytes = data
+        .storage
+        .get_photo_by_id(&photo.id, query.quality_preference.clone().into())
+        .await?;
+
+    let converted = convert_format(photo_bytes, &query.format)?;
+
     Ok(Payload(GetPhotoResponse {
-        photo: Some(
-            photo
-                .photo_to_proto(&data.storage, query.quality_preference.clone().into())
-                .await?,
-        ),
+        photo: Some(proto::Photo {
+            id: photo.id,
+            album_id: photo.album_id,
+            created_at: photo.created_at,
+            photo_data: converted,
+        }),
     }))
+}
+
+fn convert_format(bytes: Vec<u8>, format: &ImageFormat) -> WebResult<Vec<u8>> {
+    match format {
+        ImageFormat::WebP => Ok(bytes),
+        ImageFormat::Png => {
+            let byte_count = bytes.len();
+
+            let cursor = Cursor::new(bytes);
+            let reader = Reader::with_format(cursor, image::ImageFormat::WebP);
+            let decoded = reader.decode().map_err(|_| Error::ImageEncoding)?;
+
+            let mut cursor = Cursor::new(Vec::with_capacity(byte_count));
+            decoded
+                .write_to(&mut cursor, ImageOutputFormat::Png)
+                .map_err(|_| Error::ImageEncoding)?;
+
+            Ok(cursor.into_inner())
+        }
+    }
 }

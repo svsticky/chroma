@@ -20,7 +20,7 @@ pub enum Error {
     Forbidden,
     #[error("Failed to parse timestamp")]
     ChronoParse(#[from] chrono::ParseError),
-    #[error("Failed to encode image to PNG")]
+    #[error("Failed to encode image to WebP")]
     ImageEncoding,
 }
 

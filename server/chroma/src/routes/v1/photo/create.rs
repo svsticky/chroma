@@ -8,10 +8,12 @@ use dal::storage_engine::PhotoQuality;
 use image::codecs::png::PngDecoder;
 use image::imageops::FilterType;
 use image::io::Reader;
-use image::{DynamicImage, GenericImageView, ImageFormat, ImageOutputFormat};
+use image::{DynamicImage, EncodableLayout, GenericImageView, ImageFormat};
 use proto::CreatePhotoRequest;
 use std::io::Cursor;
+use tap::TapFallible;
 use tracing::{info, warn};
+use webp::Encoder;
 
 /// Create a new photo in an existing album.
 ///
@@ -32,27 +34,26 @@ pub async fn create(
         .await?
         .ok_or(Error::NotFound)?;
 
-    let photo_size = payload.photo_data.len();
     let cursor = Cursor::new(payload.photo_data.clone());
-    let image = Reader::new(cursor).with_guessed_format().unwrap(); // Cannot fail when using a Cursor
+    let image_data = Reader::new(cursor).with_guessed_format().unwrap(); // Cannot fail when using a Cursor
 
-    // Convert to PNG if the current format is JPEG
-    let png_image = match image.format() {
-        Some(ImageFormat::Png) => image.into_inner().into_inner(),
-        Some(ImageFormat::Jpeg) => {
-            let decoded = image.decode()
-                .map_err(|e| Error::BadRequest(format!("Failed to decode image. Is the format PNG or JPEG? The error is as follows: {e}")))?;
+    // Convert to WebP
+    let webp_image = match image_data.format() {
+        Some(ImageFormat::WebP) => image_data.into_inner().into_inner(),
+        Some(ImageFormat::Jpeg | ImageFormat::Png) => {
+            let dynamic_image = image_data.decode().map_err(|e| {
+                Error::BadRequest(format!(
+                    "Failed to decode image. Is the format supported? The error is as follows: {e}"
+                ))
+            })?;
 
-            let mut cursor = Cursor::new(Vec::with_capacity(photo_size));
-            decoded
-                .write_to(&mut cursor, ImageOutputFormat::Png)
-                .map_err(|_| Error::ImageEncoding)?;
-
-            cursor.into_inner()
+            convert_image_format(dynamic_image)
+                .tap_err(|e| warn!("Failed to encode image: {e}"))
+                .map_err(|_| Error::ImageEncoding)?
         }
         _ => {
             return Err(Error::BadRequest(
-                "Invalid image or non JPEG/PNG image provided".into(),
+                "Invalid image or unsupported image provided".into(),
             ))
         }
     };
@@ -64,7 +65,7 @@ pub async fn create(
     // If this fails, remove the metadata again
     if let Err(e) = data
         .storage
-        .create_photo(&photo.id, png_image.clone(), PhotoQuality::Original)
+        .create_photo(&photo.id, webp_image.clone(), PhotoQuality::Original)
         .await
     {
         photo.delete().await?;
@@ -75,7 +76,7 @@ pub async fn create(
     let data = data.clone();
     tokio::spawn(async move {
         let id = photo.id;
-        let photo = png_image;
+        let photo = webp_image;
 
         let cursor = Cursor::new(photo);
 
@@ -123,6 +124,14 @@ pub async fn create(
     Ok(Empty)
 }
 
+fn convert_image_format(dynamic_image: DynamicImage) -> WebResult<Vec<u8>> {
+    let encoder = Encoder::from_image(&dynamic_image).map_err(|_| Error::ImageEncoding)?;
+
+    let encoded_webp = encoder.encode(65.0);
+
+    Ok(encoded_webp.as_bytes().to_vec())
+}
+
 fn convert_quality(img: &DynamicImage, target_width: u32) -> color_eyre::Result<Vec<u8>> {
     let (width, height) = img.dimensions();
 
@@ -135,10 +144,5 @@ fn convert_quality(img: &DynamicImage, target_width: u32) -> color_eyre::Result<
         img.thumbnail(target_width, target_height)
     };
 
-    let mut cursor = Cursor::new(Vec::with_capacity((target_width * target_height) as usize));
-    scaled
-        .write_to(&mut cursor, ImageOutputFormat::Png)
-        .map_err(|_| Error::ImageEncoding)?;
-
-    Ok(cursor.into_inner())
+    Ok(convert_image_format(scaled)?)
 }
