@@ -4,7 +4,7 @@ use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::StatusCode;
 use actix_web::{FromRequest, HttpRequest, HttpResponse, ResponseError};
-use dal::database::User;
+use dal::database::{ChromaScope, Database, DbResult, User};
 use std::future::Future;
 use std::pin::Pin;
 use tap::TapFallible;
@@ -19,6 +19,19 @@ pub struct Authorization {
 pub enum AuthorizedUser {
     Koala { koala_id: i32 },
     Service { token: String },
+}
+
+impl Authorization {
+    pub async fn has_scope<S: AsRef<str>>(&self, db: &Database, scope: S) -> DbResult<bool> {
+        Ok(match self.user {
+            AuthorizedUser::Koala { koala_id } => ChromaScope::list_for_user(db, koala_id)
+                .await?
+                .into_iter()
+                .find(|f| f.scope.eq(scope.as_ref()))
+                .is_some(),
+            AuthorizedUser::Service { .. } => true,
+        })
+    }
 }
 
 impl FromRequest for Authorization {

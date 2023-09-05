@@ -33,10 +33,11 @@ pub enum CredentialsType {
 #[derive(Debug, Serialize)]
 struct ExchangeRequest<'a> {
     grant_type: GrantType,
-    code: &'a str,
+    code: Option<&'a str>,
     client_id: &'a str,
     client_secret: &'a str,
     redirect_uri: &'a str,
+    refresh_token: Option<&'a str>,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,6 +45,8 @@ struct ExchangeRequest<'a> {
 enum GrantType {
     /// OAuth authorization_code flow
     AuthorizationCode,
+    /// OAuth refresh_token flow
+    RefreshToken,
 }
 
 /// Get the URl to use to exchange an access code for an OAuth token pair,
@@ -62,10 +65,11 @@ pub async fn exchange_code<S: AsRef<str>>(
         .header("Accept", "application/json")
         .json(&ExchangeRequest {
             grant_type: GrantType::AuthorizationCode,
-            code: code.as_ref(),
+            code: Some(code.as_ref()),
             client_id: &config.koala_client_id,
             client_secret: &config.koala_client_secret,
             redirect_uri: &config.koala_oauth_redirect_uri,
+            refresh_token: None,
         })
         .send()
         .await?
@@ -93,6 +97,56 @@ pub async fn get_token_info<S: AsRef<str>>(
         .get(get_token_info_url(config))
         .header("User-Agent", config.koala_user_agent())
         .bearer_auth(access_token.as_ref())
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UserInfo {
+    pub first_name: String,
+    pub infix: Option<String>,
+    pub last_name: String,
+}
+
+fn get_user_info_url(config: &Config, id: i32) -> String {
+    format!("{}/api/members/{id}", config.koala_base_uri)
+}
+
+pub async fn get_user_info<S: AsRef<str>>(
+    config: &Config,
+    access_token: S,
+    koala_id: i32,
+) -> Result<UserInfo, reqwest::Error> {
+    Client::new()
+        .get(get_user_info_url(config, koala_id))
+        .header("User-Agent", config.koala_user_agent())
+        .bearer_auth(access_token.as_ref())
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await
+}
+
+pub async fn get_new_access_token<S: AsRef<str>>(
+    config: &Config,
+    refresh_token: S,
+) -> Result<ExchangeResponse, reqwest::Error> {
+    Client::new()
+        .post(get_koala_token_url(config))
+        .header("User-Agent", config.koala_user_agent())
+        .header("Accept", "application/json")
+        .json(&ExchangeRequest {
+            grant_type: GrantType::RefreshToken,
+            code: None,
+            client_id: &config.koala_client_id,
+            client_secret: &config.koala_client_secret,
+            redirect_uri: &config.koala_oauth_redirect_uri,
+            refresh_token: Some(refresh_token.as_ref()),
+        })
         .send()
         .await?
         .error_for_status()?

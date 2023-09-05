@@ -96,7 +96,7 @@ async fn main() -> Result<()> {
 
 fn configure_governor() -> Result<GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>> {
     GovernorConfigBuilder::default()
-        .per_second(3)
+        .per_second(5)
         .burst_size(10)
         .finish()
         .ok_or(Error::msg("Governor config is invalid."))

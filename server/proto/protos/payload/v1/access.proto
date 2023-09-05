@@ -3,4 +3,5 @@ package nl.svsticky.chroma;
 
 message AccessResponse {
   bool admin = 1;
+  optional bool hasRequestedScope = 2;
 }

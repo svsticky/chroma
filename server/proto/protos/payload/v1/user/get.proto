@@ -1,0 +1,9 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+import "entity/user.proto";
+
+message GetUserResponse {
+  User user = 1;
+  repeated UserScope scopes = 2;
+}

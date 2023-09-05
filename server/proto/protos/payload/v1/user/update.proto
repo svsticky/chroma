@@ -1,0 +1,9 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+import "entity/user.proto";
+
+message UpdateUserRequest {
+  int32 userId = 1;
+  repeated string newScopes = 2;
+}
