@@ -110,14 +110,20 @@ export default Vue.extend({
         await this.loadAlbum();
     },
     methods: {
-        getIdInner(): string | null {
+        getIdInner(): string | undefined {
             const paramsRaw = window.location.hash.split('?');
             if(paramsRaw.length != 2) {
-                return null;
+                return undefined;
             }
 
             const params = new URLSearchParams(paramsRaw[1]);
-            return params.get('id');
+            const id = params.get('id');
+
+            if(id == null) {
+                return undefined;
+            } else {
+                return id;
+            }
         },
         async getId(): Promise<string> {
             const id = this.getIdInner();

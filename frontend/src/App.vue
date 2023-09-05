@@ -5,6 +5,16 @@
             color="primary"
             dark>
             <v-card-title>Chroma</v-card-title>
+
+            <v-spacer></v-spacer>
+
+            <v-btn
+                icon
+                small
+                class="mr-1"
+                @click="navigateToUser">
+                <v-icon>mdi-cog-outline</v-icon>
+            </v-btn>
         </v-app-bar>
         <v-main>
             <router-view/>
@@ -28,6 +38,11 @@ export default Vue.extend({
         })
     },
     methods: {
+        navigateToUser() {
+            if(this.$router.currentRoute.fullPath !== "/user") {
+                this.$router.push('/user');
+            }
+        },
         async performLoginCheck() {
             if (this.$router.currentRoute.path == '/logged_in') {
                 return;

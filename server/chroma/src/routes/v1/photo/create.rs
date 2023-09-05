@@ -4,7 +4,6 @@ use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use dal::database::{Album, Photo};
 use dal::storage_engine::PhotoQuality;
-use image::codecs::png::PngDecoder;
 use image::imageops::FilterType;
 use image::io::Reader;
 use image::{DynamicImage, EncodableLayout, GenericImageView, ImageFormat};
@@ -80,20 +79,13 @@ pub async fn create(
         let photo = webp_image;
         let cursor = Cursor::new(photo);
 
-        let decoder = match PngDecoder::new(cursor) {
-            Ok(d) => d,
+        let image_data = Reader::new(cursor).with_guessed_format().unwrap(); // Cannot fail when using a Cursor
+        let img = match image_data.decode() {
+            Ok(dyn_img) => dyn_img,
             Err(e) => {
-                warn!("Failed to create PNG decoder: {e}");
+                warn!("Failed to decode image: {e}");
                 return;
-            }
-        };
-
-        let img = match DynamicImage::from_decoder(decoder) {
-            Ok(img) => img,
-            Err(e) => {
-                warn!("Failed to open DynamicImage from decoder: {e}");
-                return;
-            }
+            },
         };
 
         match convert_quality(&img, 400) {

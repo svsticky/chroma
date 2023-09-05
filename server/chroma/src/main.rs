@@ -12,6 +12,7 @@ use dal::s3::S3Config;
 use dal::storage_engine::StorageEngine;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
 use std::path::PathBuf;
+use actix_web::http::Method;
 use tracing::{info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
@@ -96,8 +97,15 @@ async fn main() -> Result<()> {
 
 fn configure_governor() -> Result<GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>> {
     GovernorConfigBuilder::default()
-        .per_second(5)
-        .burst_size(10)
+        .per_second(10)
+        .methods(vec![
+            Method::DELETE,
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::PUT,
+        ])
+        .burst_size(100)
         .finish()
         .ok_or(Error::msg("Governor config is invalid."))
 }
