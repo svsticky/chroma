@@ -2,6 +2,8 @@ use crate::config::Config;
 use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
+use actix_governor::governor::middleware::NoOpMiddleware;
+use actix_governor::{Governor, GovernorConfig, GovernorConfigBuilder, PeerIpKeyExtractor};
 use actix_web::{App, HttpServer};
 use color_eyre::eyre::Error;
 use color_eyre::Result;
@@ -10,7 +12,7 @@ use dal::s3::S3Config;
 use dal::storage_engine::StorageEngine;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -33,6 +35,10 @@ async fn main() -> Result<()> {
 
     if !config.validate() {
         return Err(Error::msg("Config is not valid."));
+    }
+
+    if !config.service_tokens.is_empty() {
+        warn!("There are service tokens configured, Make sure these are, and stay, confidential!");
     }
 
     info!("Initializing database");
@@ -69,10 +75,12 @@ async fn main() -> Result<()> {
     };
 
     info!("Starting web server");
+    let governor_config = configure_governor()?;
     HttpServer::new(move || {
         App::new()
             .wrap(Cors::permissive())
             .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
+            .wrap(Governor::new(&governor_config))
             .app_data(WebData::new(appdata.clone()))
             .configure(routes::Router::configure)
     })
@@ -84,6 +92,14 @@ async fn main() -> Result<()> {
     .await?;
 
     Ok(())
+}
+
+fn configure_governor() -> Result<GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>> {
+    GovernorConfigBuilder::default()
+        .per_second(3)
+        .burst_size(10)
+        .finish()
+        .ok_or(Error::msg("Governor config is invalid."))
 }
 
 fn install_tracing() {

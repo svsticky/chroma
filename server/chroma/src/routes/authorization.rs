@@ -12,8 +12,13 @@ use thiserror::Error;
 use tracing::{info, trace};
 
 pub struct Authorization {
-    pub user_id: i32,
+    pub user: AuthorizedUser,
     pub is_admin: bool,
+}
+
+pub enum AuthorizedUser {
+    Koala { koala_id: i32 },
+    Service { token: String },
 }
 
 impl FromRequest for Authorization {
@@ -38,6 +43,23 @@ impl FromRequest for Authorization {
                     trace!("Value of authorization header could not be converter to UTF-8 String")
                 })?;
 
+            // Check if we're dealing with a service token
+            if authorization.starts_with("Service ") {
+                let token = authorization.chars().skip(8).collect::<String>();
+                if token.is_empty() {
+                    return Err(AuthorizationError::InvalidServiceToken);
+                }
+
+                return if data.config.service_tokens().contains(&token.as_str()) {
+                    Ok(Self {
+                        is_admin: true,
+                        user: AuthorizedUser::Service { token },
+                    })
+                } else {
+                    Err(AuthorizationError::InvalidServiceToken)
+                };
+            }
+
             let user = User::get_by_session_id(&data.db, authorization)
                 .await?
                 .ok_or(AuthorizationError::InvalidSession(get_koala_login_url(
@@ -59,7 +81,9 @@ impl FromRequest for Authorization {
                 })?;
 
             Ok(Self {
-                user_id: user.koala_id,
+                user: AuthorizedUser::Koala {
+                    koala_id: user.koala_id,
+                },
                 is_admin: user.is_admin,
             })
         })
@@ -78,6 +102,8 @@ pub enum AuthorizationError {
     Forbidden,
     #[error("Koala has an issue")]
     KoalaUpstream,
+    #[error("Provided service token is empty or invalid")]
+    InvalidServiceToken,
 }
 
 impl ResponseError for AuthorizationError {
@@ -88,6 +114,7 @@ impl ResponseError for AuthorizationError {
             Self::InvalidSession(_) => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::KoalaUpstream => StatusCode::BAD_GATEWAY,
+            Self::InvalidServiceToken => StatusCode::UNAUTHORIZED,
         }
     }
 

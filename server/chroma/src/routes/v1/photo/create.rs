@@ -1,6 +1,5 @@
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
-use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use dal::database::{Album, Photo};
@@ -10,7 +9,7 @@ use image::imageops::FilterType;
 use image::io::Reader;
 use image::{DynamicImage, EncodableLayout, GenericImageView, ImageFormat};
 use img_parts::{Bytes, DynImage, ImageEXIF};
-use proto::CreatePhotoRequest;
+use proto::{CreatePhotoRequest, CreatePhotoResponse};
 use std::io::Cursor;
 use tap::TapFallible;
 use tracing::{info, warn};
@@ -26,7 +25,7 @@ pub async fn create(
     auth: Authorization,
     data: WebData,
     payload: Payload<CreatePhotoRequest>,
-) -> WebResult<Empty> {
+) -> WebResult<Payload<CreatePhotoResponse>> {
     if !auth.is_admin {
         return Err(Error::Forbidden);
     }
@@ -75,10 +74,10 @@ pub async fn create(
 
     // Spawn a job to create thumbnails
     let data = data.clone();
+    // Clone the ID for the async job to use
+    let photo_id = photo.id.clone();
     tokio::spawn(async move {
-        let id = photo.id;
         let photo = webp_image;
-
         let cursor = Cursor::new(photo);
 
         let decoder = match PngDecoder::new(cursor) {
@@ -100,7 +99,7 @@ pub async fn create(
         match convert_quality(&img, 400) {
             Ok(w400) => match data
                 .storage
-                .create_photo(&id, w400, PhotoQuality::W400)
+                .create_photo(&photo_id, w400, PhotoQuality::W400)
                 .await
             {
                 Ok(_) => {}
@@ -112,7 +111,7 @@ pub async fn create(
         match convert_quality(&img, 1600) {
             Ok(w1600) => match data
                 .storage
-                .create_photo(&id, w1600, PhotoQuality::W1600)
+                .create_photo(&photo_id, w1600, PhotoQuality::W1600)
                 .await
             {
                 Ok(_) => {}
@@ -122,7 +121,7 @@ pub async fn create(
         }
     });
 
-    Ok(Empty)
+    Ok(Payload(CreatePhotoResponse { photo_id: photo.id }))
 }
 
 fn convert_image_format(dynamic_image: DynamicImage) -> WebResult<Vec<u8>> {
