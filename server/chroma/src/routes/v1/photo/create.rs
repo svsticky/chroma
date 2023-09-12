@@ -155,7 +155,7 @@ fn convert_image_format(dynamic_image: DynamicImage) -> WebResult<Vec<u8>> {
 fn convert_quality(img: &DynamicImage, target_width: u32) -> color_eyre::Result<Vec<u8>> {
     let (width, height) = img.dimensions();
 
-    info!("Converting {width}x{height} to W{target_width}");
+    debug!("Converting {width}x{height} to W{target_width}");
 
     let target_height = (height as f32 / (width as f32 / target_width as f32)).round() as u32;
     let scaled = if target_width > width {

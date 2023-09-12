@@ -3,7 +3,8 @@ use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
-use dal::database::Album;
+use dal::database::{Album, Photo};
+use dal::storage_engine::PhotoQuality;
 use proto::DeleteAlbumRequest;
 
 /// Delete an existing album.
@@ -34,6 +35,19 @@ pub async fn delete(
     // Only admins may modify published albums.
     if !album.is_draft && !auth.is_admin {
         return Err(Error::Forbidden);
+    }
+
+    let photos = Photo::list_in_album(&data.db, &album.id).await?;
+    for photo in photos {
+        data.storage
+            .delete_photo(&photo.id, PhotoQuality::Original)
+            .await?;
+        data.storage
+            .delete_photo(&photo.id, PhotoQuality::W1600)
+            .await?;
+        data.storage
+            .delete_photo(&photo.id, PhotoQuality::W400)
+            .await?;
     }
 
     album.delete().await?;
