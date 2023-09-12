@@ -1,4 +1,4 @@
-use crate::koala::{get_koala_login_url, get_token_info};
+use crate::koala::{get_koala_login_url, get_user_id_from_token, UserIdFromTokenError};
 use crate::routes::appdata::WebData;
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
@@ -9,7 +9,7 @@ use std::future::Future;
 use std::pin::Pin;
 use tap::TapFallible;
 use thiserror::Error;
-use tracing::{info, trace};
+use tracing::{info, trace, warn};
 
 pub struct Authorization {
     pub user: AuthorizedUser,
@@ -82,15 +82,21 @@ impl FromRequest for Authorization {
 
             // Check if the access token is still valid
             // E.g. it could have been revoked by Koala
-            let _token_info = get_token_info(&data.config, &user.access_token)
+            let _user_id = get_user_id_from_token(&data.config, &user.access_token)
                 .await
-                .map_err(|e| match e.status() {
-                    Some(v) if v.as_u16() == 401 => {
-                        info!("Stored session was valid, tokens for koala were not.");
-                        AuthorizationError::InvalidSession(get_koala_login_url(&data.config))
+                .map_err(|e| match e {
+                    UserIdFromTokenError::Reqwest(e) => match e.status() {
+                        Some(v) if v.as_u16() == 401 => {
+                            info!("Stored session was valid, tokens for koala were not.");
+                            AuthorizationError::InvalidSession(get_koala_login_url(&data.config))
+                        }
+                        Some(v) if v.as_u16() == 403 => AuthorizationError::Forbidden,
+                        _ => AuthorizationError::KoalaUpstream,
+                    },
+                    UserIdFromTokenError::IntParse(e) => {
+                        warn!("ID Returned by koala is not parseable to an i32: {e}");
+                        AuthorizationError::KoalaUpstream
                     }
-                    Some(v) if v.as_u16() == 403 => AuthorizationError::Forbidden,
-                    _ => AuthorizationError::KoalaUpstream,
                 })?;
 
             Ok(Self {

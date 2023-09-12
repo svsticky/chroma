@@ -23,7 +23,7 @@ Much simpler is using the `File` engine, documented here.
 3. Copy `sample.env` to `.env`.
 4. With Koala running, navigate to [http://koala.rails.local:3000/api/oauth/applications](http://koala.rails.local:3000/api/oauth/applications) and create a new application.
 5. As redirect URI, use the value of `KOALA_OAUTH_REDIRECT_URI` from your `.env` file. Make sure it matches exactly!
-6. For scopes, use `member-read`.
+6. For scopes, use `member-read openid email profile`.
 7. Edit your `.env`, copy the `UID` from Koala to `KOALA_CLIENT_ID` and `Secret` to `KOALA_CLIENT_SECRET`.
 8. Edit your `.env`, update `DB_HOST` to be the IP address of your computer.
 9. Chroma can now be compiled and run with

@@ -1,14 +1,17 @@
 use crate::config::Config;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use tracing::trace;
 
 /// Get the URL to redirect a client to when they should log in with Koala
 pub fn get_koala_login_url(config: &Config) -> String {
     format!(
-        "{}/api/oauth/authorize?client_id={}&redirect_uri={}&response_type=code",
+        "{}/api/oauth/authorize?client_id={}&redirect_uri={}&response_type=code&scope={}",
         config.koala_base_redirect_uri(),
         config.koala_client_id,
         config.koala_oauth_redirect_uri,
+        "member-read+openid+email+profile"
     )
 }
 
@@ -79,32 +82,6 @@ pub async fn exchange_code<S: AsRef<str>>(
 }
 
 #[derive(Debug, Deserialize)]
-pub struct TokenInfo {
-    pub resource_owner_id: i32,
-    pub expires_in: i64,
-    pub created_at: i64,
-}
-
-fn get_token_info_url(config: &Config) -> String {
-    format!("{}/api/oauth/token/info", config.koala_base_uri)
-}
-
-pub async fn get_token_info<S: AsRef<str>>(
-    config: &Config,
-    access_token: S,
-) -> Result<TokenInfo, reqwest::Error> {
-    Client::new()
-        .get(get_token_info_url(config))
-        .header("User-Agent", config.koala_user_agent())
-        .bearer_auth(access_token.as_ref())
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await
-}
-
-#[derive(Debug, Deserialize)]
 pub struct UserInfo {
     pub first_name: String,
     pub infix: Option<String>,
@@ -152,4 +129,37 @@ pub async fn get_new_access_token<S: AsRef<str>>(
         .error_for_status()?
         .json()
         .await
+}
+
+#[derive(Deserialize)]
+struct OauthUserInfoResponse {
+    sub: String,
+}
+
+#[derive(Debug, Error)]
+pub enum UserIdFromTokenError {
+    #[error("{0}")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("{0}")]
+    IntParse(#[from] std::num::ParseIntError),
+}
+
+fn get_token_info_url(config: &Config) -> String {
+    format!("{}/oauth/userinfo", config.koala_base_uri)
+}
+
+pub async fn get_user_id_from_token<S: AsRef<str>>(config: &Config, access_token: S) -> Result<i32, UserIdFromTokenError> {
+    trace!("{}", access_token.as_ref());
+    let res: OauthUserInfoResponse = Client::new()
+        .get(get_token_info_url(config))
+        .header("User-Agent", config.koala_user_agent())
+        .header("Accept", "application/json")
+        .bearer_auth(access_token.as_ref())
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+
+    Ok(res.sub.parse::<i32>()?)
 }

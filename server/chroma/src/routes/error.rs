@@ -22,6 +22,8 @@ pub enum Error {
     ChronoParse(#[from] chrono::ParseError),
     #[error("Failed to encode image to WebP")]
     ImageEncoding,
+    #[error("Other: {0}")]
+    Other(StatusCode),
 }
 
 impl ResponseError for Error {
@@ -35,6 +37,7 @@ impl ResponseError for Error {
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::ChronoParse(_) => StatusCode::BAD_GATEWAY,
             Self::ImageEncoding => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Other(s) => *s
         }
     }
 }
