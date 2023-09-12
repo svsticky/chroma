@@ -1,3 +1,5 @@
+extern crate core;
+
 use crate::config::Config;
 use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;

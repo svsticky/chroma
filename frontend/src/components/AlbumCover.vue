@@ -4,7 +4,7 @@
             {{ album.name }} {{ album.isDraft ? "(DRAFT)" : null }}
             <v-spacer></v-spacer>
             <v-btn
-                v-if="canDeleteAlbum"
+                v-if="canDelete"
                 class="mr-1"
                 color="primary"
                 fab
@@ -13,7 +13,7 @@
                 <v-icon>mdi-trash-can-outline</v-icon>
             </v-btn>
             <v-btn
-                v-if="canEditAlbum"
+                v-if="canEdit"
                 color="primary"
                 fab
                 small
@@ -62,8 +62,6 @@ interface Data {
     snackbar: string | null,
     coverPhotoBytes: Uint8Array | null,
     loading: boolean,
-    canDeleteAlbum: boolean,
-    canEditAlbum: boolean,
 }
 
 export default Vue.extend({
@@ -71,21 +69,19 @@ export default Vue.extend({
         album: {
             type: Object as PropType<AlbumModel>,
             required: true,
-        }
+        },
+        canEdit: Boolean,
+        canDelete: Boolean,
     },
     data(): Data {
         return {
             snackbar: null,
             coverPhotoBytes: null,
             loading: true,
-            canDeleteAlbum: false,
-            canEditAlbum: false,
         }
     },
     mounted() {
         this.loadCoverPhoto();
-
-        this.loadPermissions();
     },
     computed: {
         coverPhotoUrl(): string | null {
@@ -99,15 +95,6 @@ export default Vue.extend({
         }
     },
     methods: {
-        async loadPermissions() {
-            if(Storage.isAdmin()) {
-                this.canDeleteAlbum = true;
-                this.canEditAlbum = true;
-            } else {
-                this.canEditAlbum = await checkScope("nl.svsticky.chroma.album.update") ?? false;
-                this.canDeleteAlbum = await checkScope("nl.svsticky.chroma.album.delete") ?? false;
-            }
-        },
         async loadCoverPhoto() {
             if(this.album.coverPhotoId == null) {
                 return;

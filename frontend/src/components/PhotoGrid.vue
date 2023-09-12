@@ -6,7 +6,8 @@
                 :key="idx">
                 <v-col cols="12" sm="12" md="6">
                     <PhotoCover
-                        :can-edit="edit && canDeletePhotos"
+                        :can-delete="edit && canDeletePhoto"
+                        :can-set-thumbnail="edit && canEdit"
                         :is-cover="albumModel?.coverPhotoId === pair[0].id"
                         :bytes="pair[0].photoBytes"
                         @select-cover="selectCover(pair[0])"
@@ -15,7 +16,8 @@
                 </v-col>
                 <v-col v-if="pair.length === 2">
                     <PhotoCover
-                        :can-edit="edit && canDeletePhotos"
+                        :can-delete="edit && canDeletePhoto"
+                        :can-set-thumbnail="edit && canEdit"
                         :is-cover="albumModel?.coverPhotoId === pair[1].id"
                         :bytes="pair[1].photoBytes"
                         @select-cover="selectCover(pair[1])"
@@ -43,6 +45,8 @@ interface Data {
     photos: PhotoModel[],
     loading: boolean,
     albumModel: AlbumModel | null,
+    canEdit: boolean,
+    canDeletePhoto: boolean,
 }
 
 export default Vue.extend({
@@ -64,6 +68,8 @@ export default Vue.extend({
             photos: [],
             loading: true,
             albumModel: null,
+            canDeletePhoto: false,
+            canEdit: false,
         }
     },
     watch: {
@@ -84,6 +90,14 @@ export default Vue.extend({
     async mounted() {
         await this.loadPhotos();
         await this.loadCoverData();
+
+        if(Storage.isAdmin()) {
+            this.canDeletePhoto = true;
+            this.canEdit = true;
+        } else if(this.edit) {
+            this.canDeletePhoto = await checkScope("nl.svsticky.chroma.photo.delete") ?? false;
+            this.canEdit = await checkScope("nl.svsticky.chroma.album.update") ?? false;
+        }
     },
     methods: {
         async loadPhotos() {

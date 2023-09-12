@@ -46,6 +46,8 @@ export default Vue.extend({
             type: Uint8Array,
             required: true,
         },
+        canSetThumbnail: Boolean,
+        canDelete: Boolean,
         isCover: {
             type: Boolean,
             required: false,
@@ -56,10 +58,6 @@ export default Vue.extend({
             canDelete: false,
             canSetThumbnail: false,
         }
-    },
-    async mounted() {
-        this.canDelete = await checkScope("nl.svsticky.chroma.photo.delete") ?? false;
-        this.canSetThumbnail = await checkScope("nl.svsticky.chroma.album.update") ?? false;
     },
     computed: {
         coverPhotoUrl(): string {

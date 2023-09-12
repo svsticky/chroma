@@ -136,6 +136,8 @@ export default Vue.extend({
             }
 
             this.canCreatePhotos = await checkScope("nl.svsticky.chroma.photo.create") ?? false;
+        } else {
+            this.canCreatePhotos = true;
         }
 
         await this.loadAlbum();

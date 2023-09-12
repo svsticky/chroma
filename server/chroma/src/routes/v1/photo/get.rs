@@ -5,7 +5,6 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
-use image::io::Reader;
 use image::{DynamicImage, ImageOutputFormat};
 use proto::GetPhotoResponse;
 use serde::Deserialize;
@@ -100,10 +99,11 @@ fn reencode_dynamic_image(
 }
 
 fn decode_image(bytes: Vec<u8>) -> WebResult<DynamicImage> {
-    let cursor = Cursor::new(bytes);
-    let reader = Reader::with_format(cursor, image::ImageFormat::WebP);
-
-    reader.decode()
-        .tap_err(|e| warn!("Failed to decode image: {e}"))
-        .map_err(|_| Error::ImageEncoding)
+    match webp::Decoder::new(&bytes).decode() {
+        Some(webp) => Ok(webp.to_image()),
+        None => {
+            warn!("Failed to decode WebP image");
+            Err(Error::ImageEncoding)
+        }
+    }
 }
