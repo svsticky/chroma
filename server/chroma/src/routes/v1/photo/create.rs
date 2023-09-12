@@ -26,12 +26,19 @@ pub async fn create(
     payload: Payload<CreatePhotoRequest>,
 ) -> WebResult<Payload<CreatePhotoResponse>> {
     if !auth.is_admin {
-        return Err(Error::Forbidden);
+        if !auth.has_scope(&data.db, "nl.svsticky.chroma.photo.create").await? {
+            return Err(Error::Forbidden);
+        }
     }
 
     let album = Album::get_by_id(&data.db, &payload.album_id)
         .await?
         .ok_or(Error::NotFound)?;
+
+    // Album must be un-published for non-admins to modify them.
+    if !album.is_draft && !auth.is_admin {
+        return Err(Error::Forbidden);
+    }
 
     let cursor = Cursor::new(payload.photo_data.clone());
     let image_data = Reader::new(cursor).with_guessed_format().unwrap(); // Cannot fail when using a Cursor

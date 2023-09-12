@@ -3,7 +3,8 @@ use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
-use dal::database::Photo;
+use reqwest::StatusCode;
+use dal::database::{Album, Photo};
 use dal::storage_engine::PhotoQuality;
 use proto::DeletePhotoRequest;
 
@@ -21,12 +22,25 @@ pub async fn delete(
     payload: Payload<DeletePhotoRequest>,
 ) -> WebResult<Empty> {
     if !auth.is_admin {
-        return Err(Error::Forbidden);
+        if !auth.has_scope(&data.db, "nl.svsticky.chroma.photo.delete").await? {
+            return Err(Error::Forbidden);
+        }
     }
 
     let photo = Photo::get_by_id(&data.db, &payload.photo_id)
         .await?
         .ok_or(Error::NotFound)?;
+
+    if !auth.is_admin {
+        let album = Album::get_by_id(&data.db, &photo.album_id).await?
+            .ok_or(Error::Other(StatusCode::INTERNAL_SERVER_ERROR))?;
+
+        // Only admins may modify published albums
+        if !album.is_draft {
+            return Err(Error::Forbidden);
+        }
+    }
+
     let id = photo.id.clone();
     photo.delete().await?;
 

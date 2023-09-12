@@ -5,6 +5,7 @@ use actix_web::web::ServiceConfig;
 mod get;
 mod list;
 mod update;
+mod available_scopes;
 
 pub struct Router;
 
@@ -14,7 +15,8 @@ impl Routable for Router {
             web::scope("/user")
                 .route("", web::get().to(get::get))
                 .route("", web::patch().to(update::update))
-                .route("/list", web::get().to(list::list)),
+                .route("/list", web::get().to(list::list))
+                .route("/available-scopes", web::get().to(available_scopes::available_scopes)),
         );
     }
 }

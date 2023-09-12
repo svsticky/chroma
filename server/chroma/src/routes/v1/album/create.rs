@@ -18,7 +18,10 @@ pub async fn create(
     payload: Payload<CreateAlbumRequest>,
 ) -> WebResult<Payload<CreateAlbumResponse>> {
     if !auth.is_admin {
-        return Err(Error::Forbidden);
+        let is_draft = payload.is_draft.unwrap_or(false);
+        if !(is_draft && !auth.has_scope(&data.db, "nl.svsticky.chroma.album.create").await?) {
+            return Err(Error::Forbidden);
+        }
     }
 
     if payload.name.len() > Album::MAX_NAME_LENGTH {

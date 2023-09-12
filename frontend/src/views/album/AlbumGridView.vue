@@ -24,13 +24,13 @@
                         :key="idx">
                         <v-col cols="12" sm="12" md="6">
                             <AlbumCover
-                                @request-update="loadAlbums"
+                                @change="loadAlbums"
                                 :album="pair[0]"
                             ></AlbumCover>
                         </v-col>
                         <v-col v-if="pair.length === 2">
                             <AlbumCover
-                                @request-update="loadAlbums"
+                                @change="loadAlbums"
                                 :album="pair[1]"
                             ></AlbumCover>
                         </v-col>

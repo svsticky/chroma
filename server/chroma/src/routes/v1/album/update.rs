@@ -24,7 +24,9 @@ pub async fn update(
     payload: Payload<UpdateAlbumRequest>,
 ) -> WebResult<Empty> {
     if !auth.is_admin {
-        return Err(Error::Forbidden);
+        if !auth.has_scope(&data.db, "nl.svsticky.chroma.album.update").await? {
+            return Err(Error::Forbidden);
+        }
     }
 
     let mut album = Album::get_by_id(&data.db, &payload.id)
@@ -61,6 +63,11 @@ pub async fn update(
     }
 
     if let Some(draft_settings) = &payload.draft_settings {
+        // Only admins may change publication settings
+        if !auth.is_admin {
+            return Err(Error::Forbidden);
+        }
+
         match draft_settings {
             proto::update_album_request::DraftSettings::SetDraft(v) if *v => {
                 album.set_draft().await?;

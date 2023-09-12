@@ -3,6 +3,7 @@ import {ListUserResponse} from "@/generated/payload/v1/user/list";
 import {Http} from "@/http";
 import {GetUserResponse} from "@/generated/payload/v1/user/get";
 import {UpdateUserRequest} from "@/generated/payload/v1/user/update";
+import {GetAvailableScopesResponse} from "@/generated/payload/v1/user/available_scopes";
 
 export interface UserModel {
     id: number,
@@ -63,4 +64,17 @@ export async function updateUserScopes(userId: number, newScopes: string[]): Pro
     }), null);
 
     return result.ok;
+}
+
+export async function getAvailableScopes(): Promise<string[] | undefined> {
+    const result = await Http.getBody<GetAvailableScopesResponse>('/api/v1/user/available-scopes', null, GetAvailableScopesResponse);
+    if(result instanceof Response) {
+        if(result.ok) {
+            return [];
+        } else {
+            return undefined;
+        }
+    }
+
+    return result.scopes;
 }

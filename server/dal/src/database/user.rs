@@ -203,8 +203,16 @@ impl<'a> User<'a> {
         ChromaScope::list_for_user(&self.db, self.koala_id).await
     }
 
-    pub async fn add_scope<S: AsRef<str>>(&self, scope: S, by: &User<'a>) -> DbResult<ChromaScope> {
+    pub async fn add_scope<S: AsRef<str>>(&self, scope: S, by: &User<'a>) -> DbResult<ChromaScope<'a>> {
         ChromaScope::add_scope(&self.db, self.koala_id, scope, by.koala_id).await
+    }
+
+    pub async fn remove_scope(&self, scope: &ChromaScope<'_>) -> DbResult<()> {
+        ChromaScope::remove_scope(&self.db, self.koala_id, &scope.scope).await
+    }
+
+    pub async fn remove_scope_by_name<S: AsRef<str>>(&self, scope_name: S) -> DbResult<()> {
+        ChromaScope::remove_scope(&self.db, self.koala_id, scope_name.as_ref()).await
     }
 }
 
@@ -223,7 +231,16 @@ impl<'a> ChromaScope<'a> {
             .collect::<Vec<_>>())
     }
 
-    pub async fn add_scope<S: AsRef<str>>(
+    async fn remove_scope(db: &Database, koala_id: i32, name: &str) -> DbResult<()> {
+        sqlx::query("DELETE FROM chroma_scopes WHERE koala_id = $1 AND scope = $2")
+            .bind(koala_id)
+            .bind(name)
+            .execute(&**db)
+            .await?;
+        Ok(())
+    }
+
+    async fn add_scope<S: AsRef<str>>(
         db: &'a Database,
         to: i32,
         name: S,

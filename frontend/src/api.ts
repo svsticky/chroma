@@ -4,6 +4,7 @@ import {AccessResponse} from "@/generated/payload/v1/access";
 const sessionIdKey = 'sessionid';
 const isAdminKey = 'isadmin';
 const beforeAuthUrlKey = 'beforeauth';
+const isDarkModeKey = 'darkmode';
 
 export const errorText = "Something went wrong";
 
@@ -34,6 +35,18 @@ export namespace Storage {
 
     export function setBeforeAuthUrl(url: string) {
         window.localStorage.setItem(beforeAuthUrlKey, url);
+    }
+
+    export function getIsDarkMode(): boolean {
+        return window.localStorage.getItem(isDarkModeKey) != null;
+    }
+
+    export function setIsDarkMode(darkMode: boolean) {
+        if(darkMode) {
+            window.localStorage.setItem(isDarkModeKey, "true");
+        } else {
+            window.localStorage.removeItem(isDarkModeKey);
+        }
     }
 }
 

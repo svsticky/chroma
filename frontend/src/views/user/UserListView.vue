@@ -5,7 +5,10 @@
             elevation="2"
             class="mt-3 pa-3">
 
-            <v-card-title>Users</v-card-title>
+            <v-card-title>
+                <ReturnButton></ReturnButton>
+                Users
+            </v-card-title>
             <v-card-subtitle>Manage users registered within Chroma</v-card-subtitle>
 
             <v-card-text>
@@ -34,6 +37,7 @@ import {listUsers, UserModel} from "@/views/user/user";
 import {errorText, Storage} from "@/api";
 import {DataTableHeader} from "vuetify";
 import EditUserDialog from "@/components/EditUserDialog.vue";
+import ReturnButton from "@/components/ReturnButton.vue";
 
 interface Data {
     snackbar: string | null,
@@ -49,7 +53,7 @@ interface Data {
 }
 
 export default Vue.extend({
-    components: {EditUserDialog},
+    components: {ReturnButton, EditUserDialog},
     data(): Data {
         return {
             snackbar: null,

@@ -36,7 +36,7 @@
                 width="80%"
                 aspect-ratio="1.7778"
                 cover
-                lazy-src="@/assets/hoofd_outline_kleur.svg"
+                lazy-src="@/assets/hoofd_outline_color.png"
                 :src="coverPhotoUrl">
 
                 <template v-slot:placeholder>
@@ -118,7 +118,7 @@ export default Vue.extend({
             }
         },
         requestUpdate() {
-            this.$emit('request-update');
+            this.$emit('change');
         },
         openAlbum() {
             this.$router.push(`/album/view?id=${this.album.id}`)

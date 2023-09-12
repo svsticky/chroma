@@ -19,13 +19,21 @@ pub async fn delete(
     payload: Payload<DeleteAlbumRequest>,
 ) -> WebResult<Empty> {
     if !auth.is_admin {
+        if !auth.has_scope(&data.db, "nl.svsticky.chroma.album.delete").await? {
+            return Err(Error::Forbidden);
+        }
+    }
+
+    let album = Album::get_by_id(&data.db, &payload.id)
+        .await?
+        .ok_or(Error::NotFound)?;
+
+    // Only admins may modify published albums.
+    if !album.is_draft && !auth.is_admin {
         return Err(Error::Forbidden);
     }
 
-    Album::get_by_id(&data.db, &payload.id)
-        .await?
-        .ok_or(Error::NotFound)?
-        .delete()
-        .await?;
+    album.delete().await?;
+
     Ok(Empty)
 }

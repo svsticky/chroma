@@ -25,45 +25,44 @@ pub async fn update(
         }
     };
 
-    let user = User::get_by_id(&data.db, payload.user_id)
+    // The user to grant to
+    let grantee = User::get_by_id(&data.db, payload.user_id)
         .await?
         .ok_or(Error::NotFound)?;
 
-    // Retrieve existing scopes on the user and stash them in a HashSet
-    let existing_scopes = user.get_chroma_scopes().await?;
-    let existing_scopes = existing_scopes
+    // Get the current list of scopes
+    let existing_scopes = grantee.get_chroma_scopes().await?
         .into_iter()
         .map(|f| f.scope)
         .collect::<HashSet<_>>();
 
     // Stash all new scopes in a HashSet
-    let new_scopes = payload
-        .new_scopes
+    let new_scopes = payload.new_scopes
         .clone()
         .into_iter()
         .collect::<HashSet<_>>();
 
-    // The intersection is the set of scopes that should be /removed/ from the user
-    let intersection = existing_scopes
-        .intersection(&new_scopes)
-        .collect::<HashSet<_>>();
-
-    // The difference is the set of scopes that should be /added/ to the user
-    let difference = existing_scopes
+    // The set of scopes that should be /removed/ from the user
+    let to_remove = existing_scopes
         .difference(&new_scopes)
         .collect::<HashSet<_>>();
 
+    // The set of scopes that should be /added/ to the user
+    let to_add = new_scopes
+        .difference(&existing_scopes)
+        .collect::<HashSet<_>>();
+
+    // User who is granting the scopes
     let granted_by = User::get_by_id(&data.db, granted_by_id)
         .await?
         .ok_or(Error::NotFound)?;
 
-    // Finally, grant the scopes
-    for scope in &difference {
-        user.add_scope(scope, &granted_by).await?;
+    for scope in &to_add {
+        grantee.add_scope(scope, &granted_by).await?;
     }
 
-    for scope in &intersection {
-        // TODO
+    for scope in &to_remove {
+        grantee.remove_scope_by_name(scope).await?;
     }
 
     Ok(Empty)

@@ -5,17 +5,19 @@
         persistent>
         <v-card flat>
             <v-card-title>Grant scope</v-card-title>
-            <v-card-subtitle>Editing '{{ user.name }}'</v-card-subtitle>
+            <v-card-subtitle v-if="availableScopes.length > 0">Select available scopes to grant to '{{ user.name }}'</v-card-subtitle>
             <v-card-text>
-                <v-form v-model="valid">
-                    <v-text-field
-                        v-model="scope"
-                        :rules="scopeRules"
-                        counter="128"
-                    ></v-text-field>
-                </v-form>
+                <v-select
+                    multiple
+                    v-if="availableScopes.length > 0"
+                    :items="availableScopes"
+                    v-model="scopes"
+                ></v-select>
+                <div v-else>
+                    All available scopes have already been granted to '{{ user.name }}'
+                </div>
             </v-card-text>
-            <v-card-actions>
+            <v-card-actions v-if="availableScopes.length > 0">
                 <v-btn
                     @click="$emit('close', false)">
                     Cancel
@@ -24,9 +26,17 @@
                 <v-btn
                     @click="grantScope"
                     color="primary"
-                    :disabled="!valid"
-                    :loading="loading">
+                    :disabled="scopes.length == 0"
+                    :loading="loading.updateScopes">
                     Grant scope
+                </v-btn>
+            </v-card-actions>
+            <v-card-actions v-else>
+                <v-spacer></v-spacer>
+                <v-btn
+                    color="primary"
+                    @click="$emit('close', false)">
+                    Cancel
                 </v-btn>
             </v-card-actions>
         </v-card>
@@ -35,17 +45,18 @@
 
 <script lang="ts">
 import Vue, {PropType} from "vue";
-import {getUserScopes, UserModel} from "@/views/user/user";
+import {getAvailableScopes, getUserScopes, UserModel} from "@/views/user/user";
 import {updateUserScopes} from "@/views/user/user";
-import {InputValidationRules} from "vuetify";
 import {errorText} from "@/api";
 
 interface Data {
     snackbar: string | null,
-    loading: boolean,
-    scope: string | null,
-    valid: boolean,
-    scopeRules: InputValidationRules,
+    loading: {
+        availableScopes: boolean,
+        updateScopes: boolean,
+    },
+    scopes: string[],
+    availableScopes: string[]
 }
 
 export default Vue.extend({
@@ -61,39 +72,67 @@ export default Vue.extend({
     },
     watch: {
         enabled() {
-            this.scope = null;
-            this.valid = true;
+            this.scopes = [];
+            this.loadAvailableScopes();
         }
+    },
+    mounted() {
+        this.loadAvailableScopes();
     },
     data(): Data {
         return {
             snackbar: null,
-            loading: false,
-            scope: null,
-            valid: true,
-            scopeRules: [
-                v => !!v || "Required"
-            ]
+            loading: {
+                availableScopes: true,
+                updateScopes: false,
+            },
+            scopes: [],
+            availableScopes: [],
         }
     },
     methods: {
+        async loadAvailableScopes() {
+            this.loading.availableScopes = true;
+            const availableScopes = await getAvailableScopes();
+            this.loading.availableScopes = false;
+
+            if(availableScopes == undefined) {
+                this.snackbar = errorText;
+                this.loading.availableScopes = false;
+                return;
+            }
+
+            const grantedScopes = await getUserScopes(this.user!.id);
+            this.loading.availableScopes = false;
+
+            if(grantedScopes == undefined) {
+                this.snackbar = errorText;
+                return;
+            }
+
+            let grantedScopeNames = grantedScopes.map(f => f.scope)
+            let scopesGrantable = availableScopes
+                .filter(f => !grantedScopeNames.includes(f));
+
+            this.availableScopes = scopesGrantable;
+        },
         async grantScope() {
             if(this.user == undefined) return;
 
-            this.loading = true;
+            this.loading.updateScopes = true;
 
             const currentScopes = await getUserScopes(this.user!.id);
             if(currentScopes == undefined) {
-                this.loading = false;
+                this.loading.updateScopes = false;
                 this.snackbar = errorText;
                 return;
             }
 
             let newScopes = currentScopes.map(f => f.scope);
-            newScopes.push(this.scope!);
+            newScopes = newScopes.concat(this.scopes);
 
             const result = await updateUserScopes(this.user!.id, newScopes);
-            this.loading = false;
+            this.loading.updateScopes = false;
 
             if(result == undefined) {
                 this.snackbar = errorText;
