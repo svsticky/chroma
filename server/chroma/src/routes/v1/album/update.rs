@@ -60,5 +60,17 @@ pub async fn update(
         album.update_cover_photo(&photo).await?;
     }
 
+    if let Some(draft_settings) = &payload.draft_settings {
+        match draft_settings {
+            proto::update_album_request::DraftSettings::SetDraft(v) if *v => {
+                album.set_draft().await?;
+            },
+            proto::update_album_request::DraftSettings::SetPublished(v) if *v => {
+                album.set_published(auth.to_dal_user_type(&data.db).await?).await?;
+            },
+            _ => {}
+        }
+    }
+
     Ok(Empty)
 }

@@ -6,4 +6,5 @@ message Album {
   string name = 2;
   int64 createdAt = 3;
   optional string coverPhotoId = 4;
+  bool isDraft = 5;
 }

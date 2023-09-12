@@ -29,6 +29,12 @@ pub async fn create(
         )));
     }
 
-    let album = Album::create(&data.db, &payload.name).await?;
+    let album = Album::create(
+        &data.db,
+        &payload.name,
+        payload.is_draft.unwrap_or(false),
+        auth.to_dal_user_type(&data.db).await?,
+
+    ).await?;
     Ok(Payload(CreateAlbumResponse { id: album.id }))
 }

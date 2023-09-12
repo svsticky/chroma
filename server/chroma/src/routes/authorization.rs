@@ -4,7 +4,7 @@ use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::StatusCode;
 use actix_web::{FromRequest, HttpRequest, HttpResponse, ResponseError};
-use dal::database::{ChromaScope, Database, DbResult, User};
+use dal::database::{ChromaScope, Database, DbResult, ServiceTokenUser, User, UserType};
 use std::future::Future;
 use std::pin::Pin;
 use tap::TapFallible;
@@ -22,6 +22,23 @@ pub enum AuthorizedUser {
 }
 
 impl Authorization {
+    pub async fn to_dal_user_type(&self, db: &Database) -> DbResult<UserType> {
+        let user_type = match &self.user {
+            AuthorizedUser::Koala { koala_id } => UserType::Koala(*koala_id),
+            AuthorizedUser::Service { token } => {
+                match ServiceTokenUser::get_by_token(db, token).await? {
+                    Some(stu) => UserType::ServiceToken(stu.id),
+                    None => {
+                        let stu = ServiceTokenUser::create(db, token).await?;
+                        UserType::ServiceToken(stu.id)
+                    }
+                }
+            }
+        };
+
+        Ok(user_type)
+    }
+
     pub async fn has_scope<S: AsRef<str>>(&self, db: &Database, scope: S) -> DbResult<bool> {
         Ok(match self.user {
             AuthorizedUser::Koala { koala_id } => ChromaScope::list_for_user(db, koala_id)
