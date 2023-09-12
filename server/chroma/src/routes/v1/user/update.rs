@@ -43,25 +43,27 @@ pub async fn update(
         .into_iter()
         .collect::<HashSet<_>>();
 
+    // The intersection is the set of scopes that should be /removed/ from the user
     let intersection = existing_scopes
         .intersection(&new_scopes)
         .collect::<HashSet<_>>();
 
-    // Check that there is no intersection between the set of current scopes
-    // and the set of new scopes.
-    if !intersection.is_empty() {
-        return Err(Error::BadRequest(
-            "Some new scopes are alreadyp resent on the user.".into(),
-        ));
-    }
+    // The difference is the set of scopes that should be /added/ to the user
+    let difference = existing_scopes
+        .difference(&new_scopes)
+        .collect::<HashSet<_>>();
 
     let granted_by = User::get_by_id(&data.db, granted_by_id)
         .await?
         .ok_or(Error::NotFound)?;
 
     // Finally, grant the scopes
-    for scope in &new_scopes {
+    for scope in &difference {
         user.add_scope(scope, &granted_by).await?;
+    }
+
+    for scope in &intersection {
+        // TODO
     }
 
     Ok(Empty)

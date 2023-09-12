@@ -1,7 +1,7 @@
 <template>
     <v-card elevation="pa-3">
         <v-card-title>
-            {{ album.name }}
+            {{ album.name }} {{ album.isDraft ? "(DRAFT)" : null }}
             <v-spacer></v-spacer>
             <v-btn
                 v-if="isAdmin"

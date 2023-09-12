@@ -6,7 +6,9 @@ use crate::routes::redirect::Redirect;
 use actix_web::web;
 use dal::database::{OAuthAccess, User};
 use serde::Deserialize;
+use tap::TapFallible;
 use tracing::{trace, warn};
+use crate::config::Config;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -62,6 +64,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
                     }
                 })?;
 
+            let name = get_user_name(&data.config, koala_id, &oauth_tokens.access_token).await?;
             User::create(
                 &data.db,
                 koala_id,
@@ -71,6 +74,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
                     expires_at,
                 },
                 is_admin,
+                name,
             )
             .await?
         }
@@ -83,4 +87,20 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         data.config.login_complete_redirect_uri, session_id, is_admin
     );
     Ok(Redirect::new(redirect_to))
+}
+
+async fn get_user_name(config: &Config, koala_id: i32, access_token: &str) -> WebResult<String> {
+    // Retrieve the user's name
+    let user_info = crate::koala::get_user_info(&config, access_token, koala_id)
+        .await
+        .tap_err(|e| warn!("Failed to retrieve user info from Koala: {e}"))
+        .map_err(|e| Error::Koala(e))?;
+
+    let user_name = if let Some(infix) = user_info.infix {
+        format!("{} {} {}", user_info.first_name, infix, user_info.last_name)
+    } else {
+        format!("{} {}", user_info.first_name, user_info.last_name)
+    };
+
+    Ok(user_name)
 }

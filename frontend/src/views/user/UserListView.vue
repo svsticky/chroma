@@ -1,5 +1,6 @@
 <template>
     <v-container>
+        <EditUserDialog :enabled="dialog.editUser.enabled" :user="dialog.editUser.user" @close="dialog.editUser.enabled = false"></EditUserDialog>
         <v-card
             elevation="2"
             class="mt-3 pa-3">
@@ -17,7 +18,7 @@
                         <v-btn
                             fab
                             small
-                            @click="openEditDialog">
+                            @click="openEditDialog(item)">
                             <v-icon>mdi-account-edit</v-icon>
                         </v-btn>
                     </template>
@@ -32,15 +33,23 @@ import Vue from 'vue';
 import {listUsers, UserModel} from "@/views/user/user";
 import {errorText, Storage} from "@/api";
 import {DataTableHeader} from "vuetify";
+import EditUserDialog from "@/components/EditUserDialog.vue";
 
 interface Data {
     snackbar: string | null,
     loading: boolean,
     users: UserModel[],
     headers: DataTableHeader[],
+    dialog: {
+        editUser: {
+            user: UserModel | null,
+            enabled: boolean,
+        }
+    }
 }
 
 export default Vue.extend({
+    components: {EditUserDialog},
     data(): Data {
         return {
             snackbar: null,
@@ -55,7 +64,13 @@ export default Vue.extend({
                     text: "Acties",
                     value: "actions",
                 }
-            ]
+            ],
+            dialog: {
+                editUser: {
+                    user: null,
+                    enabled: false,
+                }
+            }
         }
     },
     async mounted() {
@@ -67,8 +82,9 @@ export default Vue.extend({
         await this.loadUsers();
     },
     methods: {
-        openEditDialog() {
-            // TODO
+        openEditDialog(user: UserModel) {
+            this.dialog.editUser.user = user;
+            this.dialog.editUser.enabled = true;
         },
         async loadUsers() {
             this.loading = true;

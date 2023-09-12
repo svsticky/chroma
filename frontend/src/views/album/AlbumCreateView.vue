@@ -13,6 +13,10 @@
                         :rules="rules.name"
                         counter="64"
                     ></v-text-field>
+                    <v-checkbox
+                        v-model="album.isDraft"
+                        label="Draft"
+                    ></v-checkbox>
                 </v-form>
             </v-card-text>
             <v-card-actions>
@@ -40,6 +44,7 @@ interface Data {
     loading: boolean,
     album: {
         name: string | null,
+        isDraft: boolean,
     },
     valid: boolean,
     rules: {
@@ -55,6 +60,7 @@ export default Vue.extend({
             loading: false,
             album: {
                 name: null,
+                isDraft: false,
             },
             valid: true,
             rules: {
@@ -74,7 +80,7 @@ export default Vue.extend({
     methods: {
         async create() {
             this.loading = true;
-            const result = await createAlbum(this.album.name!);
+            const result = await createAlbum(this.album.name!, this.album.isDraft!);
             this.loading = false;
 
             if(result == undefined) {

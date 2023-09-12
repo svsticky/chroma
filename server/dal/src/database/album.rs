@@ -1,4 +1,4 @@
-use crate::database::{Database, DbResult, Photo};
+use crate::database::{Database, DatabaseError, DbResult, Photo, User};
 use rand::Rng;
 use sqlx::{FromRow, Type};
 use std::borrow::Cow;
@@ -37,6 +37,7 @@ struct _Album {
 }
 
 #[derive(Clone, Type)]
+#[sqlx(type_name = "user_type")]
 enum _UserType {
     Koala,
     Service
@@ -65,18 +66,6 @@ impl _Album {
     }
 }
 
-impl<'a> From<Album<'a>> for proto::Album {
-    fn from(x: Album<'a>) -> Self {
-        Self {
-            id: x.id,
-            name: x.name,
-            created_at: x.created_at,
-            cover_photo_id: x.cover_photo_id,
-            is_draft: x.is_draft,
-        }
-    }
-}
-
 impl<'a> Album<'a> {
     pub const MAX_NAME_LENGTH: usize = 64;
     pub const ID_PREFIX: &'static str = "ALB_";
@@ -89,6 +78,40 @@ impl<'a> Album<'a> {
             .map(char::from)
             .collect();
         format!("{}{random}", Self::ID_PREFIX)
+    }
+
+    async fn user_type_to_proto(db: &Database, user: UserType) -> DbResult<proto::AlbumUser> {
+        Ok(match user {
+            UserType::Koala(id) => {
+                let user = User::get_by_id(db, id).await?
+                    .ok_or(DatabaseError::RowNotFound)?;
+                proto::AlbumUser {
+                    id,
+                    name: Some(user.name),
+                    r#type: proto::UserType::Koala as i32,
+                }
+            },
+            UserType::ServiceToken(id) => proto::AlbumUser {
+                id,
+                name: None,
+                r#type: proto::UserType::Service as i32,
+            }
+        })
+    }
+
+    pub async fn to_proto(self) -> DbResult<proto::Album> {
+        Ok(proto::Album {
+            id: self.id,
+            name: self.name,
+            created_at: self.created_at,
+            cover_photo_id: self.cover_photo_id,
+            is_draft: self.is_draft,
+            created_by: Some(Self::user_type_to_proto(&self.db, self.created_by).await?),
+            published_by: match self.published_by {
+                Some(published_by) => Some(Self::user_type_to_proto(&self.db, published_by).await?),
+                None => None,
+            }
+        })
     }
 
     pub async fn create(
@@ -205,7 +228,7 @@ impl<'a> Album<'a> {
     }
 
     pub async fn set_draft(&mut self) -> DbResult<()> {
-        sqlx::query("UPDATE album_metadata SET published_by = NULL, published_at = NULL, is_draft = true WHERE id = $3")
+        sqlx::query("UPDATE album_metadata SET published_by = NULL, published_by_type = NULL, published_at = NULL, is_draft = true WHERE id = $1")
             .bind(&self.id)
             .execute(&**self.db)
             .await?;

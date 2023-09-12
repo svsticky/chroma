@@ -7,4 +7,17 @@ message Album {
   int64 createdAt = 3;
   optional string coverPhotoId = 4;
   bool isDraft = 5;
+  AlbumUser createdBy = 6;
+  optional AlbumUser publishedBy = 7;
+}
+
+enum UserType {
+  SERVICE = 0;
+  KOALA = 1;
+}
+
+message AlbumUser {
+  UserType type = 1;
+  optional string name = 2;
+  int32 id = 3;
 }

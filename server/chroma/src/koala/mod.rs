@@ -49,6 +49,7 @@ enum GrantType {
     /// OAuth authorization_code flow
     AuthorizationCode,
     /// OAuth refresh_token flow
+    #[allow(unused)]
     RefreshToken,
 }
 
@@ -108,6 +109,7 @@ pub async fn get_user_info<S: AsRef<str>>(
         .await
 }
 
+#[allow(unused)]
 pub async fn get_new_access_token<S: AsRef<str>>(
     config: &Config,
     refresh_token: S,

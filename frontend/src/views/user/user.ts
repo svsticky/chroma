@@ -2,6 +2,7 @@ import {User, UserScope} from "@/generated/entity/user";
 import {ListUserResponse} from "@/generated/payload/v1/user/list";
 import {Http} from "@/http";
 import {GetUserResponse} from "@/generated/payload/v1/user/get";
+import {UpdateUserRequest} from "@/generated/payload/v1/user/update";
 
 export interface UserModel {
     id: number,
@@ -53,4 +54,13 @@ export async function getUserScopes(userId: number): Promise<UserScopeModel[] | 
     }
 
     return result.scopes.map(protoUserScopeToUserScopeModel);
+}
+
+export async function updateUserScopes(userId: number, newScopes: string[]): Promise<boolean | undefined> {
+    const result = await Http.patch('/api/v1/user', new UpdateUserRequest({
+        userId,
+        newScopes,
+    }), null);
+
+    return result.ok;
 }

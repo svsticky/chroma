@@ -9,7 +9,23 @@
         <v-card elevation="2" class="mt-3 pa-3" :loading="loading.get">
             <v-card-title>
                 <ReturnButton></ReturnButton>
-                Edit album
+                Edit {{ album.isDraft ? "draft" : null }} album
+                <v-spacer></v-spacer>
+
+                <v-btn
+                    v-if="album.isDraft"
+                    :loading="loading.changeDraftStatus"
+                    @click="setDraftStatus(false)"
+                    color="primary">
+                    Publish album
+                </v-btn>
+                <v-btn
+                    v-else
+                    :loading="loading.changeDraftStatus"
+                    @click="setDraftStatus(true)"
+                    color="primary">
+                    Unpublish album
+                </v-btn>
             </v-card-title>
             <v-card-text v-if="album != null">
                 <v-form
@@ -54,7 +70,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import {AlbumModel, getAlbum, saveEditedAlbum} from "@/views/album/album";
+import {AlbumModel, getAlbum, saveEditedAlbum, setAlbumDraftStatus} from "@/views/album/album";
 import {errorText, Storage} from "@/api";
 import ReturnButton from "@/components/ReturnButton.vue";
 import {InputValidationRules} from "vuetify";
@@ -66,6 +82,7 @@ interface Data {
     loading: {
         get: boolean,
         save: boolean,
+        changeDraftStatus: boolean,
     },
     rules: {
         name: InputValidationRules,
@@ -86,6 +103,7 @@ export default Vue.extend({
             loading: {
                 get: true,
                 save: false,
+                changeDraftStatus: false,
             },
             rules: {
                 name: [
@@ -132,6 +150,24 @@ export default Vue.extend({
             }
 
             return id!;
+        },
+        async setDraftStatus(setDraft: boolean) {
+            this.loading.changeDraftStatus = true;
+            const result = await setAlbumDraftStatus(this.album!, setDraft)
+            this.loading.changeDraftStatus = false;
+
+            if(result == undefined || !result) {
+                this.snackbar = errorText;
+                return;
+            }
+
+            if(setDraft) {
+                this.snackbar = "Album unpublished";
+            } else {
+                this.snackbar = "Album published";
+            }
+
+            await this.loadAlbum();
         },
         async loadAlbum() {
             this.loading.get = true;

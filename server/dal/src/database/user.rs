@@ -10,6 +10,7 @@ pub struct User<'a> {
     pub refresh_token: String,
     pub oauth_expires_at: i64,
     pub is_admin: bool,
+    pub name: String,
 }
 
 pub struct OAuthAccess {
@@ -25,6 +26,7 @@ struct _User {
     refresh_token: String,
     expires_at: i64,
     is_admin: bool,
+    name: String,
 }
 
 pub struct ChromaScope<'a> {
@@ -53,6 +55,7 @@ impl _User {
             refresh_token: self.refresh_token,
             oauth_expires_at: self.expires_at,
             is_admin: self.is_admin,
+            name: self.name,
         }
     }
 }
@@ -73,23 +76,25 @@ impl<'a> User<'a> {
     pub const SESSION_ID_LEN: usize = 32;
     pub const SESSION_DEFAULT_EXPIRY: Duration = Duration::days(15);
 
-    pub async fn create(
+    pub async fn create<S: AsRef<str>>(
         db: &'a Database,
         koala_id: i32,
         oauth: OAuthAccess,
         admin: bool,
+        name: S,
     ) -> DbResult<User<'a>> {
         sqlx::query(
             "INSERT INTO users \
-                    (koala_id, access_token, refresh_token, expires_at, is_admin) \
+                    (koala_id, access_token, refresh_token, expires_at, is_admin, name) \
                 VALUES \
-                    ($1, $2, $3, $4, $5)",
+                    ($1, $2, $3, $4, $5, $6)",
         )
         .bind(koala_id)
         .bind(&oauth.access_token)
         .bind(&oauth.refresh_token)
         .bind(oauth.expires_at)
         .bind(admin)
+        .bind(name.as_ref())
         .execute(&**db)
         .await?;
 
@@ -100,11 +105,12 @@ impl<'a> User<'a> {
             refresh_token: oauth.refresh_token,
             oauth_expires_at: oauth.expires_at,
             is_admin: admin,
+            name: name.as_ref().to_string(),
         })
     }
 
     pub async fn get_by_id(db: &'a Database, koala_id: i32) -> DbResult<Option<User<'a>>> {
-        let user: Option<_User> = sqlx::query_as("SELECT koala_id, access_token, refresh_token, expires_at, is_admin FROM users WHERE koala_id = $1")
+        let user: Option<_User> = sqlx::query_as("SELECT * FROM users WHERE koala_id = $1")
             .bind(koala_id)
             .fetch_optional(&**db)
             .await?;
@@ -132,7 +138,7 @@ impl<'a> User<'a> {
     pub async fn list(db: &'a Database) -> DbResult<Vec<User<'a>>> {
         let users: Vec<_User> = sqlx::query_as(
             "SELECT \
-                    koala_id, access_token, refresh_token, expires_at, is_admin \
+                    * \
                 FROM \
                     users",
         )
