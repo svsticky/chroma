@@ -4,7 +4,7 @@
             {{ album.name }} {{ album.isDraft ? "(DRAFT)" : null }}
             <v-spacer></v-spacer>
             <v-btn
-                v-if="isAdmin"
+                v-if="canDeleteAlbum"
                 class="mr-1"
                 color="primary"
                 fab
@@ -13,7 +13,7 @@
                 <v-icon>mdi-trash-can-outline</v-icon>
             </v-btn>
             <v-btn
-                v-if="isAdmin"
+                v-if="canEditAlbum"
                 color="primary"
                 fab
                 small
@@ -55,13 +55,15 @@
 <script lang="ts">
 import Vue, {PropType} from 'vue';
 import {AlbumModel, deleteAlbum} from "@/views/album/album";
-import {errorText, Storage} from "@/api";
+import {checkScope, errorText, Storage} from "@/api";
 import {getPhoto} from "@/views/photo/photo";
 
 interface Data {
     snackbar: string | null,
     coverPhotoBytes: Uint8Array | null,
     loading: boolean,
+    canDeleteAlbum: boolean,
+    canEditAlbum: boolean,
 }
 
 export default Vue.extend({
@@ -76,13 +78,16 @@ export default Vue.extend({
             snackbar: null,
             coverPhotoBytes: null,
             loading: true,
+            canDeleteAlbum: false,
+            canEditAlbum: false,
         }
     },
     mounted() {
         this.loadCoverPhoto();
+
+        this.loadPermissions();
     },
     computed: {
-        isAdmin: () => Storage.isAdmin(),
         coverPhotoUrl(): string | null {
             if(this.loading || this.coverPhotoBytes == null) {
                 return null;
@@ -94,6 +99,15 @@ export default Vue.extend({
         }
     },
     methods: {
+        async loadPermissions() {
+            if(Storage.isAdmin()) {
+                this.canDeleteAlbum = true;
+                this.canEditAlbum = true;
+            } else {
+                this.canEditAlbum = await checkScope("nl.svsticky.chroma.album.update") ?? false;
+                this.canDeleteAlbum = await checkScope("nl.svsticky.chroma.album.delete") ?? false;
+            }
+        },
         async loadCoverPhoto() {
             if(this.album.coverPhotoId == null) {
                 return;

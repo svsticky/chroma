@@ -6,7 +6,7 @@
                 :key="idx">
                 <v-col cols="12" sm="12" md="6">
                     <PhotoCover
-                        :can-edit="edit && isAdmin"
+                        :can-edit="edit && canDeletePhotos"
                         :is-cover="albumModel?.coverPhotoId === pair[0].id"
                         :bytes="pair[0].photoBytes"
                         @select-cover="selectCover(pair[0])"
@@ -15,7 +15,7 @@
                 </v-col>
                 <v-col v-if="pair.length === 2">
                     <PhotoCover
-                        :can-edit="edit && isAdmin"
+                        :can-edit="edit && canDeletePhotos"
                         :is-cover="albumModel?.coverPhotoId === pair[1].id"
                         :bytes="pair[1].photoBytes"
                         @select-cover="selectCover(pair[1])"
@@ -35,7 +35,7 @@
 import Vue from 'vue';
 import {deletePhoto, listPhotosInAlbum, PhotoModel} from "@/views/photo/photo";
 import PhotoCover from "@/components/PhotoCover.vue";
-import {errorText, Storage} from "@/api";
+import {checkScope, errorText, Storage} from "@/api";
 import {AlbumModel, getAlbum, saveEditedAlbum} from "@/views/album/album";
 
 interface Data {
@@ -72,7 +72,6 @@ export default Vue.extend({
         }
     },
     computed: {
-        isAdmin: () => Storage.isAdmin(),
         chunkedPhotos(): PhotoModel[][] {
             const result = [];
             for(let i = 0; i < this.photos.length; i += 2) {
@@ -89,7 +88,7 @@ export default Vue.extend({
     methods: {
         async loadPhotos() {
             this.loading = true;
-            const result = await listPhotosInAlbum(this.albumId, true);
+            const result = await listPhotosInAlbum(this.albumId!, true);
             this.loading = false;
 
             if(result == undefined) {
@@ -100,7 +99,7 @@ export default Vue.extend({
             this.photos = result;
         },
         async loadCoverData() {
-            const result = await getAlbum(this.albumId, true);
+            const result = await getAlbum(this.albumId!, true);
 
             if(result == undefined) {
                 this.snackbar = errorText;

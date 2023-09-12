@@ -2,6 +2,7 @@ use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
+use tracing::trace;
 use dal::database::Album;
 use proto::{CreateAlbumRequest, CreateAlbumResponse};
 
@@ -19,7 +20,10 @@ pub async fn create(
 ) -> WebResult<Payload<CreateAlbumResponse>> {
     if !auth.is_admin {
         let is_draft = payload.is_draft.unwrap_or(false);
-        if !(is_draft && !auth.has_scope(&data.db, "nl.svsticky.chroma.album.create").await?) {
+        let create_scope = auth.has_scope(&data.db, "nl.svsticky.chroma.album.create").await?;
+        trace!("is_draft: {is_draft}");
+        trace!("has_scope: {create_scope}");
+        if !is_draft && !create_scope {
             return Err(Error::Forbidden);
         }
     }

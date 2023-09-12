@@ -60,7 +60,7 @@ fn access_ratelimit(
 ) -> GovernorConfig<PeerIpKeyExtractor, StateInformationMiddleware> {
     GovernorConfigBuilder::default()
         .period(request_per_n)
-        .burst_size(3)
+        .burst_size(10)
         .use_headers()
         .finish()
         .unwrap()

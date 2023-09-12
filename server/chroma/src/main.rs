@@ -100,10 +100,10 @@ fn configure_governor() -> Result<GovernorConfig<PeerIpKeyExtractor, NoOpMiddlew
         .per_second(10)
         .methods(vec![
             Method::DELETE,
-            Method::GET,
             Method::POST,
             Method::PATCH,
             Method::PUT,
+            Method::GET,
         ])
         .burst_size(100)
         .finish()

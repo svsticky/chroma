@@ -7,7 +7,7 @@
         lazy-src="@/assets/hoofd_outline_color.png"
         :src="coverPhotoUrl">
         <v-btn
-            v-if="canEdit"
+            v-if="canSetThumbnail"
             style="position: absolute; right: 12%; top: 2%"
             color="primary"
             @click="$emit('select-cover')"
@@ -19,7 +19,7 @@
         </v-btn>
 
         <v-btn
-            v-if="canEdit"
+            v-if="canDelete"
             style="position: absolute; right: 2%; top: 2%"
             color="primary"
             @click="$emit('deleted')"
@@ -33,6 +33,12 @@
 
 <script lang="ts">
 import Vue from 'vue';
+import {checkScope} from "@/api";
+
+interface Data {
+    canDelete: boolean,
+    canSetThumbnail: boolean,
+}
 
 export default Vue.extend({
     props: {
@@ -40,14 +46,20 @@ export default Vue.extend({
             type: Uint8Array,
             required: true,
         },
-        canEdit: {
-            type: Boolean,
-            required: false,
-        },
         isCover: {
             type: Boolean,
             required: false,
         }
+    },
+    data(): Data {
+        return {
+            canDelete: false,
+            canSetThumbnail: false,
+        }
+    },
+    async mounted() {
+        this.canDelete = await checkScope("nl.svsticky.chroma.photo.delete") ?? false;
+        this.canSetThumbnail = await checkScope("nl.svsticky.chroma.album.update") ?? false;
     },
     computed: {
         coverPhotoUrl(): string {

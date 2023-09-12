@@ -12,20 +12,22 @@
                 Edit {{ album.isDraft ? "draft" : null }} album
                 <v-spacer></v-spacer>
 
-                <v-btn
-                    v-if="album.isDraft"
-                    :loading="loading.changeDraftStatus"
-                    @click="setDraftStatus(false)"
-                    color="primary">
-                    Publish album
-                </v-btn>
-                <v-btn
-                    v-else
-                    :loading="loading.changeDraftStatus"
-                    @click="setDraftStatus(true)"
-                    color="primary">
-                    Unpublish album
-                </v-btn>
+                <div v-if="isAdmin">
+                    <v-btn
+                        v-if="album.isDraft"
+                        :loading="loading.changeDraftStatus"
+                        @click="setDraftStatus(false)"
+                        color="primary">
+                        Publish album
+                    </v-btn>
+                    <v-btn
+                        v-else
+                        :loading="loading.changeDraftStatus"
+                        @click="setDraftStatus(true)"
+                        color="primary">
+                        Unpublish album
+                    </v-btn>
+                </div>
             </v-card-title>
             <v-card-text v-if="album != null">
                 <v-form
@@ -50,6 +52,7 @@
                     <div class="text-h5"> Photos </div>
                     <v-spacer></v-spacer>
                     <v-btn
+                        v-if="canCreatePhotos"
                         color="primary"
                         fab
                         small
@@ -71,7 +74,7 @@
 <script lang="ts">
 import Vue from 'vue';
 import {AlbumModel, getAlbum, saveEditedAlbum, setAlbumDraftStatus} from "@/views/album/album";
-import {errorText, Storage} from "@/api";
+import {checkScope, errorText, Storage} from "@/api";
 import ReturnButton from "@/components/ReturnButton.vue";
 import {InputValidationRules} from "vuetify";
 import PhotoGrid from "@/components/PhotoGrid.vue";
@@ -93,6 +96,7 @@ interface Data {
     dialog: {
         uploadPhoto: boolean,
     }
+    canCreatePhotos: boolean,
 }
 
 export default Vue.extend({
@@ -116,13 +120,22 @@ export default Vue.extend({
             valid: true,
             dialog: {
                 uploadPhoto: false,
-            }
+            },
+            canCreatePhotos: false,
         }
+    },
+    computed: {
+        isAdmin: () => Storage.isAdmin(),
     },
     async mounted() {
         if(!Storage.isAdmin()) {
-            await this.$router.back();
-            return;
+            const hasScopeUpdate = await checkScope("nl.svsticky.chroma.album.update") ?? false;
+            if(!hasScopeUpdate) {
+                await this.$router.back();
+                return;
+            }
+
+            this.canCreatePhotos = await checkScope("nl.svsticky.chroma.photo.create") ?? false;
         }
 
         await this.loadAlbum();

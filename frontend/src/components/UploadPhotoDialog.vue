@@ -17,8 +17,7 @@
             </v-card-text>
             <v-card-actions>
                 <v-btn
-                    @click="close(false)"
-                    color="secondary">
+                    @click="close(false)">
                     Cancel
                 </v-btn>
                 <v-spacer></v-spacer>

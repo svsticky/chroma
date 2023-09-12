@@ -11,7 +11,7 @@ use img_parts::{Bytes, DynImage, ImageEXIF};
 use proto::{CreatePhotoRequest, CreatePhotoResponse};
 use std::io::Cursor;
 use tap::TapFallible;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 use webp::Encoder;
 
 /// Create a new photo in an existing album.
@@ -41,12 +41,14 @@ pub async fn create(
     }
 
     let cursor = Cursor::new(payload.photo_data.clone());
-    let image_data = Reader::new(cursor).with_guessed_format().unwrap(); // Cannot fail when using a Cursor
+    let image_data = Reader::new(cursor.clone()).with_guessed_format().unwrap(); // Cannot fail when using a Cursor
 
     // Convert to WebP
     let webp_image = match image_data.format() {
         Some(ImageFormat::WebP) => image_data.into_inner().into_inner(),
         Some(ImageFormat::Jpeg | ImageFormat::Png) => {
+            debug!("Re-encoding uploaded image to WebP");
+
             let dynamic_image = image_data.decode().map_err(|e| {
                 Error::BadRequest(format!(
                     "Failed to decode image. Is the format supported? The error is as follows: {e}"
@@ -54,7 +56,7 @@ pub async fn create(
             })?;
 
             convert_image_format(dynamic_image)
-                .tap_err(|e| warn!("Failed to encode image: {e}"))
+                .tap_err(|e| warn!("Failed to encode image as WebP: {e}"))
                 .map_err(|_| Error::ImageEncoding)?
         }
         _ => {
@@ -84,15 +86,14 @@ pub async fn create(
     let photo_id = photo.id.clone();
     tokio::spawn(async move {
         let photo = webp_image;
-        let cursor = Cursor::new(photo);
 
-        let image_data = Reader::new(cursor).with_guessed_format().unwrap(); // Cannot fail when using a Cursor
-        let img = match image_data.decode() {
-            Ok(dyn_img) => dyn_img,
-            Err(e) => {
-                warn!("Failed to decode image: {e}");
+        debug!("Decoding image for quality conversion");
+        let img = match webp::Decoder::new(&photo).decode() {
+            Some(decoded) => decoded.to_image(),
+            None => {
+                warn!("Failed to decode WebP image");
                 return;
-            },
+            }
         };
 
         match convert_quality(&img, 400) {
@@ -125,13 +126,16 @@ pub async fn create(
 
 fn convert_image_format(dynamic_image: DynamicImage) -> WebResult<Vec<u8>> {
     // Convert to webp
-    let encoder = Encoder::from_image(&dynamic_image).map_err(|_| Error::ImageEncoding)?;
+    let encoder = Encoder::from_image(&dynamic_image)
+        .tap_err(|e| warn!("Failed to create image encoder: {e}"))
+        .map_err(|_| Error::ImageEncoding)?;
     let encoded_webp = encoder.encode(100.0);
 
     let mut bytes = encoded_webp.as_bytes().to_vec();
 
     // Strip EXIF
     let mut dyn_img = DynImage::from_bytes(Bytes::from(bytes.clone()))
+        .tap_err(|e| warn!("Failed to create DynImage (stripping EXIF metadata): {e}"))
         .map_err(|_| Error::ImageEncoding)?
         .unwrap();
 
@@ -139,6 +143,7 @@ fn convert_image_format(dynamic_image: DynamicImage) -> WebResult<Vec<u8>> {
     dyn_img
         .encoder()
         .write_to(&mut bytes)
+        .tap_err(|e| warn!("Failed to reencode image (stripping EXIF metadata): {e}"))
         .map_err(|_| Error::ImageEncoding)?;
 
     Ok(bytes)

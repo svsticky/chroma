@@ -15,6 +15,7 @@
                     ></v-text-field>
                     <v-checkbox
                         v-model="album.isDraft"
+                        :disabled="forceDraft"
                         label="Draft"
                     ></v-checkbox>
                 </v-form>
@@ -35,7 +36,7 @@
 <script lang="ts">
 import Vue from 'vue';
 import {InputValidationRules} from "vuetify";
-import {errorText, Storage} from "@/api";
+import {checkScope, errorText, Storage} from "@/api";
 import {createAlbum} from "@/views/album/album";
 import ReturnButton from "@/components/ReturnButton.vue";
 
@@ -49,7 +50,8 @@ interface Data {
     valid: boolean,
     rules: {
         name: InputValidationRules
-    }
+    },
+    forceDraft: boolean,
 }
 
 export default Vue.extend({
@@ -67,17 +69,30 @@ export default Vue.extend({
                 name: [
                     v => !!v || "Name is required",
                 ]
-            }
+            },
+            forceDraft: true,
         }
     },
     mounted() {
-        this.$router.onReady(() => {
+        this.$router.onReady(async () => {
             if(!Storage.isAdmin()) {
-                this.$router.back();
+                const hasScope = await checkScope("nl.svsticky.chroma.album.create");
+                if(!hasScope) {
+                    this.$router.back();
+                    return;
+                }
             }
+
+            await this.loadForceDraft();
         })
     },
     methods: {
+        async loadForceDraft() {
+            this.forceDraft = !Storage.isAdmin();
+            if(this.forceDraft) {
+                this.album.isDraft = true;
+            }
+        },
         async create() {
             this.loading = true;
             const result = await createAlbum(this.album.name!, this.album.isDraft!);

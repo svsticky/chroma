@@ -2,7 +2,6 @@ use crate::config::Config;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::trace;
 
 /// Get the URL to redirect a client to when they should log in with Koala
 pub fn get_koala_login_url(config: &Config) -> String {
@@ -151,7 +150,6 @@ fn get_token_info_url(config: &Config) -> String {
 }
 
 pub async fn get_user_id_from_token<S: AsRef<str>>(config: &Config, access_token: S) -> Result<i32, UserIdFromTokenError> {
-    trace!("{}", access_token.as_ref());
     let res: OauthUserInfoResponse = Client::new()
         .get(get_token_info_url(config))
         .header("User-Agent", config.koala_user_agent())

@@ -11,12 +11,13 @@ pub async fn available_scopes(auth: Authorization) -> WebResult<Payload<GetAvail
     Ok(Payload(GetAvailableScopesResponse {
         scopes: vec![
             // Albums
-            "nl.svsticky.album.create".into(),
-            "nl.svsticky.album.update".into(),
-            "nl.svsticky.album.delete".into(),
+            "nl.svsticky.chroma.album.create".into(),
+            "nl.svsticky.chroma.album.update".into(),
+            "nl.svsticky.chroma.album.delete".into(),
+            "nl.svsticky.chroma.album.list.draft".into(),
             // Photos
-            "nl.svsticky.photo.create".into(),
-            "nl.svsticky.photo.delete".into(),
+            "nl.svsticky.chroma.photo.create".into(),
+            "nl.svsticky.chroma.photo.delete".into(),
         ]
     }))
 }

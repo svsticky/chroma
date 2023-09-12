@@ -66,6 +66,15 @@ export class KoalaLoginUrl {
     }
 }
 
+export async function checkScope(scope: string): Promise<boolean | undefined> {
+    const result = await Http.getBody<AccessResponse>(`/api/v1/access?scope=${scope}`, null, AccessResponse);
+    if(result instanceof Response) {
+        return undefined;
+    }
+
+    return result.hasRequestedScope;
+}
+
 export async function checkLoggedIn(sessionId: string | null = null): Promise<LoginCheckResult | KoalaLoginUrl | null> {
     let r = await Http.getBody<AccessResponse>("/api/v1/access", sessionId, AccessResponse);
 
