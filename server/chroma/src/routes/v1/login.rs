@@ -1,14 +1,14 @@
-use actix_web::http::StatusCode;
-use crate::koala::{CredentialsType, get_user_id_from_token, UserIdFromTokenError};
+use crate::config::Config;
+use crate::koala::{get_user_id_from_token, CredentialsType, UserIdFromTokenError};
 use crate::routes::appdata::WebData;
 use crate::routes::error::{Error, WebResult};
 use crate::routes::redirect::Redirect;
+use actix_web::http::StatusCode;
 use actix_web::web;
 use dal::database::{OAuthAccess, User};
 use serde::Deserialize;
 use tap::TapFallible;
 use tracing::{trace, warn};
-use crate::config::Config;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -55,7 +55,8 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         None => {
             trace!("User does not yet exist in database, creating new user.");
 
-            let koala_id = get_user_id_from_token(&data.config, &oauth_tokens.access_token).await
+            let koala_id = get_user_id_from_token(&data.config, &oauth_tokens.access_token)
+                .await
                 .map_err(|e| match e {
                     UserIdFromTokenError::Reqwest(e) => Error::Koala(e),
                     UserIdFromTokenError::IntParse(e) => {

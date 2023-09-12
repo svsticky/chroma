@@ -1,9 +1,11 @@
-use actix_multiresponse::Payload;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
+use actix_multiresponse::Payload;
 use proto::GetAvailableScopesResponse;
 
-pub async fn available_scopes(auth: Authorization) -> WebResult<Payload<GetAvailableScopesResponse>> {
+pub async fn available_scopes(
+    auth: Authorization,
+) -> WebResult<Payload<GetAvailableScopesResponse>> {
     if !auth.is_admin {
         return Err(Error::Forbidden);
     }
@@ -18,6 +20,6 @@ pub async fn available_scopes(auth: Authorization) -> WebResult<Payload<GetAvail
             // Photos
             "nl.svsticky.chroma.photo.create".into(),
             "nl.svsticky.chroma.photo.delete".into(),
-        ]
+        ],
     }))
 }

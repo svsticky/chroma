@@ -37,7 +37,7 @@ impl ResponseError for Error {
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::ChronoParse(_) => StatusCode::BAD_GATEWAY,
             Self::ImageEncoding => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::Other(s) => *s
+            Self::Other(s) => *s,
         }
     }
 }

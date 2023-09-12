@@ -5,8 +5,8 @@ use thiserror::Error;
 
 mod album;
 mod photo;
-mod user;
 mod service_token_user;
+mod user;
 
 pub use album::*;
 pub use photo::*;

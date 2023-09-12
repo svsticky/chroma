@@ -26,7 +26,10 @@ pub async fn create(
     payload: Payload<CreatePhotoRequest>,
 ) -> WebResult<Payload<CreatePhotoResponse>> {
     if !auth.is_admin {
-        if !auth.has_scope(&data.db, "nl.svsticky.chroma.photo.create").await? {
+        if !auth
+            .has_scope(&data.db, "nl.svsticky.chroma.photo.create")
+            .await?
+        {
             return Err(Error::Forbidden);
         }
     }

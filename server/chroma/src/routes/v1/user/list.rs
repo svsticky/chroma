@@ -13,11 +13,12 @@ pub async fn list(data: WebData, auth: Authorization) -> WebResult<Payload<ListU
     let users = User::list(&data.db).await?;
 
     Ok(Payload(ListUserResponse {
-        users: users.into_iter()
+        users: users
+            .into_iter()
             .map(|f| proto::User {
                 id: f.koala_id,
                 name: f.name,
             })
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>(),
     }))
 }

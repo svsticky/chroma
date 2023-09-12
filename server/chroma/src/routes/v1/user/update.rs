@@ -31,13 +31,16 @@ pub async fn update(
         .ok_or(Error::NotFound)?;
 
     // Get the current list of scopes
-    let existing_scopes = grantee.get_chroma_scopes().await?
+    let existing_scopes = grantee
+        .get_chroma_scopes()
+        .await?
         .into_iter()
         .map(|f| f.scope)
         .collect::<HashSet<_>>();
 
     // Stash all new scopes in a HashSet
-    let new_scopes = payload.new_scopes
+    let new_scopes = payload
+        .new_scopes
         .clone()
         .into_iter()
         .collect::<HashSet<_>>();

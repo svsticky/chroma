@@ -203,7 +203,11 @@ impl<'a> User<'a> {
         ChromaScope::list_for_user(&self.db, self.koala_id).await
     }
 
-    pub async fn add_scope<S: AsRef<str>>(&self, scope: S, by: &User<'a>) -> DbResult<ChromaScope<'a>> {
+    pub async fn add_scope<S: AsRef<str>>(
+        &self,
+        scope: S,
+        by: &User<'a>,
+    ) -> DbResult<ChromaScope<'a>> {
         ChromaScope::add_scope(&self.db, self.koala_id, scope, by.koala_id).await
     }
 

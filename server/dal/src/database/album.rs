@@ -40,7 +40,7 @@ struct _Album {
 #[sqlx(type_name = "user_type")]
 enum _UserType {
     Koala,
-    Service
+    Service,
 }
 
 impl _Album {
@@ -83,19 +83,20 @@ impl<'a> Album<'a> {
     async fn user_type_to_proto(db: &Database, user: UserType) -> DbResult<proto::AlbumUser> {
         Ok(match user {
             UserType::Koala(id) => {
-                let user = User::get_by_id(db, id).await?
+                let user = User::get_by_id(db, id)
+                    .await?
                     .ok_or(DatabaseError::RowNotFound)?;
                 proto::AlbumUser {
                     id,
                     name: Some(user.name),
                     r#type: proto::UserType::Koala as i32,
                 }
-            },
+            }
             UserType::ServiceToken(id) => proto::AlbumUser {
                 id,
                 name: None,
                 r#type: proto::UserType::Service as i32,
-            }
+            },
         })
     }
 
@@ -110,7 +111,7 @@ impl<'a> Album<'a> {
             published_by: match self.published_by {
                 Some(published_by) => Some(Self::user_type_to_proto(&self.db, published_by).await?),
                 None => None,
-            }
+            },
         })
     }
 
@@ -172,12 +173,10 @@ impl<'a> Album<'a> {
         db: &'a Database,
         id: S,
     ) -> DbResult<Option<Album<'a>>> {
-        let album: Option<_Album> = sqlx::query_as(
-            "SELECT * FROM album_metadata WHERE id = $1",
-        )
-        .bind(id.as_ref())
-        .fetch_optional(&**db)
-        .await?;
+        let album: Option<_Album> = sqlx::query_as("SELECT * FROM album_metadata WHERE id = $1")
+            .bind(id.as_ref())
+            .fetch_optional(&**db)
+            .await?;
 
         Ok(album.map(|x| x.to_album(db)))
     }
@@ -266,10 +265,9 @@ impl<'a> Album<'a> {
     }
 
     pub async fn list(db: &'a Database) -> DbResult<Vec<Album<'a>>> {
-        let selfs: Vec<_Album> =
-            sqlx::query_as("SELECT * FROM album_metadata")
-                .fetch_all(&**db)
-                .await?;
+        let selfs: Vec<_Album> = sqlx::query_as("SELECT * FROM album_metadata")
+            .fetch_all(&**db)
+            .await?;
 
         Ok(selfs.into_iter().map(|x| x.to_album(db)).collect())
     }

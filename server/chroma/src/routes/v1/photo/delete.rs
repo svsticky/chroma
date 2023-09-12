@@ -3,10 +3,10 @@ use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
-use reqwest::StatusCode;
 use dal::database::{Album, Photo};
 use dal::storage_engine::PhotoQuality;
 use proto::DeletePhotoRequest;
+use reqwest::StatusCode;
 
 /// Delete a photo.
 /// If this photo is the cover of it's album, the album will no longer have a defined cover image.
@@ -22,7 +22,10 @@ pub async fn delete(
     payload: Payload<DeletePhotoRequest>,
 ) -> WebResult<Empty> {
     if !auth.is_admin {
-        if !auth.has_scope(&data.db, "nl.svsticky.chroma.photo.delete").await? {
+        if !auth
+            .has_scope(&data.db, "nl.svsticky.chroma.photo.delete")
+            .await?
+        {
             return Err(Error::Forbidden);
         }
     }
@@ -32,7 +35,8 @@ pub async fn delete(
         .ok_or(Error::NotFound)?;
 
     if !auth.is_admin {
-        let album = Album::get_by_id(&data.db, &photo.album_id).await?
+        let album = Album::get_by_id(&data.db, &photo.album_id)
+            .await?
             .ok_or(Error::Other(StatusCode::INTERNAL_SERVER_ERROR))?;
 
         // Only admins may modify published albums

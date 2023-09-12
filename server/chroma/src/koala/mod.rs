@@ -149,7 +149,10 @@ fn get_token_info_url(config: &Config) -> String {
     format!("{}/oauth/userinfo", config.koala_base_uri)
 }
 
-pub async fn get_user_id_from_token<S: AsRef<str>>(config: &Config, access_token: S) -> Result<i32, UserIdFromTokenError> {
+pub async fn get_user_id_from_token<S: AsRef<str>>(
+    config: &Config,
+    access_token: S,
+) -> Result<i32, UserIdFromTokenError> {
     let res: OauthUserInfoResponse = Client::new()
         .get(get_token_info_url(config))
         .header("User-Agent", config.koala_user_agent())

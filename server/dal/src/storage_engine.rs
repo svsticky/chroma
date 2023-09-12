@@ -77,7 +77,12 @@ impl StorageEngine {
                             if quality_preference == PhotoQuality::Original {
                                 Err(StorageEngineError::S3(S3Error::GetObject(e)))
                             } else {
-                                Ok(s3.get_photo_by_id(fmt_id_with_quality(photo_id.as_ref(), &PhotoQuality::Original)).await?)
+                                Ok(s3
+                                    .get_photo_by_id(fmt_id_with_quality(
+                                        photo_id.as_ref(),
+                                        &PhotoQuality::Original,
+                                    ))
+                                    .await?)
                             }
                         }
                         _ => Err(StorageEngineError::S3(S3Error::GetObject(e))),
@@ -93,7 +98,12 @@ impl StorageEngine {
                         if quality_preference == PhotoQuality::Original {
                             Err(e.into())
                         } else {
-                            Ok(engine.get_photo_by_id(fmt_id_with_quality(photo_id.as_ref(), &PhotoQuality::Original)).await?)
+                            Ok(engine
+                                .get_photo_by_id(fmt_id_with_quality(
+                                    photo_id.as_ref(),
+                                    &PhotoQuality::Original,
+                                ))
+                                .await?)
                         }
                     }
                     _ => Err(e.into()),

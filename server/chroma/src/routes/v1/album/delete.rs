@@ -19,7 +19,10 @@ pub async fn delete(
     payload: Payload<DeleteAlbumRequest>,
 ) -> WebResult<Empty> {
     if !auth.is_admin {
-        if !auth.has_scope(&data.db, "nl.svsticky.chroma.album.delete").await? {
+        if !auth
+            .has_scope(&data.db, "nl.svsticky.chroma.album.delete")
+            .await?
+        {
             return Err(Error::Forbidden);
         }
     }

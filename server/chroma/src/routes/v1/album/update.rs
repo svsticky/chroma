@@ -24,7 +24,10 @@ pub async fn update(
     payload: Payload<UpdateAlbumRequest>,
 ) -> WebResult<Empty> {
     if !auth.is_admin {
-        if !auth.has_scope(&data.db, "nl.svsticky.chroma.album.update").await? {
+        if !auth
+            .has_scope(&data.db, "nl.svsticky.chroma.album.update")
+            .await?
+        {
             return Err(Error::Forbidden);
         }
     }
@@ -71,10 +74,12 @@ pub async fn update(
         match draft_settings {
             proto::update_album_request::DraftSettings::SetDraft(v) if *v => {
                 album.set_draft().await?;
-            },
+            }
             proto::update_album_request::DraftSettings::SetPublished(v) if *v => {
-                album.set_published(auth.to_dal_user_type(&data.db).await?).await?;
-            },
+                album
+                    .set_published(auth.to_dal_user_type(&data.db).await?)
+                    .await?;
+            }
             _ => {}
         }
     }
