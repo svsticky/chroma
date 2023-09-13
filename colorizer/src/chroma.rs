@@ -39,7 +39,10 @@ impl Chroma {
         let response: CreateAlbumResponse = self
             .client
             .post(self.path("/api/v1/album"))
-            .protobuf(CreateAlbumRequest { name })?
+            .protobuf(CreateAlbumRequest {
+                is_draft: Some(false),
+                name,
+            })?
             .send()
             .await?
             .error_for_status()?
