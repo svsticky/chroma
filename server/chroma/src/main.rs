@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
     let db = Database::new(
         &config.db_host,
         &config.db_username,
-        &config.db_password,
+        config.db_password.as_deref(),
         &config.db_database,
     )
     .await?;

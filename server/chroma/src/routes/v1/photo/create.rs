@@ -11,7 +11,7 @@ use img_parts::{Bytes, DynImage, ImageEXIF};
 use proto::{CreatePhotoRequest, CreatePhotoResponse};
 use std::io::Cursor;
 use tap::TapFallible;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 use webp::Encoder;
 
 /// Create a new photo in an existing album.

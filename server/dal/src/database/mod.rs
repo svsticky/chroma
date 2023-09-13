@@ -44,25 +44,29 @@ impl Database {
     pub async fn new(
         host: &str,
         user: &str,
-        passw: &str,
+        passw: Option<&str>,
         database: &str,
     ) -> Result<Database, DatabaseInitError> {
-        let mut cfg = Config::new(ConfigDbType::Postgres)
+        let mut migration_config = Config::new(ConfigDbType::Postgres)
             .set_db_host(host)
             .set_db_name(database)
-            .set_db_user(user)
-            .set_db_pass(passw);
-        migrations::migrations::runner().run_async(&mut cfg).await?;
+            .set_db_user(user);
+
+        let mut pg_connect = PgConnectOptions::new()
+            .host(host)
+            .database(database)
+            .username(user);
+
+        if let Some(passw) = passw {
+            migration_config = migration_config.set_db_pass(passw);
+            pg_connect = pg_connect.password(passw);
+        }
+
+        migrations::migrations::runner().run_async(&mut migration_config).await?;
 
         let pool = PgPoolOptions::new()
             .max_connections(5)
-            .connect_with(
-                PgConnectOptions::new()
-                    .host(host)
-                    .database(database)
-                    .username(user)
-                    .password(passw),
-            )
+            .connect_with(pg_connect)
             .await?;
 
         Ok(Database(pool))

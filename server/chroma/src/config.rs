@@ -12,7 +12,7 @@ pub struct Config {
     /// MySQL database username
     pub db_username: String,
     /// MySQL database password
-    pub db_password: String,
+    pub db_password: Option<String>,
 
     /// The storage engine to be used
     #[serde(default = "default_storage_engine")]
