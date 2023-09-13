@@ -62,7 +62,9 @@ impl Database {
             pg_connect = pg_connect.password(passw);
         }
 
-        migrations::migrations::runner().run_async(&mut migration_config).await?;
+        migrations::migrations::runner()
+            .run_async(&mut migration_config)
+            .await?;
 
         let pool = PgPoolOptions::new()
             .max_connections(5)
