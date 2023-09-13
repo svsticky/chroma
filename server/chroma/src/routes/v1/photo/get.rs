@@ -5,11 +5,12 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
-use image::io::Reader;
 use image::{DynamicImage, ImageOutputFormat};
 use proto::GetPhotoResponse;
 use serde::Deserialize;
 use std::io::Cursor;
+use tap::TapFallible;
+use tracing::warn;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -91,14 +92,18 @@ fn reencode_dynamic_image(
     let mut cursor = Cursor::new(Vec::with_capacity(byte_count));
     image
         .write_to(&mut cursor, format)
+        .tap_err(|e| warn!("Failed to write image in format: {e}"))
         .map_err(|_| Error::ImageEncoding)?;
 
     Ok(cursor.into_inner())
 }
 
 fn decode_image(bytes: Vec<u8>) -> WebResult<DynamicImage> {
-    let cursor = Cursor::new(bytes);
-    let reader = Reader::with_format(cursor, image::ImageFormat::WebP);
-
-    reader.decode().map_err(|_| Error::ImageEncoding)
+    match webp::Decoder::new(&bytes).decode() {
+        Some(webp) => Ok(webp.to_image()),
+        None => {
+            warn!("Failed to decode WebP image");
+            Err(Error::ImageEncoding)
+        }
+    }
 }

@@ -26,6 +26,7 @@ image = "0.24.5"
 tap = "1.0.1"
 webp = "0.2.5"
 img-parts = "0.3.0"
+time = "0.3.28"
 
 [dev-dependencies]
 serde_json = "1.0.93"

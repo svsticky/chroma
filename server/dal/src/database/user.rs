@@ -10,6 +10,7 @@ pub struct User<'a> {
     pub refresh_token: String,
     pub oauth_expires_at: i64,
     pub is_admin: bool,
+    pub name: String,
 }
 
 pub struct OAuthAccess {
@@ -25,6 +26,24 @@ struct _User {
     refresh_token: String,
     expires_at: i64,
     is_admin: bool,
+    name: String,
+}
+
+pub struct ChromaScope<'a> {
+    #[allow(unused)]
+    db: &'a Database,
+    pub koala_id: i32,
+    pub scope: String,
+    pub granted_by: i32,
+    pub granted_at: i64,
+}
+
+#[derive(FromRow)]
+struct _ChromaScope {
+    koala_id: i32,
+    scope: String,
+    granted_by: i32,
+    granted_at: i64,
 }
 
 impl _User {
@@ -36,6 +55,19 @@ impl _User {
             refresh_token: self.refresh_token,
             oauth_expires_at: self.expires_at,
             is_admin: self.is_admin,
+            name: self.name,
+        }
+    }
+}
+
+impl _ChromaScope {
+    pub fn to_chroma_scope(self, db: &Database) -> ChromaScope {
+        ChromaScope {
+            db,
+            koala_id: self.koala_id,
+            scope: self.scope,
+            granted_by: self.granted_by,
+            granted_at: self.granted_at,
         }
     }
 }
@@ -44,23 +76,25 @@ impl<'a> User<'a> {
     pub const SESSION_ID_LEN: usize = 32;
     pub const SESSION_DEFAULT_EXPIRY: Duration = Duration::days(15);
 
-    pub async fn create(
+    pub async fn create<S: AsRef<str>>(
         db: &'a Database,
         koala_id: i32,
         oauth: OAuthAccess,
         admin: bool,
+        name: S,
     ) -> DbResult<User<'a>> {
         sqlx::query(
             "INSERT INTO users \
-                    (koala_id, access_token, refresh_token, expires_at, is_admin) \
+                    (koala_id, access_token, refresh_token, expires_at, is_admin, name) \
                 VALUES \
-                    ($1, $2, $3, $4, $5)",
+                    ($1, $2, $3, $4, $5, $6)",
         )
         .bind(koala_id)
         .bind(&oauth.access_token)
         .bind(&oauth.refresh_token)
         .bind(oauth.expires_at)
         .bind(admin)
+        .bind(name.as_ref())
         .execute(&**db)
         .await?;
 
@@ -71,11 +105,12 @@ impl<'a> User<'a> {
             refresh_token: oauth.refresh_token,
             oauth_expires_at: oauth.expires_at,
             is_admin: admin,
+            name: name.as_ref().to_string(),
         })
     }
 
     pub async fn get_by_id(db: &'a Database, koala_id: i32) -> DbResult<Option<User<'a>>> {
-        let user: Option<_User> = sqlx::query_as("SELECT koala_id, access_token, refresh_token, expires_at, is_admin FROM users WHERE koala_id = $1")
+        let user: Option<_User> = sqlx::query_as("SELECT * FROM users WHERE koala_id = $1")
             .bind(koala_id)
             .fetch_optional(&**db)
             .await?;
@@ -98,6 +133,18 @@ impl<'a> User<'a> {
             .await?;
 
         Ok(session_id)
+    }
+
+    pub async fn list(db: &'a Database) -> DbResult<Vec<User<'a>>> {
+        let users: Vec<_User> = sqlx::query_as(
+            "SELECT \
+                    * \
+                FROM \
+                    users",
+        )
+        .fetch_all(&**db)
+        .await?;
+        Ok(users.into_iter().map(|f| f.to_user(db)).collect::<Vec<_>>())
     }
 
     pub async fn get_by_session_id<S: AsRef<str>>(
@@ -150,5 +197,80 @@ impl<'a> User<'a> {
         self.refresh_token = refresh;
 
         Ok(())
+    }
+
+    pub async fn get_chroma_scopes(&self) -> DbResult<Vec<ChromaScope>> {
+        ChromaScope::list_for_user(&self.db, self.koala_id).await
+    }
+
+    pub async fn add_scope<S: AsRef<str>>(
+        &self,
+        scope: S,
+        by: &User<'a>,
+    ) -> DbResult<ChromaScope<'a>> {
+        ChromaScope::add_scope(&self.db, self.koala_id, scope, by.koala_id).await
+    }
+
+    pub async fn remove_scope(&self, scope: &ChromaScope<'_>) -> DbResult<()> {
+        ChromaScope::remove_scope(&self.db, self.koala_id, &scope.scope).await
+    }
+
+    pub async fn remove_scope_by_name<S: AsRef<str>>(&self, scope_name: S) -> DbResult<()> {
+        ChromaScope::remove_scope(&self.db, self.koala_id, scope_name.as_ref()).await
+    }
+}
+
+impl<'a> ChromaScope<'a> {
+    pub async fn list_for_user(db: &'a Database, koala_id: i32) -> DbResult<Vec<ChromaScope<'a>>> {
+        let chroma_scopes: Vec<_ChromaScope> = sqlx::query_as(
+            "SELECT koala_id, scope, granted_by, granted_at FROM chroma_scopes WHERE koala_id = $1",
+        )
+        .bind(koala_id)
+        .fetch_all(&**db)
+        .await?;
+
+        Ok(chroma_scopes
+            .into_iter()
+            .map(|f| f.to_chroma_scope(db))
+            .collect::<Vec<_>>())
+    }
+
+    async fn remove_scope(db: &Database, koala_id: i32, name: &str) -> DbResult<()> {
+        sqlx::query("DELETE FROM chroma_scopes WHERE koala_id = $1 AND scope = $2")
+            .bind(koala_id)
+            .bind(name)
+            .execute(&**db)
+            .await?;
+        Ok(())
+    }
+
+    async fn add_scope<S: AsRef<str>>(
+        db: &'a Database,
+        to: i32,
+        name: S,
+        by: i32,
+    ) -> DbResult<ChromaScope> {
+        let ts = OffsetDateTime::now_utc().unix_timestamp();
+
+        sqlx::query(
+            "INSERT INTO chroma_scopes \
+                (koala_id, scope, granted_by, granted_at) \
+            VALUES \
+                ($1, $2, $3, $4)",
+        )
+        .bind(to)
+        .bind(name.as_ref())
+        .bind(by)
+        .bind(ts)
+        .execute(&**db)
+        .await?;
+
+        Ok(ChromaScope {
+            db,
+            koala_id: to,
+            scope: name.as_ref().to_string(),
+            granted_by: by,
+            granted_at: ts,
+        })
     }
 }

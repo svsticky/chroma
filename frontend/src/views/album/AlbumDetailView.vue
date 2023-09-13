@@ -21,8 +21,6 @@
 <script lang="ts">
 import Vue from 'vue';
 import {AlbumModel, getAlbum} from "@/views/album/album";
-import {listPhotosInAlbum, PhotoModel} from "@/views/photo/photo";
-import {errorText} from "@/api";
 import PhotoGrid from "@/components/PhotoGrid.vue";
 import ReturnButton from "@/components/ReturnButton.vue";
 

@@ -4,6 +4,7 @@ import {AccessResponse} from "@/generated/payload/v1/access";
 const sessionIdKey = 'sessionid';
 const isAdminKey = 'isadmin';
 const beforeAuthUrlKey = 'beforeauth';
+const isDarkModeKey = 'darkmode';
 
 export const errorText = "Something went wrong";
 
@@ -35,6 +36,18 @@ export namespace Storage {
     export function setBeforeAuthUrl(url: string) {
         window.localStorage.setItem(beforeAuthUrlKey, url);
     }
+
+    export function getIsDarkMode(): boolean {
+        return window.localStorage.getItem(isDarkModeKey) != null;
+    }
+
+    export function setIsDarkMode(darkMode: boolean) {
+        if(darkMode) {
+            window.localStorage.setItem(isDarkModeKey, "true");
+        } else {
+            window.localStorage.removeItem(isDarkModeKey);
+        }
+    }
 }
 
 export class LoginCheckResult {
@@ -51,6 +64,15 @@ export class KoalaLoginUrl {
     constructor(url: string) {
         this.url = url;
     }
+}
+
+export async function checkScope(scope: string): Promise<boolean | undefined> {
+    const result = await Http.getBody<AccessResponse>(`/api/v1/access?scope=${scope}`, null, AccessResponse);
+    if(result instanceof Response) {
+        return undefined;
+    }
+
+    return result.hasRequestedScope;
 }
 
 export async function checkLoggedIn(sessionId: string | null = null): Promise<LoginCheckResult | KoalaLoginUrl | null> {

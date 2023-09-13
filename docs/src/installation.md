@@ -9,7 +9,7 @@ It has the following runtime dependencies:
 
 Before starting the container, one must make sure to create an OAuth client in Koala.
 If Koala is running locally, you can navigate to [http://koala.rails.local:3000/api/oauth/applications](http://koala.rails.local:3000/api/oauth/applications) and create a new client.
-The redirect uri *must* match what is specified in the `KOALA_OAUTH_REDIRECT_URI` variable. Only the scope `member-read` is required. Koala will then give you an OAuth client and secret key, these must be given to Chroma.
+The redirect uri *must* match what is specified in the `KOALA_OAUTH_REDIRECT_URI` variable. Only the scope `member-read openid email profile` is required. Koala will then give you an OAuth client and secret key, these must be given to Chroma.
 
 A list of all configuration variables:
 ```rust,no_run,noplayground

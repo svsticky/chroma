@@ -1,9 +1,12 @@
+extern crate core;
+
 use crate::config::Config;
 use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
 use actix_governor::governor::middleware::NoOpMiddleware;
 use actix_governor::{Governor, GovernorConfig, GovernorConfigBuilder, PeerIpKeyExtractor};
+use actix_web::http::Method;
 use actix_web::{App, HttpServer};
 use color_eyre::eyre::Error;
 use color_eyre::Result;
@@ -96,8 +99,15 @@ async fn main() -> Result<()> {
 
 fn configure_governor() -> Result<GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware>> {
     GovernorConfigBuilder::default()
-        .per_second(3)
-        .burst_size(10)
+        .per_second(10)
+        .methods(vec![
+            Method::DELETE,
+            Method::POST,
+            Method::PATCH,
+            Method::PUT,
+            Method::GET,
+        ])
+        .burst_size(100)
         .finish()
         .ok_or(Error::msg("Governor config is invalid."))
 }

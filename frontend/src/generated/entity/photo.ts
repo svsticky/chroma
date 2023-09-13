@@ -48,7 +48,7 @@ export class Photo extends pb_1.Message {
         pb_1.Message.setField(this, 3, value);
     }
     get photoData() {
-        return pb_1.Message.getFieldWithDefault(this, 4, new Uint8Array()) as Uint8Array;
+        return pb_1.Message.getFieldWithDefault(this, 4, new Uint8Array(0)) as Uint8Array;
     }
     set photoData(value: Uint8Array) {
         pb_1.Message.setField(this, 4, value);

@@ -1,15 +1,15 @@
-use crate::koala::{get_koala_login_url, get_token_info};
+use crate::koala::{get_koala_login_url, get_user_id_from_token, UserIdFromTokenError};
 use crate::routes::appdata::WebData;
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::StatusCode;
 use actix_web::{FromRequest, HttpRequest, HttpResponse, ResponseError};
-use dal::database::User;
+use dal::database::{ChromaScope, Database, DbResult, ServiceTokenUser, User, UserType};
 use std::future::Future;
 use std::pin::Pin;
 use tap::TapFallible;
 use thiserror::Error;
-use tracing::{info, trace};
+use tracing::{info, trace, warn};
 
 pub struct Authorization {
     pub user: AuthorizedUser,
@@ -19,6 +19,36 @@ pub struct Authorization {
 pub enum AuthorizedUser {
     Koala { koala_id: i32 },
     Service { token: String },
+}
+
+impl Authorization {
+    pub async fn to_dal_user_type(&self, db: &Database) -> DbResult<UserType> {
+        let user_type = match &self.user {
+            AuthorizedUser::Koala { koala_id } => UserType::Koala(*koala_id),
+            AuthorizedUser::Service { token } => {
+                match ServiceTokenUser::get_by_token(db, token).await? {
+                    Some(stu) => UserType::ServiceToken(stu.id),
+                    None => {
+                        let stu = ServiceTokenUser::create(db, token).await?;
+                        UserType::ServiceToken(stu.id)
+                    }
+                }
+            }
+        };
+
+        Ok(user_type)
+    }
+
+    pub async fn has_scope<S: AsRef<str>>(&self, db: &Database, scope: S) -> DbResult<bool> {
+        Ok(match self.user {
+            AuthorizedUser::Koala { koala_id } => ChromaScope::list_for_user(db, koala_id)
+                .await?
+                .into_iter()
+                .find(|f| f.scope.eq(scope.as_ref()))
+                .is_some(),
+            AuthorizedUser::Service { .. } => true,
+        })
+    }
 }
 
 impl FromRequest for Authorization {
@@ -69,15 +99,21 @@ impl FromRequest for Authorization {
 
             // Check if the access token is still valid
             // E.g. it could have been revoked by Koala
-            let _token_info = get_token_info(&data.config, &user.access_token)
+            let _user_id = get_user_id_from_token(&data.config, &user.access_token)
                 .await
-                .map_err(|e| match e.status() {
-                    Some(v) if v.as_u16() == 401 => {
-                        info!("Stored session was valid, tokens for koala were not.");
-                        AuthorizationError::InvalidSession(get_koala_login_url(&data.config))
+                .map_err(|e| match e {
+                    UserIdFromTokenError::Reqwest(e) => match e.status() {
+                        Some(v) if v.as_u16() == 401 => {
+                            info!("Stored session was valid, tokens for koala were not.");
+                            AuthorizationError::InvalidSession(get_koala_login_url(&data.config))
+                        }
+                        Some(v) if v.as_u16() == 403 => AuthorizationError::Forbidden,
+                        _ => AuthorizationError::KoalaUpstream,
+                    },
+                    UserIdFromTokenError::IntParse(e) => {
+                        warn!("ID Returned by koala is not parseable to an i32: {e}");
+                        AuthorizationError::KoalaUpstream
                     }
-                    Some(v) if v.as_u16() == 403 => AuthorizationError::Forbidden,
-                    _ => AuthorizationError::KoalaUpstream,
                 })?;
 
             Ok(Self {

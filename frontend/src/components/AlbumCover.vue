@@ -1,10 +1,10 @@
 <template>
     <v-card elevation="pa-3">
         <v-card-title>
-            {{ album.name }}
+            {{ album.name }} {{ album.isDraft ? "(DRAFT)" : null }}
             <v-spacer></v-spacer>
             <v-btn
-                v-if="isAdmin"
+                v-if="canDelete"
                 class="mr-1"
                 color="primary"
                 fab
@@ -13,7 +13,7 @@
                 <v-icon>mdi-trash-can-outline</v-icon>
             </v-btn>
             <v-btn
-                v-if="isAdmin"
+                v-if="canEdit"
                 color="primary"
                 fab
                 small
@@ -36,7 +36,7 @@
                 width="80%"
                 aspect-ratio="1.7778"
                 cover
-                lazy-src="@/assets/hoofd_outline_kleur.svg"
+                lazy-src="@/assets/hoofd_outline_color.png"
                 :src="coverPhotoUrl">
 
                 <template v-slot:placeholder>
@@ -55,7 +55,7 @@
 <script lang="ts">
 import Vue, {PropType} from 'vue';
 import {AlbumModel, deleteAlbum} from "@/views/album/album";
-import {errorText, Storage} from "@/api";
+import {checkScope, errorText, Storage} from "@/api";
 import {getPhoto} from "@/views/photo/photo";
 
 interface Data {
@@ -69,7 +69,9 @@ export default Vue.extend({
         album: {
             type: Object as PropType<AlbumModel>,
             required: true,
-        }
+        },
+        canEdit: Boolean,
+        canDelete: Boolean,
     },
     data(): Data {
         return {
@@ -82,7 +84,6 @@ export default Vue.extend({
         this.loadCoverPhoto();
     },
     computed: {
-        isAdmin: () => Storage.isAdmin(),
         coverPhotoUrl(): string | null {
             if(this.loading || this.coverPhotoBytes == null) {
                 return null;
@@ -118,7 +119,7 @@ export default Vue.extend({
             }
         },
         requestUpdate() {
-            this.$emit('request-update');
+            this.$emit('change');
         },
         openAlbum() {
             this.$router.push(`/album/view?id=${this.album.id}`)

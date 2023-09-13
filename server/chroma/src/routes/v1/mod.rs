@@ -10,6 +10,7 @@ mod access;
 mod album;
 mod login;
 mod photo;
+mod user;
 
 #[derive(Debug, Default, Clone, Deserialize)]
 pub enum PhotoQuality {
@@ -36,6 +37,7 @@ impl Routable for Router {
             web::scope("/v1")
                 .configure(album::Router::configure)
                 .configure(photo::Router::configure)
+                .configure(user::Router::configure)
                 .route("/login", web::get().to(login::login))
                 // This route requires strict ratelimits
                 // We allow one request every 2 seconds per IP.
@@ -58,7 +60,7 @@ fn access_ratelimit(
 ) -> GovernorConfig<PeerIpKeyExtractor, StateInformationMiddleware> {
     GovernorConfigBuilder::default()
         .period(request_per_n)
-        .burst_size(3)
+        .burst_size(10)
         .use_headers()
         .finish()
         .unwrap()

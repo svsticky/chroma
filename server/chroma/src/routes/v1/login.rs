@@ -1,11 +1,14 @@
-use crate::koala::CredentialsType;
+use crate::config::Config;
+use crate::koala::{get_user_id_from_token, CredentialsType, UserIdFromTokenError};
 use crate::routes::appdata::WebData;
 use crate::routes::error::{Error, WebResult};
 use crate::routes::redirect::Redirect;
+use actix_web::http::StatusCode;
 use actix_web::web;
 use dal::database::{OAuthAccess, User};
 use serde::Deserialize;
-use tracing::trace;
+use tap::TapFallible;
+use tracing::{trace, warn};
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -52,15 +55,27 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         None => {
             trace!("User does not yet exist in database, creating new user.");
 
+            let koala_id = get_user_id_from_token(&data.config, &oauth_tokens.access_token)
+                .await
+                .map_err(|e| match e {
+                    UserIdFromTokenError::Reqwest(e) => Error::Koala(e),
+                    UserIdFromTokenError::IntParse(e) => {
+                        warn!("Failed to parse int: {e}");
+                        Error::Other(StatusCode::INTERNAL_SERVER_ERROR)
+                    }
+                })?;
+
+            let name = get_user_name(&data.config, koala_id, &oauth_tokens.access_token).await?;
             User::create(
                 &data.db,
-                oauth_tokens.credentials_id,
+                koala_id,
                 OAuthAccess {
                     access_token: oauth_tokens.access_token,
                     refresh_token: oauth_tokens.refresh_token,
                     expires_at,
                 },
                 is_admin,
+                name,
             )
             .await?
         }
@@ -73,4 +88,20 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         data.config.login_complete_redirect_uri, session_id, is_admin
     );
     Ok(Redirect::new(redirect_to))
+}
+
+async fn get_user_name(config: &Config, koala_id: i32, access_token: &str) -> WebResult<String> {
+    // Retrieve the user's name
+    let user_info = crate::koala::get_user_info(&config, access_token, koala_id)
+        .await
+        .tap_err(|e| warn!("Failed to retrieve user info from Koala: {e}"))
+        .map_err(|e| Error::Koala(e))?;
+
+    let user_name = if let Some(infix) = user_info.infix {
+        format!("{} {} {}", user_info.first_name, infix, user_info.last_name)
+    } else {
+        format!("{} {}", user_info.first_name, user_info.last_name)
+    };
+
+    Ok(user_name)
 }

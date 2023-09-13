@@ -8,7 +8,7 @@
                 Albums
                 <v-spacer></v-spacer>
                 <v-btn
-                    v-if="isAdmin"
+                    v-if="canCreateAlbum"
                     color="primary"
                     fab
                     small
@@ -24,13 +24,17 @@
                         :key="idx">
                         <v-col cols="12" sm="12" md="6">
                             <AlbumCover
-                                @request-update="loadAlbums"
+                                :can-delete="canDeleteAlbums"
+                                :can-edit="canEditAlbums"
+                                @change="loadAlbums"
                                 :album="pair[0]"
                             ></AlbumCover>
                         </v-col>
                         <v-col v-if="pair.length === 2">
                             <AlbumCover
-                                @request-update="loadAlbums"
+                                :can-delete="canDeleteAlbums"
+                                :can-edit="canEditAlbums"
+                                @change="loadAlbums"
                                 :album="pair[1]"
                             ></AlbumCover>
                         </v-col>
@@ -48,14 +52,16 @@
 <script lang="ts">
 import Vue from 'vue';
 import {AlbumModel, listAlbums} from "@/views/album/album";
-import {errorText, Storage} from "@/api";
+import {checkScope, errorText, Storage} from "@/api";
 import AlbumCover from "@/components/AlbumCover.vue";
 
 interface Data {
     snackbar: string | null,
     loading: boolean,
-
+    canCreateAlbum: boolean,
     albums: AlbumModel[]
+    canEditAlbums: boolean,
+    canDeleteAlbums: boolean,
 }
 
 export default Vue.extend({
@@ -64,11 +70,13 @@ export default Vue.extend({
         return {
             snackbar: null,
             loading: false,
+            canCreateAlbum: false,
             albums: [],
+            canEditAlbums: false,
+            canDeleteAlbums: false,
         }
     },
     computed: {
-        isAdmin: () => Storage.isAdmin(),
         chunkedAlbums(): AlbumModel[][] {
             const result = [];
             for(let i = 0; i < this.albums.length; i += 2) {
@@ -80,8 +88,29 @@ export default Vue.extend({
     },
     async mounted() {
         await this.loadAlbums();
+        await this.loadCanCreateAlbum();
+
+        if(Storage.isAdmin()) {
+            this.canEditAlbums = true;
+            this.canDeleteAlbums = true;
+        } else {
+            this.canEditAlbums = await checkScope("nl.svsticky.chroma.album.update") ?? false;
+            this.canDeleteAlbums = await checkScope("nl.svsticky.chroma.album.delete") ?? false;
+        }
     },
     methods: {
+        async loadCanCreateAlbum() {
+            if(Storage.isAdmin()) {
+               this.canCreateAlbum = true;
+            } else {
+                const hasScope = await checkScope("nl.svsticky.chroma.album.create");
+                if(hasScope == undefined) {
+                    return;
+                }
+
+                this.canCreateAlbum = hasScope;
+            }
+        },
         async loadAlbums() {
             this.loading = true;
             const albums = await listAlbums();

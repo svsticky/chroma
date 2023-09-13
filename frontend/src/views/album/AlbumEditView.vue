@@ -9,7 +9,25 @@
         <v-card elevation="2" class="mt-3 pa-3" :loading="loading.get">
             <v-card-title>
                 <ReturnButton></ReturnButton>
-                Edit album
+                Edit {{ album.isDraft ? "draft" : null }} album
+                <v-spacer></v-spacer>
+
+                <div v-if="isAdmin">
+                    <v-btn
+                        v-if="album.isDraft"
+                        :loading="loading.changeDraftStatus"
+                        @click="setDraftStatus(false)"
+                        color="primary">
+                        Publish album
+                    </v-btn>
+                    <v-btn
+                        v-else
+                        :loading="loading.changeDraftStatus"
+                        @click="setDraftStatus(true)"
+                        color="primary">
+                        Unpublish album
+                    </v-btn>
+                </div>
             </v-card-title>
             <v-card-text v-if="album != null">
                 <v-form
@@ -34,6 +52,7 @@
                     <div class="text-h5"> Photos </div>
                     <v-spacer></v-spacer>
                     <v-btn
+                        v-if="canCreatePhotos"
                         color="primary"
                         fab
                         small
@@ -54,8 +73,8 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import {AlbumModel, getAlbum, saveEditedAlbum} from "@/views/album/album";
-import {errorText, Storage} from "@/api";
+import {AlbumModel, getAlbum, saveEditedAlbum, setAlbumDraftStatus} from "@/views/album/album";
+import {checkScope, errorText, Storage} from "@/api";
 import ReturnButton from "@/components/ReturnButton.vue";
 import {InputValidationRules} from "vuetify";
 import PhotoGrid from "@/components/PhotoGrid.vue";
@@ -66,6 +85,7 @@ interface Data {
     loading: {
         get: boolean,
         save: boolean,
+        changeDraftStatus: boolean,
     },
     rules: {
         name: InputValidationRules,
@@ -76,6 +96,7 @@ interface Data {
     dialog: {
         uploadPhoto: boolean,
     }
+    canCreatePhotos: boolean,
 }
 
 export default Vue.extend({
@@ -86,6 +107,7 @@ export default Vue.extend({
             loading: {
                 get: true,
                 save: false,
+                changeDraftStatus: false,
             },
             rules: {
                 name: [
@@ -98,26 +120,43 @@ export default Vue.extend({
             valid: true,
             dialog: {
                 uploadPhoto: false,
-            }
+            },
+            canCreatePhotos: false,
         }
+    },
+    computed: {
+        isAdmin: () => Storage.isAdmin(),
     },
     async mounted() {
         if(!Storage.isAdmin()) {
-            await this.$router.back();
-            return;
+            const hasScopeUpdate = await checkScope("nl.svsticky.chroma.album.update") ?? false;
+            if(!hasScopeUpdate) {
+                await this.$router.back();
+                return;
+            }
+
+            this.canCreatePhotos = await checkScope("nl.svsticky.chroma.photo.create") ?? false;
+        } else {
+            this.canCreatePhotos = true;
         }
 
         await this.loadAlbum();
     },
     methods: {
-        getIdInner(): string | null {
+        getIdInner(): string | undefined {
             const paramsRaw = window.location.hash.split('?');
             if(paramsRaw.length != 2) {
-                return null;
+                return undefined;
             }
 
             const params = new URLSearchParams(paramsRaw[1]);
-            return params.get('id');
+            const id = params.get('id');
+
+            if(id == null) {
+                return undefined;
+            } else {
+                return id;
+            }
         },
         async getId(): Promise<string> {
             const id = this.getIdInner();
@@ -126,6 +165,24 @@ export default Vue.extend({
             }
 
             return id!;
+        },
+        async setDraftStatus(setDraft: boolean) {
+            this.loading.changeDraftStatus = true;
+            const result = await setAlbumDraftStatus(this.album!, setDraft)
+            this.loading.changeDraftStatus = false;
+
+            if(result == undefined || !result) {
+                this.snackbar = errorText;
+                return;
+            }
+
+            if(setDraft) {
+                this.snackbar = "Album unpublished";
+            } else {
+                this.snackbar = "Album published";
+            }
+
+            await this.loadAlbum();
         },
         async loadAlbum() {
             this.loading.get = true;

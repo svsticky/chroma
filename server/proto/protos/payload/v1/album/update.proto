@@ -5,4 +5,9 @@ message UpdateAlbumRequest {
   string id = 1;
   optional string name = 2;
   optional string coverPhotoId = 3;
+  oneof draftSettings {
+    bool dontChange = 4;
+    bool setPublished = 5;
+    bool setDraft = 6;
+  }
 }

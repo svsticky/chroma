@@ -5,15 +5,20 @@
  * git: https://github.com/thesayyn/protoc-gen-ts */
 import * as pb_1 from "google-protobuf";
 export class AccessResponse extends pb_1.Message {
-    #one_of_decls: number[][] = [];
-    constructor(data?: any[] | {
+    #one_of_decls: number[][] = [[2]];
+    constructor(data?: any[] | ({
         admin?: boolean;
-    }) {
+    } & (({
+        hasRequestedScope?: boolean;
+    })))) {
         super();
         pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
         if (!Array.isArray(data) && typeof data == "object") {
             if ("admin" in data && data.admin != undefined) {
                 this.admin = data.admin;
+            }
+            if ("hasRequestedScope" in data && data.hasRequestedScope != undefined) {
+                this.hasRequestedScope = data.hasRequestedScope;
             }
         }
     }
@@ -23,21 +28,47 @@ export class AccessResponse extends pb_1.Message {
     set admin(value: boolean) {
         pb_1.Message.setField(this, 1, value);
     }
+    get hasRequestedScope() {
+        return pb_1.Message.getFieldWithDefault(this, 2, false) as boolean;
+    }
+    set hasRequestedScope(value: boolean) {
+        pb_1.Message.setOneofField(this, 2, this.#one_of_decls[0], value);
+    }
+    get hasHasRequestedScope() {
+        return pb_1.Message.getField(this, 2) != null;
+    }
+    get _hasRequestedScope() {
+        const cases: {
+            [index: number]: "none" | "hasRequestedScope";
+        } = {
+            0: "none",
+            2: "hasRequestedScope"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [2])];
+    }
     static fromObject(data: {
         admin?: boolean;
+        hasRequestedScope?: boolean;
     }): AccessResponse {
         const message = new AccessResponse({});
         if (data.admin != null) {
             message.admin = data.admin;
+        }
+        if (data.hasRequestedScope != null) {
+            message.hasRequestedScope = data.hasRequestedScope;
         }
         return message;
     }
     toObject() {
         const data: {
             admin?: boolean;
+            hasRequestedScope?: boolean;
         } = {};
         if (this.admin != null) {
             data.admin = this.admin;
+        }
+        if (this.hasRequestedScope != null) {
+            data.hasRequestedScope = this.hasRequestedScope;
         }
         return data;
     }
@@ -47,6 +78,8 @@ export class AccessResponse extends pb_1.Message {
         const writer = w || new pb_1.BinaryWriter();
         if (this.admin != false)
             writer.writeBool(1, this.admin);
+        if (this.hasHasRequestedScope)
+            writer.writeBool(2, this.hasRequestedScope);
         if (!w)
             return writer.getResultBuffer();
     }
@@ -58,6 +91,9 @@ export class AccessResponse extends pb_1.Message {
             switch (reader.getFieldNumber()) {
                 case 1:
                     message.admin = reader.readBool();
+                    break;
+                case 2:
+                    message.hasRequestedScope = reader.readBool();
                     break;
                 default: reader.skipField();
             }

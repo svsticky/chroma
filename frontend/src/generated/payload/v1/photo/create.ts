@@ -28,7 +28,7 @@ export class CreatePhotoRequest extends pb_1.Message {
         pb_1.Message.setField(this, 1, value);
     }
     get photoData() {
-        return pb_1.Message.getFieldWithDefault(this, 2, new Uint8Array()) as Uint8Array;
+        return pb_1.Message.getFieldWithDefault(this, 2, new Uint8Array(0)) as Uint8Array;
     }
     set photoData(value: Uint8Array) {
         pb_1.Message.setField(this, 2, value);
@@ -92,5 +92,72 @@ export class CreatePhotoRequest extends pb_1.Message {
     }
     static deserializeBinary(bytes: Uint8Array): CreatePhotoRequest {
         return CreatePhotoRequest.deserialize(bytes);
+    }
+}
+export class CreatePhotoResponse extends pb_1.Message {
+    #one_of_decls: number[][] = [];
+    constructor(data?: any[] | {
+        photoId?: string;
+    }) {
+        super();
+        pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+        if (!Array.isArray(data) && typeof data == "object") {
+            if ("photoId" in data && data.photoId != undefined) {
+                this.photoId = data.photoId;
+            }
+        }
+    }
+    get photoId() {
+        return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+    }
+    set photoId(value: string) {
+        pb_1.Message.setField(this, 1, value);
+    }
+    static fromObject(data: {
+        photoId?: string;
+    }): CreatePhotoResponse {
+        const message = new CreatePhotoResponse({});
+        if (data.photoId != null) {
+            message.photoId = data.photoId;
+        }
+        return message;
+    }
+    toObject() {
+        const data: {
+            photoId?: string;
+        } = {};
+        if (this.photoId != null) {
+            data.photoId = this.photoId;
+        }
+        return data;
+    }
+    serialize(): Uint8Array;
+    serialize(w: pb_1.BinaryWriter): void;
+    serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+        const writer = w || new pb_1.BinaryWriter();
+        if (this.photoId.length)
+            writer.writeString(1, this.photoId);
+        if (!w)
+            return writer.getResultBuffer();
+    }
+    static deserialize(bytes: Uint8Array | pb_1.BinaryReader): CreatePhotoResponse {
+        const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new CreatePhotoResponse();
+        while (reader.nextField()) {
+            if (reader.isEndGroup())
+                break;
+            switch (reader.getFieldNumber()) {
+                case 1:
+                    message.photoId = reader.readString();
+                    break;
+                default: reader.skipField();
+            }
+        }
+        return message;
+    }
+    serializeBinary(): Uint8Array {
+        return this.serialize();
+    }
+    static deserializeBinary(bytes: Uint8Array): CreatePhotoResponse {
+        return CreatePhotoResponse.deserialize(bytes);
     }
 }

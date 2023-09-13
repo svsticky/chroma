@@ -19,6 +19,21 @@ export interface AlbumModel {
      * The ID of the cover photo, if it is set
      */
     coverPhotoId: string | null,
+    /**
+     * Whether the album is a draft.
+     */
+    isDraft: boolean,
+    /**
+     * The name of the creator.
+     * Null if the creator was a service token
+     */
+    createdBy: string | null,
+    /**
+     * The name of the publisher.
+     * If `is_draft` is true, this value should not be shown and will be `null`.
+     * If `is_draft` is false and this value is `null`, the publisher is a service token.
+     */
+    publishedBy: string | null,
 }
 
 /**
@@ -30,7 +45,20 @@ function protoAlbumToAlbumModel(album: Album): AlbumModel {
         id: album.id,
         coverPhotoId: album.hasCoverPhotoId ? album.coverPhotoId : null,
         name: album.name,
+        isDraft: album.isDraft,
+        createdBy: album.createdBy.name,
+        publishedBy: album.hasPublishedBy ? album.publishedBy.name : null,
     };
+}
+
+export async function setAlbumDraftStatus(album: AlbumModel, draft: boolean): Promise<boolean | undefined> {
+    const result = await Http.patch('/api/v1/album', new UpdateAlbumRequest({
+        id: album.id,
+        setDraft: draft ? true : undefined,
+        setPublished: draft ? undefined : true,
+    }), null);
+
+    return result.ok ? true : undefined;
 }
 
 /**
@@ -96,11 +124,13 @@ export async function getAlbum(id: string, without_photos: boolean = false): Pro
 /**
  * Create an album
  * @param name The name of the album
+ * @param isDraft Whether the album should be created as a draft
  * @return The ID of the album on success. `undefined` on failure
  */
-export async function createAlbum(name: string): Promise<string | undefined> {
+export async function createAlbum(name: string, isDraft: boolean): Promise<string | undefined> {
     const response = await Http.postBody<CreateAlbumResponse>('/api/v1/album', new CreateAlbumRequest({
-        name
+        name,
+        isDraft
     }), null, CreateAlbumResponse);
 
     if(response instanceof Response) {

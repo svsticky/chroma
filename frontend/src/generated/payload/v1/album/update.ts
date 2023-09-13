@@ -5,10 +5,22 @@
  * git: https://github.com/thesayyn/protoc-gen-ts */
 import * as pb_1 from "google-protobuf";
 export class UpdateAlbumRequest extends pb_1.Message {
-    #one_of_decls: number[][] = [[2], [3]];
+    #one_of_decls: number[][] = [[4, 5, 6], [2], [3]];
     constructor(data?: any[] | ({
         id?: string;
     } & (({
+        dontChange?: boolean;
+        setPublished?: never;
+        setDraft?: never;
+    } | {
+        dontChange?: never;
+        setPublished?: boolean;
+        setDraft?: never;
+    } | {
+        dontChange?: never;
+        setPublished?: never;
+        setDraft?: boolean;
+    }) | ({
         name?: string;
     }) | ({
         coverPhotoId?: string;
@@ -25,6 +37,15 @@ export class UpdateAlbumRequest extends pb_1.Message {
             if ("coverPhotoId" in data && data.coverPhotoId != undefined) {
                 this.coverPhotoId = data.coverPhotoId;
             }
+            if ("dontChange" in data && data.dontChange != undefined) {
+                this.dontChange = data.dontChange;
+            }
+            if ("setPublished" in data && data.setPublished != undefined) {
+                this.setPublished = data.setPublished;
+            }
+            if ("setDraft" in data && data.setDraft != undefined) {
+                this.setDraft = data.setDraft;
+            }
         }
     }
     get id() {
@@ -37,7 +58,7 @@ export class UpdateAlbumRequest extends pb_1.Message {
         return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
     }
     set name(value: string) {
-        pb_1.Message.setOneofField(this, 2, this.#one_of_decls[0], value);
+        pb_1.Message.setOneofField(this, 2, this.#one_of_decls[1], value);
     }
     get hasName() {
         return pb_1.Message.getField(this, 2) != null;
@@ -46,10 +67,48 @@ export class UpdateAlbumRequest extends pb_1.Message {
         return pb_1.Message.getFieldWithDefault(this, 3, "") as string;
     }
     set coverPhotoId(value: string) {
-        pb_1.Message.setOneofField(this, 3, this.#one_of_decls[1], value);
+        pb_1.Message.setOneofField(this, 3, this.#one_of_decls[2], value);
     }
     get hasCoverPhotoId() {
         return pb_1.Message.getField(this, 3) != null;
+    }
+    get dontChange() {
+        return pb_1.Message.getFieldWithDefault(this, 4, false) as boolean;
+    }
+    set dontChange(value: boolean) {
+        pb_1.Message.setOneofField(this, 4, this.#one_of_decls[0], value);
+    }
+    get hasDontChange() {
+        return pb_1.Message.getField(this, 4) != null;
+    }
+    get setPublished() {
+        return pb_1.Message.getFieldWithDefault(this, 5, false) as boolean;
+    }
+    set setPublished(value: boolean) {
+        pb_1.Message.setOneofField(this, 5, this.#one_of_decls[0], value);
+    }
+    get hasSetPublished() {
+        return pb_1.Message.getField(this, 5) != null;
+    }
+    get setDraft() {
+        return pb_1.Message.getFieldWithDefault(this, 6, false) as boolean;
+    }
+    set setDraft(value: boolean) {
+        pb_1.Message.setOneofField(this, 6, this.#one_of_decls[0], value);
+    }
+    get hasSetDraft() {
+        return pb_1.Message.getField(this, 6) != null;
+    }
+    get draftSettings() {
+        const cases: {
+            [index: number]: "none" | "dontChange" | "setPublished" | "setDraft";
+        } = {
+            0: "none",
+            4: "dontChange",
+            5: "setPublished",
+            6: "setDraft"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [4, 5, 6])];
     }
     get _name() {
         const cases: {
@@ -73,6 +132,9 @@ export class UpdateAlbumRequest extends pb_1.Message {
         id?: string;
         name?: string;
         coverPhotoId?: string;
+        dontChange?: boolean;
+        setPublished?: boolean;
+        setDraft?: boolean;
     }): UpdateAlbumRequest {
         const message = new UpdateAlbumRequest({});
         if (data.id != null) {
@@ -84,6 +146,15 @@ export class UpdateAlbumRequest extends pb_1.Message {
         if (data.coverPhotoId != null) {
             message.coverPhotoId = data.coverPhotoId;
         }
+        if (data.dontChange != null) {
+            message.dontChange = data.dontChange;
+        }
+        if (data.setPublished != null) {
+            message.setPublished = data.setPublished;
+        }
+        if (data.setDraft != null) {
+            message.setDraft = data.setDraft;
+        }
         return message;
     }
     toObject() {
@@ -91,6 +162,9 @@ export class UpdateAlbumRequest extends pb_1.Message {
             id?: string;
             name?: string;
             coverPhotoId?: string;
+            dontChange?: boolean;
+            setPublished?: boolean;
+            setDraft?: boolean;
         } = {};
         if (this.id != null) {
             data.id = this.id;
@@ -100,6 +174,15 @@ export class UpdateAlbumRequest extends pb_1.Message {
         }
         if (this.coverPhotoId != null) {
             data.coverPhotoId = this.coverPhotoId;
+        }
+        if (this.dontChange != null) {
+            data.dontChange = this.dontChange;
+        }
+        if (this.setPublished != null) {
+            data.setPublished = this.setPublished;
+        }
+        if (this.setDraft != null) {
+            data.setDraft = this.setDraft;
         }
         return data;
     }
@@ -113,6 +196,12 @@ export class UpdateAlbumRequest extends pb_1.Message {
             writer.writeString(2, this.name);
         if (this.hasCoverPhotoId)
             writer.writeString(3, this.coverPhotoId);
+        if (this.hasDontChange)
+            writer.writeBool(4, this.dontChange);
+        if (this.hasSetPublished)
+            writer.writeBool(5, this.setPublished);
+        if (this.hasSetDraft)
+            writer.writeBool(6, this.setDraft);
         if (!w)
             return writer.getResultBuffer();
     }
@@ -130,6 +219,15 @@ export class UpdateAlbumRequest extends pb_1.Message {
                     break;
                 case 3:
                     message.coverPhotoId = reader.readString();
+                    break;
+                case 4:
+                    message.dontChange = reader.readBool();
+                    break;
+                case 5:
+                    message.setPublished = reader.readBool();
+                    break;
+                case 6:
+                    message.setDraft = reader.readBool();
                     break;
                 default: reader.skipField();
             }

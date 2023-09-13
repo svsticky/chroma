@@ -5,6 +5,24 @@
             color="primary"
             dark>
             <v-card-title>Chroma</v-card-title>
+
+            <v-spacer></v-spacer>
+
+            <v-btn
+                v-if="isAdmin && $router.currentRoute.fullPath !== '/user'"
+                icon
+                small
+                class="mr-3"
+                @click="navigateToUser">
+                <v-icon>mdi-cog-outline</v-icon>
+            </v-btn>
+            <v-btn
+                icon
+                small
+                class="mr-3"
+                @click="toggleDarkMode">
+                <v-icon>mdi-theme-light-dark</v-icon>
+            </v-btn>
         </v-app-bar>
         <v-main>
             <router-view/>
@@ -22,12 +40,37 @@ export default Vue.extend({
             await this.performLoginCheck();
         }
     },
+    computed: {
+        isAdmin(): boolean {
+            return Storage.isAdmin();
+        }
+    },
     async mounted() {
+        this.$vuetify.theme.dark = Storage.getIsDarkMode();
+
         this.$router.onReady(async () => {
             await this.performLoginCheck();
         })
     },
     methods: {
+        toggleDarkMode() {
+            if(Storage.getIsDarkMode()) {
+                Storage.setIsDarkMode(false);
+            } else {
+                Storage.setIsDarkMode(true);
+            }
+
+            this.$vuetify.theme.dark = Storage.getIsDarkMode();
+        },
+        navigateToUser() {
+            if(!this.isAdmin) {
+                return;
+            }
+
+            if(this.$router.currentRoute.fullPath !== "/user") {
+                this.$router.push('/user');
+            }
+        },
         async performLoginCheck() {
             if (this.$router.currentRoute.path == '/logged_in') {
                 return;

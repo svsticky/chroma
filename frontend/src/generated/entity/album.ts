@@ -4,14 +4,22 @@
  * source: entity/album.proto
  * git: https://github.com/thesayyn/protoc-gen-ts */
 import * as pb_1 from "google-protobuf";
+export enum UserType {
+    SERVICE = 0,
+    KOALA = 1
+}
 export class Album extends pb_1.Message {
-    #one_of_decls: number[][] = [[4]];
+    #one_of_decls: number[][] = [[4], [7]];
     constructor(data?: any[] | ({
         id?: string;
         name?: string;
         createdAt?: number;
+        isDraft?: boolean;
+        createdBy?: AlbumUser;
     } & (({
         coverPhotoId?: string;
+    }) | ({
+        publishedBy?: AlbumUser;
     })))) {
         super();
         pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -27,6 +35,15 @@ export class Album extends pb_1.Message {
             }
             if ("coverPhotoId" in data && data.coverPhotoId != undefined) {
                 this.coverPhotoId = data.coverPhotoId;
+            }
+            if ("isDraft" in data && data.isDraft != undefined) {
+                this.isDraft = data.isDraft;
+            }
+            if ("createdBy" in data && data.createdBy != undefined) {
+                this.createdBy = data.createdBy;
+            }
+            if ("publishedBy" in data && data.publishedBy != undefined) {
+                this.publishedBy = data.publishedBy;
             }
         }
     }
@@ -57,6 +74,30 @@ export class Album extends pb_1.Message {
     get hasCoverPhotoId() {
         return pb_1.Message.getField(this, 4) != null;
     }
+    get isDraft() {
+        return pb_1.Message.getFieldWithDefault(this, 5, false) as boolean;
+    }
+    set isDraft(value: boolean) {
+        pb_1.Message.setField(this, 5, value);
+    }
+    get createdBy() {
+        return pb_1.Message.getWrapperField(this, AlbumUser, 6) as AlbumUser;
+    }
+    set createdBy(value: AlbumUser) {
+        pb_1.Message.setWrapperField(this, 6, value);
+    }
+    get hasCreatedBy() {
+        return pb_1.Message.getField(this, 6) != null;
+    }
+    get publishedBy() {
+        return pb_1.Message.getWrapperField(this, AlbumUser, 7) as AlbumUser;
+    }
+    set publishedBy(value: AlbumUser) {
+        pb_1.Message.setOneofWrapperField(this, 7, this.#one_of_decls[1], value);
+    }
+    get hasPublishedBy() {
+        return pb_1.Message.getField(this, 7) != null;
+    }
     get _coverPhotoId() {
         const cases: {
             [index: number]: "none" | "coverPhotoId";
@@ -66,11 +107,23 @@ export class Album extends pb_1.Message {
         };
         return cases[pb_1.Message.computeOneofCase(this, [4])];
     }
+    get _publishedBy() {
+        const cases: {
+            [index: number]: "none" | "publishedBy";
+        } = {
+            0: "none",
+            7: "publishedBy"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [7])];
+    }
     static fromObject(data: {
         id?: string;
         name?: string;
         createdAt?: number;
         coverPhotoId?: string;
+        isDraft?: boolean;
+        createdBy?: ReturnType<typeof AlbumUser.prototype.toObject>;
+        publishedBy?: ReturnType<typeof AlbumUser.prototype.toObject>;
     }): Album {
         const message = new Album({});
         if (data.id != null) {
@@ -85,6 +138,15 @@ export class Album extends pb_1.Message {
         if (data.coverPhotoId != null) {
             message.coverPhotoId = data.coverPhotoId;
         }
+        if (data.isDraft != null) {
+            message.isDraft = data.isDraft;
+        }
+        if (data.createdBy != null) {
+            message.createdBy = AlbumUser.fromObject(data.createdBy);
+        }
+        if (data.publishedBy != null) {
+            message.publishedBy = AlbumUser.fromObject(data.publishedBy);
+        }
         return message;
     }
     toObject() {
@@ -93,6 +155,9 @@ export class Album extends pb_1.Message {
             name?: string;
             createdAt?: number;
             coverPhotoId?: string;
+            isDraft?: boolean;
+            createdBy?: ReturnType<typeof AlbumUser.prototype.toObject>;
+            publishedBy?: ReturnType<typeof AlbumUser.prototype.toObject>;
         } = {};
         if (this.id != null) {
             data.id = this.id;
@@ -105,6 +170,15 @@ export class Album extends pb_1.Message {
         }
         if (this.coverPhotoId != null) {
             data.coverPhotoId = this.coverPhotoId;
+        }
+        if (this.isDraft != null) {
+            data.isDraft = this.isDraft;
+        }
+        if (this.createdBy != null) {
+            data.createdBy = this.createdBy.toObject();
+        }
+        if (this.publishedBy != null) {
+            data.publishedBy = this.publishedBy.toObject();
         }
         return data;
     }
@@ -120,6 +194,12 @@ export class Album extends pb_1.Message {
             writer.writeInt64(3, this.createdAt);
         if (this.hasCoverPhotoId)
             writer.writeString(4, this.coverPhotoId);
+        if (this.isDraft != false)
+            writer.writeBool(5, this.isDraft);
+        if (this.hasCreatedBy)
+            writer.writeMessage(6, this.createdBy, () => this.createdBy.serialize(writer));
+        if (this.hasPublishedBy)
+            writer.writeMessage(7, this.publishedBy, () => this.publishedBy.serialize(writer));
         if (!w)
             return writer.getResultBuffer();
     }
@@ -141,6 +221,15 @@ export class Album extends pb_1.Message {
                 case 4:
                     message.coverPhotoId = reader.readString();
                     break;
+                case 5:
+                    message.isDraft = reader.readBool();
+                    break;
+                case 6:
+                    reader.readMessage(message.createdBy, () => message.createdBy = AlbumUser.deserialize(reader));
+                    break;
+                case 7:
+                    reader.readMessage(message.publishedBy, () => message.publishedBy = AlbumUser.deserialize(reader));
+                    break;
                 default: reader.skipField();
             }
         }
@@ -151,5 +240,131 @@ export class Album extends pb_1.Message {
     }
     static deserializeBinary(bytes: Uint8Array): Album {
         return Album.deserialize(bytes);
+    }
+}
+export class AlbumUser extends pb_1.Message {
+    #one_of_decls: number[][] = [[2]];
+    constructor(data?: any[] | ({
+        type?: UserType;
+        id?: number;
+    } & (({
+        name?: string;
+    })))) {
+        super();
+        pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+        if (!Array.isArray(data) && typeof data == "object") {
+            if ("type" in data && data.type != undefined) {
+                this.type = data.type;
+            }
+            if ("name" in data && data.name != undefined) {
+                this.name = data.name;
+            }
+            if ("id" in data && data.id != undefined) {
+                this.id = data.id;
+            }
+        }
+    }
+    get type() {
+        return pb_1.Message.getFieldWithDefault(this, 1, UserType.SERVICE) as UserType;
+    }
+    set type(value: UserType) {
+        pb_1.Message.setField(this, 1, value);
+    }
+    get name() {
+        return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+    }
+    set name(value: string) {
+        pb_1.Message.setOneofField(this, 2, this.#one_of_decls[0], value);
+    }
+    get hasName() {
+        return pb_1.Message.getField(this, 2) != null;
+    }
+    get id() {
+        return pb_1.Message.getFieldWithDefault(this, 3, 0) as number;
+    }
+    set id(value: number) {
+        pb_1.Message.setField(this, 3, value);
+    }
+    get _name() {
+        const cases: {
+            [index: number]: "none" | "name";
+        } = {
+            0: "none",
+            2: "name"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [2])];
+    }
+    static fromObject(data: {
+        type?: UserType;
+        name?: string;
+        id?: number;
+    }): AlbumUser {
+        const message = new AlbumUser({});
+        if (data.type != null) {
+            message.type = data.type;
+        }
+        if (data.name != null) {
+            message.name = data.name;
+        }
+        if (data.id != null) {
+            message.id = data.id;
+        }
+        return message;
+    }
+    toObject() {
+        const data: {
+            type?: UserType;
+            name?: string;
+            id?: number;
+        } = {};
+        if (this.type != null) {
+            data.type = this.type;
+        }
+        if (this.name != null) {
+            data.name = this.name;
+        }
+        if (this.id != null) {
+            data.id = this.id;
+        }
+        return data;
+    }
+    serialize(): Uint8Array;
+    serialize(w: pb_1.BinaryWriter): void;
+    serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+        const writer = w || new pb_1.BinaryWriter();
+        if (this.type != UserType.SERVICE)
+            writer.writeEnum(1, this.type);
+        if (this.hasName)
+            writer.writeString(2, this.name);
+        if (this.id != 0)
+            writer.writeInt32(3, this.id);
+        if (!w)
+            return writer.getResultBuffer();
+    }
+    static deserialize(bytes: Uint8Array | pb_1.BinaryReader): AlbumUser {
+        const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new AlbumUser();
+        while (reader.nextField()) {
+            if (reader.isEndGroup())
+                break;
+            switch (reader.getFieldNumber()) {
+                case 1:
+                    message.type = reader.readEnum();
+                    break;
+                case 2:
+                    message.name = reader.readString();
+                    break;
+                case 3:
+                    message.id = reader.readInt32();
+                    break;
+                default: reader.skipField();
+            }
+        }
+        return message;
+    }
+    serializeBinary(): Uint8Array {
+        return this.serialize();
+    }
+    static deserializeBinary(bytes: Uint8Array): AlbumUser {
+        return AlbumUser.deserialize(bytes);
     }
 }

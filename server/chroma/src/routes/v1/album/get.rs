@@ -53,6 +53,6 @@ pub async fn get(
 
     Ok(Payload(GetAlbumResponse {
         photos,
-        album: Some(album.into()),
+        album: Some(album.to_proto().await?),
     }))
 }

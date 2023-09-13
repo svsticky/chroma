@@ -5,15 +5,20 @@
  * git: https://github.com/thesayyn/protoc-gen-ts */
 import * as pb_1 from "google-protobuf";
 export class CreateAlbumRequest extends pb_1.Message {
-    #one_of_decls: number[][] = [];
-    constructor(data?: any[] | {
+    #one_of_decls: number[][] = [[2]];
+    constructor(data?: any[] | ({
         name?: string;
-    }) {
+    } & (({
+        isDraft?: boolean;
+    })))) {
         super();
         pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
         if (!Array.isArray(data) && typeof data == "object") {
             if ("name" in data && data.name != undefined) {
                 this.name = data.name;
+            }
+            if ("isDraft" in data && data.isDraft != undefined) {
+                this.isDraft = data.isDraft;
             }
         }
     }
@@ -23,21 +28,47 @@ export class CreateAlbumRequest extends pb_1.Message {
     set name(value: string) {
         pb_1.Message.setField(this, 1, value);
     }
+    get isDraft() {
+        return pb_1.Message.getFieldWithDefault(this, 2, false) as boolean;
+    }
+    set isDraft(value: boolean) {
+        pb_1.Message.setOneofField(this, 2, this.#one_of_decls[0], value);
+    }
+    get hasIsDraft() {
+        return pb_1.Message.getField(this, 2) != null;
+    }
+    get _isDraft() {
+        const cases: {
+            [index: number]: "none" | "isDraft";
+        } = {
+            0: "none",
+            2: "isDraft"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [2])];
+    }
     static fromObject(data: {
         name?: string;
+        isDraft?: boolean;
     }): CreateAlbumRequest {
         const message = new CreateAlbumRequest({});
         if (data.name != null) {
             message.name = data.name;
+        }
+        if (data.isDraft != null) {
+            message.isDraft = data.isDraft;
         }
         return message;
     }
     toObject() {
         const data: {
             name?: string;
+            isDraft?: boolean;
         } = {};
         if (this.name != null) {
             data.name = this.name;
+        }
+        if (this.isDraft != null) {
+            data.isDraft = this.isDraft;
         }
         return data;
     }
@@ -47,6 +78,8 @@ export class CreateAlbumRequest extends pb_1.Message {
         const writer = w || new pb_1.BinaryWriter();
         if (this.name.length)
             writer.writeString(1, this.name);
+        if (this.hasIsDraft)
+            writer.writeBool(2, this.isDraft);
         if (!w)
             return writer.getResultBuffer();
     }
@@ -58,6 +91,9 @@ export class CreateAlbumRequest extends pb_1.Message {
             switch (reader.getFieldNumber()) {
                 case 1:
                     message.name = reader.readString();
+                    break;
+                case 2:
+                    message.isDraft = reader.readBool();
                     break;
                 default: reader.skipField();
             }

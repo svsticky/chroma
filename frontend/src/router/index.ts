@@ -30,7 +30,11 @@ const routes: Array<RouteConfig> = [
   },
   {
     path: '/logged_in',
-    component: () => import('../views/LoggedIn.vue')
+    component: () => import('../views/LoggedIn.vue'),
+  },
+  {
+    path: '/user',
+    component: () => import('../views/user/UserListView.vue'),
   }
 ]
 
