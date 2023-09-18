@@ -42,13 +42,7 @@ async fn main() -> Result<()> {
     }
 
     info!("Initializing database");
-    let db = Database::new(
-        &config.db_host,
-        &config.db_username,
-        config.db_password.as_deref(),
-        &config.db_database,
-    )
-    .await?;
+    let db = Database::new(config.database_config()?).await?;
 
     info!("Initializing storage engine");
     let storage = match config.storage_engine {
