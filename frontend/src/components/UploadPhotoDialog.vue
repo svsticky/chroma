@@ -1,5 +1,6 @@
 <template>
     <v-dialog
+        persistent
         v-model="enabled"
         max-width="600">
         <v-card flat>
@@ -12,15 +13,20 @@
                     accept=".png,.jpeg,.jpg"
                     multiple
                     chips
+                    :disabled="loading"
                     label="Photo"
                 ></v-file-input>
             </v-card-text>
             <v-card-actions>
                 <v-btn
+                    :disabled="loading"
                     @click="close(false)">
                     Cancel
                 </v-btn>
                 <v-spacer></v-spacer>
+                <div v-if="loading" class="mr-1">
+                    <span class="primary--text">{{ uploadProgress }} / {{ uploadTotal}}</span>
+                </div>
                 <v-btn
                     @click="upload"
                     color="primary"
@@ -40,6 +46,8 @@ interface Data {
     snackbar: string | null,
     loading: boolean,
     photos: File[],
+    uploadProgress: number,
+    uploadTotal: number,
 }
 
 export default Vue.extend({
@@ -52,14 +60,23 @@ export default Vue.extend({
             snackbar: null,
             loading: false,
             photos: [],
+            uploadProgress: 0,
+            uploadTotal: 0,
         }
     },
     methods: {
         async upload() {
             this.loading = true;
+
+            this.uploadProgress = 0;
+            this.uploadTotal = this.photos.length;
+
             const results = await Promise.all(this.photos.map(async photoFile => {
                 const photoBytes = new Uint8Array(await photoFile.arrayBuffer());
                 const result = await createPhoto(this.albumId, photoBytes);
+
+                this.uploadProgress++;
+
                 return result != undefined;
             }));
             this.loading = false;

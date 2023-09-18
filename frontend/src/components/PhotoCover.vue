@@ -33,12 +33,6 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import {checkScope} from "@/api";
-
-interface Data {
-    canDelete: boolean,
-    canSetThumbnail: boolean,
-}
 
 export default Vue.extend({
     props: {
@@ -51,12 +45,6 @@ export default Vue.extend({
         isCover: {
             type: Boolean,
             required: false,
-        }
-    },
-    data(): Data {
-        return {
-            canDelete: false,
-            canSetThumbnail: false,
         }
     },
     computed: {

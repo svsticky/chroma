@@ -7,7 +7,7 @@
         ></UploadPhotoDialog>
 
         <v-card elevation="2" class="mt-3 pa-3" :loading="loading.get">
-            <v-card-title>
+            <v-card-title v-if="album != null">
                 <ReturnButton></ReturnButton>
                 Edit {{ album.isDraft ? "draft" : null }} album
                 <v-spacer></v-spacer>
