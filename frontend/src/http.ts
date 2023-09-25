@@ -1,4 +1,4 @@
-import {server} from "@/generated/server";
+import {server} from "@/server";
 import * as pb_1 from "google-protobuf";
 import {Storage} from "@/api";
 

@@ -1,18 +1,22 @@
+use color_eyre::eyre::Error;
+use dal::database::DbConfig;
 use serde::Deserialize;
 use tracing::{info, warn};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     // ANCHOR: config
-    /// MySQL database host.
+    /// Database host.
     /// Non-standard ports are not supported and should not be provided.
-    pub db_host: String,
-    /// MySQL database name
-    pub db_database: String,
-    /// MySQL database username
-    pub db_username: String,
-    /// MySQL database password
+    pub db_host: Option<String>,
+    /// Database name
+    pub db_database: Option<String>,
+    /// Database username
+    pub db_username: Option<String>,
+    /// Database password
     pub db_password: Option<String>,
+    /// Database connection url
+    pub db_url: Option<String>,
 
     /// The storage engine to be used
     #[serde(default = "default_storage_engine")]
@@ -104,6 +108,18 @@ pub enum StorageEngine {
 impl Config {
     /// The default user agent for Koala when none is configured
     const DEFAULT_KOALA_USER_AGENT: &'static str = "Chroma server";
+
+    /// Get the database configuration specified by the configuration
+    pub fn database_config(&self) -> color_eyre::Result<DbConfig> {
+        if let Some(url) = &self.db_url {
+            Ok(DbConfig::Url { url })
+        } else {
+            match (&self.db_host, &self.db_username, &self.db_password, &self.db_database) {
+                (Some(host), Some(user), Some(passw), Some(database)) => Ok(DbConfig::Parameters { host, user, passw, database }),
+                _ => Err(Error::msg("Database is configured incorrectly. You must specify either a `db_url` OR `db_host`, `db_username`, `db_password` and `db_database`"))
+            }
+        }
+    }
 
     /// Parse the configuration from environmental variables.
     ///
