@@ -63,7 +63,11 @@ impl<'a> Photo<'a> {
         format!("{}{random}", Self::ID_PREFIX)
     }
 
-    pub async fn create(db: &'a Database, album: &Album<'_>, created_at: i64) -> DbResult<Photo<'a>> {
+    pub async fn create(
+        db: &'a Database,
+        album: &Album<'_>,
+        created_at: i64,
+    ) -> DbResult<Photo<'a>> {
         let id = Self::generate_id();
 
         sqlx::query("INSERT INTO photo_metadata (id, album_id, created_at) VALUES ($1, $2, $3)")
