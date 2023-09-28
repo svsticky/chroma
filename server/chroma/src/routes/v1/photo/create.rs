@@ -11,10 +11,10 @@ use image::{DynamicImage, GenericImageView};
 use img_parts::{Bytes, DynImage, ImageEXIF};
 use proto::{CreatePhotoRequest, CreatePhotoResponse};
 use std::io::Cursor;
-use std::str::FromStr;
 use tap::TapFallible;
 use time::OffsetDateTime;
-use tracing::{debug, trace, warn};
+use tokio::time::Instant;
+use tracing::{debug, instrument, trace, warn};
 use webp::Encoder;
 
 /// Create a new photo in an existing album.
@@ -57,49 +57,65 @@ pub async fn create(
 /// # Errors
 ///
 /// If any step in the pipeline fails
+#[instrument(skip(data, image))]
 async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> WebResult<String> {
     // This pipeline modifies the image. The idea is that each 'step' outputs
     // a variable 'image', which the next step can then use.
 
-    let image = Reader::new(Cursor::new(image))
-        .with_guessed_format()
-        .unwrap(); // Cannot fail when using a Cursor
+    // We want to keep track of the duration of various steps.
+    let mut timer = Instant::now();
 
-    // Decode image to DynamicImage
-    let image = image.decode()?;
-
-    // Re-Encode to WebP
-    let image = Encoder::from_image(&image)
-        .map_err(|e| ImagePipelineError::WebpEncoding(e.to_string()))?
-        .encode(100.0);
-
-    // Parse EXIF timestamp, if available
-    let timestamp = try_parse_exif_timestamp(image.to_vec())
+    // EXIF metadata seems to get stripped in the decoding process. Extract the timestamp before that happens
+    let timestamp = try_parse_exif_timestamp(image.clone())
         .tap_err(|e| {
             warn!("Failed to extract timestamp from EXIF data: {e}. Using current time instead")
         })
         .unwrap_or(OffsetDateTime::now_utc().unix_timestamp());
 
+    trace!("Parsing EXIF timestamp took {} ms", timer.elapsed().as_millis());
+    timer = Instant::now();
+
+    // Decoding the image also removes all EXIF metadata, we do not need to strip it manually as well.
+    trace!("Decoding received image");
+    let image = Reader::new(Cursor::new(image))
+        .with_guessed_format()
+        .unwrap() // Cannot fail when using a Cursor
+        .decode()?;
+
+    trace!("Decoding received image to DynamicImage took {} ms", timer.elapsed().as_millis());
+
     // Create the photo metadata
     let photo_metadata = Photo::create(&data.db, &album, timestamp).await?;
 
-    // Strip EXIF metadata
-    let image = strip_exif_metadata(image.to_vec())?;
-
     // Upload original quality image
-    tokio::spawn(save_to_engine(
-        data.storage.clone(),
-        image.clone(),
-        photo_metadata.id.clone(),
-        PhotoQuality::Original,
-    ));
+    trace!("Uploading original image on another Task");
+    let original_image = image.clone();
+    let photo_id = photo_metadata.id.clone();
+    let engine = data.storage.clone();
+    tokio::spawn(async move {
+        // Encode to WebP
+        let encoder = match Encoder::from_image(&original_image) {
+            Ok(encoder) => encoder,
+            Err(e) => {
+                warn!("{e}");
+                return;
+            }
+        };
 
-    // Decode WebP image to DynamicImage again
-    let image = webp::Decoder::new(&image)
-        .decode()
-        .unwrap() // It is guaranteed to be a WebP image
-        .to_image();
+        let image = encoder
+            .encode(100.0)
+            .to_vec();
 
+        // Upload
+        save_to_engine(
+            engine,
+            image,
+            photo_id,
+            PhotoQuality::Original,
+        ).await;
+    });
+
+    trace!("Resizing to W400 on another Task");
     resize_and_save(
         image.clone(),
         PhotoQuality::W400,
@@ -107,6 +123,7 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
         photo_metadata.id.clone(),
     );
 
+    trace!("Resizing to W1600 on another Task");
     resize_and_save(
         image,
         PhotoQuality::W1600,
@@ -157,33 +174,23 @@ async fn save_to_engine(
     }
 }
 
-/// Strip the provided image of its EXIF metadata.
-/// The image provided should be a WebP image.
-///
-/// # Errors
-///
-/// If decoding or encoding the image fails
-fn strip_exif_metadata(image_bytes: Vec<u8>) -> Result<Vec<u8>, ImagePipelineError> {
-    trace!("Stripping EXIF metadata");
-
-    // Strip exif metadata
-    let mut dyn_image = DynImage::from_bytes(Bytes::from(image_bytes))
-        .tap_err(|e| warn!("Failed to create DynImage (stripping EXIF metadata): {e}"))?
-        .unwrap();
-
-    let mut image_bytes = Vec::new();
-    dyn_image.set_exif(None);
-    dyn_image.encoder().write_to(&mut image_bytes)?;
-    Ok(image_bytes)
-}
-
 /// Try to parse the EXIF timestamp from the image.
 ///
 /// # Errors
 /// -
 fn try_parse_exif_timestamp(image_bytes: Vec<u8>) -> Result<i64, ImagePipelineError> {
-    // Parse EXIF metadata
-    let exif = exif::Reader::new().read_raw(image_bytes)?;
+    // Create a DynImage to extract EXIF data
+    let dyn_image = DynImage::from_bytes(Bytes::from(image_bytes))
+        .tap_err(|e| warn!("Failed to create DynImage (stripping EXIF metadata): {e}"))?
+        .ok_or(ImagePipelineError::MissingExifField("All"))?;
+
+    let exif = exif::Reader::new()
+        .read_raw(
+            dyn_image.exif()
+                .ok_or(ImagePipelineError::MissingExifField("All"))?
+                .to_vec()
+        )
+        .tap_err(|_| warn!("A"))?;
 
     // Try to parse the timestamp the photo was created at from EXIF metadata.
     // If it is not available, use the current server time.
@@ -202,11 +209,24 @@ fn try_parse_exif_timestamp(image_bytes: Vec<u8>) -> Result<i64, ImagePipelineEr
                     })
                     .ok_or(ImagePipelineError::MissingExifField("DateTimeOriginal"))?;
 
-                // Conver to a string
+                // Convert the ASCII bytes to a UTF-8 string
                 let datetime_string = String::from_utf8(ascii)?;
-                // Try to parse the datetime
-                let datetime = chrono::DateTime::<chrono::offset::Utc>::from_str(&datetime_string)?;
 
+                // The datetime stored isn't in the format we can use for parsing.
+                // Convert it to RFC 3339 format.
+                let components = datetime_string.trim().split(" ").collect::<Vec<_>>();
+                let date = components.first().ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
+                let time = components.get(1).ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
+
+                // Replace ':' with '-' in date
+                let date = date.replace(":", "-");
+
+                // Join them using the RFC 3339 seperator, 'T' and add a 'Z' at the end.
+                let datetime_string = format!("{date}T{time}Z");
+
+
+                // Try to parse the datetime
+                let datetime = chrono::DateTime::parse_from_rfc3339(datetime_string.trim())?;
                 Ok(datetime.timestamp())
             }
             _ => Err(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal")),
