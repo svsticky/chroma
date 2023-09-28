@@ -72,7 +72,10 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
         })
         .unwrap_or(OffsetDateTime::now_utc().unix_timestamp());
 
-    trace!("Parsing EXIF timestamp took {} ms", timer.elapsed().as_millis());
+    trace!(
+        "Parsing EXIF timestamp took {} ms",
+        timer.elapsed().as_millis()
+    );
     timer = Instant::now();
 
     // Decoding the image also removes all EXIF metadata, we do not need to strip it manually as well.
@@ -82,7 +85,10 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
         .unwrap() // Cannot fail when using a Cursor
         .decode()?;
 
-    trace!("Decoding received image to DynamicImage took {} ms", timer.elapsed().as_millis());
+    trace!(
+        "Decoding received image to DynamicImage took {} ms",
+        timer.elapsed().as_millis()
+    );
 
     // Create the photo metadata
     let photo_metadata = Photo::create(&data.db, &album, timestamp).await?;
@@ -102,17 +108,10 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
             }
         };
 
-        let image = encoder
-            .encode(100.0)
-            .to_vec();
+        let image = encoder.encode(100.0).to_vec();
 
         // Upload
-        save_to_engine(
-            engine,
-            image,
-            photo_id,
-            PhotoQuality::Original,
-        ).await;
+        save_to_engine(engine, image, photo_id, PhotoQuality::Original).await;
     });
 
     trace!("Resizing to W400 on another Task");
@@ -186,9 +185,10 @@ fn try_parse_exif_timestamp(image_bytes: Vec<u8>) -> Result<i64, ImagePipelineEr
 
     let exif = exif::Reader::new()
         .read_raw(
-            dyn_image.exif()
+            dyn_image
+                .exif()
                 .ok_or(ImagePipelineError::MissingExifField("All"))?
-                .to_vec()
+                .to_vec(),
         )
         .tap_err(|_| warn!("A"))?;
 
@@ -215,15 +215,18 @@ fn try_parse_exif_timestamp(image_bytes: Vec<u8>) -> Result<i64, ImagePipelineEr
                 // The datetime stored isn't in the format we can use for parsing.
                 // Convert it to RFC 3339 format.
                 let components = datetime_string.trim().split(" ").collect::<Vec<_>>();
-                let date = components.first().ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
-                let time = components.get(1).ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
+                let date = components
+                    .first()
+                    .ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
+                let time = components
+                    .get(1)
+                    .ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
 
                 // Replace ':' with '-' in date
                 let date = date.replace(":", "-");
 
                 // Join them using the RFC 3339 seperator, 'T' and add a 'Z' at the end.
                 let datetime_string = format!("{date}T{time}Z");
-
 
                 // Try to parse the datetime
                 let datetime = chrono::DateTime::parse_from_rfc3339(datetime_string.trim())?;
