@@ -92,8 +92,7 @@ fn reencode_dynamic_image(
     let mut cursor = Cursor::new(Vec::with_capacity(byte_count));
     image
         .write_to(&mut cursor, format)
-        .tap_err(|e| warn!("Failed to write image in format: {e}"))
-        .map_err(|_| Error::ImageEncoding)?;
+        .tap_err(|e| warn!("Failed to write image in format: {e}"))?;
 
     Ok(cursor.into_inner())
 }
@@ -103,7 +102,7 @@ fn decode_image(bytes: Vec<u8>) -> WebResult<DynamicImage> {
         Some(webp) => Ok(webp.to_image()),
         None => {
             warn!("Failed to decode WebP image");
-            Err(Error::ImageEncoding)
+            Err(Error::WebpDecode)
         }
     }
 }

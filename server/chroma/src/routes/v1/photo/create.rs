@@ -1,17 +1,20 @@
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
-use crate::routes::error::{Error, WebResult};
+use crate::routes::error::{Error, ImagePipelineError, WebResult};
 use actix_multiresponse::Payload;
 use dal::database::{Album, Photo};
-use dal::storage_engine::PhotoQuality;
+use dal::storage_engine::{PhotoQuality, StorageEngine};
+use exif::{In, Tag};
 use image::imageops::FilterType;
 use image::io::Reader;
-use image::{DynamicImage, EncodableLayout, GenericImageView, ImageFormat};
+use image::{DynamicImage, GenericImageView};
 use img_parts::{Bytes, DynImage, ImageEXIF};
 use proto::{CreatePhotoRequest, CreatePhotoResponse};
 use std::io::Cursor;
 use tap::TapFallible;
-use tracing::{debug, warn};
+use time::OffsetDateTime;
+use tokio::time::Instant;
+use tracing::{debug, instrument, trace, warn};
 use webp::Encoder;
 
 /// Create a new photo in an existing album.
@@ -43,116 +46,203 @@ pub async fn create(
         return Err(Error::Forbidden);
     }
 
-    let cursor = Cursor::new(payload.photo_data.clone());
-    let image_data = Reader::new(cursor.clone()).with_guessed_format().unwrap(); // Cannot fail when using a Cursor
+    // TODO Update actix-multiresponse to support moving out the payload, avoids another clone
+    let photo_id = image_pipeline(&data, payload.photo_data.clone(), &album).await?;
 
-    // Convert to WebP
-    let webp_image = match image_data.format() {
-        Some(ImageFormat::WebP) => image_data.into_inner().into_inner(),
-        Some(ImageFormat::Jpeg | ImageFormat::Png) => {
-            debug!("Re-encoding uploaded image to WebP");
+    Ok(Payload(CreatePhotoResponse { photo_id }))
+}
 
-            let dynamic_image = image_data.decode().map_err(|e| {
-                Error::BadRequest(format!(
-                    "Failed to decode image. Is the format supported? The error is as follows: {e}"
-                ))
-            })?;
+/// Process the image and return the resulting photo ID
+///
+/// # Errors
+///
+/// If any step in the pipeline fails
+#[instrument(skip(data, image))]
+async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> WebResult<String> {
+    // This pipeline modifies the image. The idea is that each 'step' outputs
+    // a variable 'image', which the next step can then use.
 
-            convert_image_format(dynamic_image)
-                .tap_err(|e| warn!("Failed to encode image as WebP: {e}"))
-                .map_err(|_| Error::ImageEncoding)?
-        }
-        _ => {
-            return Err(Error::BadRequest(
-                "Invalid image or unsupported image provided".into(),
-            ))
-        }
-    };
+    // We want to keep track of the duration of various steps.
+    let mut timer = Instant::now();
 
-    // Create the photo metadata in the DB
-    let photo = Photo::create(&data.db, &album).await?;
+    // EXIF metadata seems to get stripped in the decoding process. Extract the timestamp before that happens
+    let timestamp = try_parse_exif_timestamp(image.clone())
+        .tap_err(|e| {
+            warn!("Failed to extract timestamp from EXIF data: {e}. Using current time instead")
+        })
+        .unwrap_or(OffsetDateTime::now_utc().unix_timestamp());
 
-    // Upload the photo to S3
-    // If this fails, remove the metadata again
-    if let Err(e) = data
-        .storage
-        .create_photo(&photo.id, webp_image.clone(), PhotoQuality::Original)
-        .await
-    {
-        photo.delete().await?;
-        return Err(e.into());
-    }
+    trace!("Parsing EXIF timestamp took {} ms", timer.elapsed().as_millis());
+    timer = Instant::now();
 
-    // Spawn a job to create thumbnails
-    let data = data.clone();
-    // Clone the ID for the async job to use
-    let photo_id = photo.id.clone();
+    // Decoding the image also removes all EXIF metadata, we do not need to strip it manually as well.
+    trace!("Decoding received image");
+    let image = Reader::new(Cursor::new(image))
+        .with_guessed_format()
+        .unwrap() // Cannot fail when using a Cursor
+        .decode()?;
+
+    trace!("Decoding received image to DynamicImage took {} ms", timer.elapsed().as_millis());
+
+    // Create the photo metadata
+    let photo_metadata = Photo::create(&data.db, &album, timestamp).await?;
+
+    // Upload original quality image
+    trace!("Uploading original image on another Task");
+    let original_image = image.clone();
+    let photo_id = photo_metadata.id.clone();
+    let engine = data.storage.clone();
     tokio::spawn(async move {
-        let photo = webp_image;
-
-        debug!("Decoding image for quality conversion");
-        let img = match webp::Decoder::new(&photo).decode() {
-            Some(decoded) => decoded.to_image(),
-            None => {
-                warn!("Failed to decode WebP image");
+        // Encode to WebP
+        let encoder = match Encoder::from_image(&original_image) {
+            Ok(encoder) => encoder,
+            Err(e) => {
+                warn!("{e}");
                 return;
             }
         };
 
-        match convert_quality(&img, 400) {
-            Ok(w400) => match data
-                .storage
-                .create_photo(&photo_id, w400, PhotoQuality::W400)
-                .await
-            {
-                Ok(_) => {}
-                Err(e) => warn!("Failed to upload W400 photo: {e}"),
-            },
-            Err(e) => warn!("Failed to scale to W400: {e}"),
-        }
+        let image = encoder
+            .encode(100.0)
+            .to_vec();
 
-        match convert_quality(&img, 1600) {
-            Ok(w1600) => match data
-                .storage
-                .create_photo(&photo_id, w1600, PhotoQuality::W1600)
-                .await
-            {
-                Ok(_) => {}
-                Err(e) => warn!("Failed to upload W1600 photo: {e}"),
-            },
-            Err(e) => warn!("Failed to scale to W1600: {e}"),
-        }
+        // Upload
+        save_to_engine(
+            engine,
+            image,
+            photo_id,
+            PhotoQuality::Original,
+        ).await;
     });
 
-    Ok(Payload(CreatePhotoResponse { photo_id: photo.id }))
+    trace!("Resizing to W400 on another Task");
+    resize_and_save(
+        image.clone(),
+        PhotoQuality::W400,
+        data.storage.clone(),
+        photo_metadata.id.clone(),
+    );
+
+    trace!("Resizing to W1600 on another Task");
+    resize_and_save(
+        image,
+        PhotoQuality::W1600,
+        data.storage.clone(),
+        photo_metadata.id.clone(),
+    );
+
+    Ok(photo_metadata.id)
 }
 
-fn convert_image_format(dynamic_image: DynamicImage) -> WebResult<Vec<u8>> {
-    // Convert to webp
-    let encoder = Encoder::from_image(&dynamic_image)
-        .tap_err(|e| warn!("Failed to create image encoder: {e}"))
-        .map_err(|_| Error::ImageEncoding)?;
-    let encoded_webp = encoder.encode(100.0);
+/// Resize an image and save the resulting image.
+/// Spawns a new Tokio task.
+fn resize_and_save(
+    image: DynamicImage,
+    quality: PhotoQuality,
+    engine: StorageEngine,
+    photo_id: String,
+) {
+    let target_width = match quality.width() {
+        Some(w) => w,
+        None => {
+            warn!("Programmer: You wanted to resize an image to its 'original' quality, that doesn't work! Ignoring.");
+            return;
+        }
+    };
 
-    let mut bytes = encoded_webp.as_bytes().to_vec();
-
-    // Strip EXIF
-    let mut dyn_img = DynImage::from_bytes(Bytes::from(bytes.clone()))
-        .tap_err(|e| warn!("Failed to create DynImage (stripping EXIF metadata): {e}"))
-        .map_err(|_| Error::ImageEncoding)?
-        .unwrap();
-
-    dyn_img.set_exif(None);
-    dyn_img
-        .encoder()
-        .write_to(&mut bytes)
-        .tap_err(|e| warn!("Failed to reencode image (stripping EXIF metadata): {e}"))
-        .map_err(|_| Error::ImageEncoding)?;
-
-    Ok(bytes)
+    tokio::spawn(async move {
+        trace!("Converting image to W{target_width}");
+        match convert_quality(&image, target_width) {
+            Ok(data) => save_to_engine(engine, data, &photo_id, quality).await,
+            Err(e) => warn!("Failed to scale to W{target_width}: {e}"),
+        }
+    });
 }
 
-fn convert_quality(img: &DynamicImage, target_width: u32) -> color_eyre::Result<Vec<u8>> {
+/// Save the provided data.
+/// Errors are logged, rather than bubbled up.
+async fn save_to_engine(
+    engine: StorageEngine,
+    bytes: Vec<u8>,
+    id: impl AsRef<str>,
+    quality: PhotoQuality,
+) {
+    trace!("Saving image '{}' in quality '{quality:?}'", id.as_ref());
+    match engine.create_photo(id.as_ref(), bytes, quality).await {
+        Ok(_) => {}
+        Err(e) => warn!("Failed to upload photo: {e}"),
+    }
+}
+
+/// Try to parse the EXIF timestamp from the image.
+///
+/// # Errors
+/// -
+fn try_parse_exif_timestamp(image_bytes: Vec<u8>) -> Result<i64, ImagePipelineError> {
+    // Create a DynImage to extract EXIF data
+    let dyn_image = DynImage::from_bytes(Bytes::from(image_bytes))
+        .tap_err(|e| warn!("Failed to create DynImage (stripping EXIF metadata): {e}"))?
+        .ok_or(ImagePipelineError::MissingExifField("All"))?;
+
+    let exif = exif::Reader::new()
+        .read_raw(
+            dyn_image.exif()
+                .ok_or(ImagePipelineError::MissingExifField("All"))?
+                .to_vec()
+        )
+        .tap_err(|_| warn!("A"))?;
+
+    // Try to parse the timestamp the photo was created at from EXIF metadata.
+    // If it is not available, use the current server time.
+    let timestamp = exif
+        .get_field(Tag::DateTimeOriginal, In::PRIMARY)
+        .map(|field| match &field.value {
+            exif::Value::Ascii(ascii) => {
+                // Field value is documented as 'Vector of slices of 8-bit bytes containing 7-bit ASCII characters'
+                // Merge all inner vectors into one
+                let ascii = ascii
+                    .clone()
+                    .into_iter()
+                    .reduce(|mut acc, mut item| {
+                        acc.append(&mut item);
+                        acc
+                    })
+                    .ok_or(ImagePipelineError::MissingExifField("DateTimeOriginal"))?;
+
+                // Convert the ASCII bytes to a UTF-8 string
+                let datetime_string = String::from_utf8(ascii)?;
+
+                // The datetime stored isn't in the format we can use for parsing.
+                // Convert it to RFC 3339 format.
+                let components = datetime_string.trim().split(" ").collect::<Vec<_>>();
+                let date = components.first().ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
+                let time = components.get(1).ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
+
+                // Replace ':' with '-' in date
+                let date = date.replace(":", "-");
+
+                // Join them using the RFC 3339 seperator, 'T' and add a 'Z' at the end.
+                let datetime_string = format!("{date}T{time}Z");
+
+
+                // Try to parse the datetime
+                let datetime = chrono::DateTime::parse_from_rfc3339(datetime_string.trim())?;
+                Ok(datetime.timestamp())
+            }
+            _ => Err(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal")),
+        })
+        .ok_or(ImagePipelineError::MissingExifField("DateTimeOriginal"))??;
+
+    Ok(timestamp)
+}
+
+/// Convert an image to the provided target width.
+/// The height of the image will be scaled such that the aspect ratio remains the same.
+///
+/// # Errors
+///
+/// If image encoding fails
+fn convert_quality(img: &DynamicImage, target_width: u32) -> Result<Vec<u8>, ImagePipelineError> {
     let (width, height) = img.dimensions();
 
     debug!("Converting {width}x{height} to W{target_width}");
@@ -164,5 +254,9 @@ fn convert_quality(img: &DynamicImage, target_width: u32) -> color_eyre::Result<
         img.thumbnail(target_width, target_height)
     };
 
-    Ok(convert_image_format(scaled)?)
+    let encoder = Encoder::from_image(&scaled)
+        .map_err(|e| ImagePipelineError::WebpEncoding(e.to_string()))?;
+    let encoded_webp = encoder.encode(100.0);
+
+    Ok(encoded_webp.to_vec())
 }

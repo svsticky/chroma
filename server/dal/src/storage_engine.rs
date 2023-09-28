@@ -189,6 +189,16 @@ pub enum PhotoQuality {
     W1600,
 }
 
+impl PhotoQuality {
+    pub fn width(&self) -> Option<u32> {
+        match self {
+            Self::Original => None,
+            Self::W400 => Some(400),
+            Self::W1600 => Some(1600),
+        }
+    }
+}
+
 pub(crate) fn fmt_id_with_quality(id: &str, quality: &PhotoQuality) -> String {
     format!("{id}_{quality}")
 }

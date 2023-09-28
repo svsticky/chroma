@@ -2,7 +2,6 @@ use crate::database::{Album, Database, DbResult};
 use crate::storage_engine::{PhotoQuality, StorageEngine, StorageEngineError};
 use rand::Rng;
 use sqlx::FromRow;
-use time::OffsetDateTime;
 
 pub struct Photo<'a> {
     db: &'a Database,
@@ -64,9 +63,12 @@ impl<'a> Photo<'a> {
         format!("{}{random}", Self::ID_PREFIX)
     }
 
-    pub async fn create(db: &'a Database, album: &Album<'_>) -> DbResult<Photo<'a>> {
+    pub async fn create(
+        db: &'a Database,
+        album: &Album<'_>,
+        created_at: i64,
+    ) -> DbResult<Photo<'a>> {
         let id = Self::generate_id();
-        let created_at = OffsetDateTime::now_utc().unix_timestamp();
 
         sqlx::query("INSERT INTO photo_metadata (id, album_id, created_at) VALUES ($1, $2, $3)")
             .bind(&id)

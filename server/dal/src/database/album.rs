@@ -2,6 +2,8 @@ use crate::database::{Database, DatabaseError, DbResult, Photo, User};
 use rand::Rng;
 use sqlx::{FromRow, Type};
 use std::borrow::Cow;
+use std::fmt;
+use std::fmt::{Formatter, Pointer};
 use time::OffsetDateTime;
 
 pub struct Album<'a> {
@@ -16,7 +18,23 @@ pub struct Album<'a> {
     pub published_at: Option<i64>,
 }
 
-#[derive(Clone)]
+// Manually impl debug as to not print the `db` field
+impl fmt::Debug for Album<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Album")
+            .field("id", &self.id)
+            .field("name", &self.name)
+            .field("created_at", &self.created_at)
+            .field("created_by", &self.created_by)
+            .field("published_at", &self.published_at)
+            .field("published_by", &self.published_by)
+            .field("is_draft", &self.is_draft)
+            .field("cover_photo_id", &self.cover_photo_id)
+            .finish()
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum UserType {
     Koala(i32),
     ServiceToken(i32),
