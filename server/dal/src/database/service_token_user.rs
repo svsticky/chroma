@@ -15,7 +15,7 @@ struct _ServiceTokenUser {
 }
 
 impl _ServiceTokenUser {
-    fn to_service_token_user(self, db: &Database) -> ServiceTokenUser {
+    fn into_service_token_user(self, db: &Database) -> ServiceTokenUser {
         ServiceTokenUser {
             db,
             id: self.id,
@@ -56,7 +56,7 @@ impl<'a> ServiceTokenUser<'a> {
                 .fetch_optional(&**db)
                 .await?;
 
-        Ok(user.map(|user| user.to_service_token_user(db)))
+        Ok(user.map(|user| user.into_service_token_user(db)))
     }
 
     pub async fn get_by_token<S: AsRef<str>>(
@@ -69,6 +69,6 @@ impl<'a> ServiceTokenUser<'a> {
                 .fetch_optional(&**db)
                 .await?;
 
-        Ok(user.map(|user| user.to_service_token_user(db)))
+        Ok(user.map(|user| user.into_service_token_user(db)))
     }
 }

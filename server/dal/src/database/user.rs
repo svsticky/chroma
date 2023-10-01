@@ -47,7 +47,7 @@ struct _ChromaScope {
 }
 
 impl _User {
-    pub fn to_user(self, db: &Database) -> User {
+    pub fn into_user(self, db: &Database) -> User {
         User {
             db,
             koala_id: self.koala_id,
@@ -61,7 +61,7 @@ impl _User {
 }
 
 impl _ChromaScope {
-    pub fn to_chroma_scope(self, db: &Database) -> ChromaScope {
+    pub fn into_chroma_scope(self, db: &Database) -> ChromaScope {
         ChromaScope {
             db,
             koala_id: self.koala_id,
@@ -114,7 +114,7 @@ impl<'a> User<'a> {
             .bind(koala_id)
             .fetch_optional(&**db)
             .await?;
-        Ok(user.map(|user| user.to_user(db)))
+        Ok(user.map(|user| user.into_user(db)))
     }
 
     pub async fn create_session(&self) -> DbResult<String> {
@@ -144,7 +144,10 @@ impl<'a> User<'a> {
         )
         .fetch_all(&**db)
         .await?;
-        Ok(users.into_iter().map(|f| f.to_user(db)).collect::<Vec<_>>())
+        Ok(users
+            .into_iter()
+            .map(|f| f.into_user(db))
+            .collect::<Vec<_>>())
     }
 
     pub async fn get_by_session_id<S: AsRef<str>>(
@@ -200,7 +203,7 @@ impl<'a> User<'a> {
     }
 
     pub async fn get_chroma_scopes(&self) -> DbResult<Vec<ChromaScope>> {
-        ChromaScope::list_for_user(&self.db, self.koala_id).await
+        ChromaScope::list_for_user(self.db, self.koala_id).await
     }
 
     pub async fn add_scope<S: AsRef<str>>(
@@ -208,15 +211,15 @@ impl<'a> User<'a> {
         scope: S,
         by: &User<'a>,
     ) -> DbResult<ChromaScope<'a>> {
-        ChromaScope::add_scope(&self.db, self.koala_id, scope, by.koala_id).await
+        ChromaScope::add_scope(self.db, self.koala_id, scope, by.koala_id).await
     }
 
     pub async fn remove_scope(&self, scope: &ChromaScope<'_>) -> DbResult<()> {
-        ChromaScope::remove_scope(&self.db, self.koala_id, &scope.scope).await
+        ChromaScope::remove_scope(self.db, self.koala_id, &scope.scope).await
     }
 
     pub async fn remove_scope_by_name<S: AsRef<str>>(&self, scope_name: S) -> DbResult<()> {
-        ChromaScope::remove_scope(&self.db, self.koala_id, scope_name.as_ref()).await
+        ChromaScope::remove_scope(self.db, self.koala_id, scope_name.as_ref()).await
     }
 }
 
@@ -231,7 +234,7 @@ impl<'a> ChromaScope<'a> {
 
         Ok(chroma_scopes
             .into_iter()
-            .map(|f| f.to_chroma_scope(db))
+            .map(|f| f.into_chroma_scope(db))
             .collect::<Vec<_>>())
     }
 

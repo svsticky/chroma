@@ -21,13 +21,12 @@ pub async fn delete(
     data: WebData,
     payload: Payload<DeletePhotoRequest>,
 ) -> WebResult<Empty> {
-    if !auth.is_admin {
-        if !auth
+    if !auth.is_admin
+        && !auth
             .has_scope(&data.db, "nl.svsticky.chroma.photo.delete")
             .await?
-        {
-            return Err(Error::Forbidden);
-        }
+    {
+        return Err(Error::Forbidden);
     }
 
     let photo = Photo::get_by_id(&data.db, &payload.photo_id)

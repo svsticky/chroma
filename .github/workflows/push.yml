@@ -1,0 +1,40 @@
+name: push
+on:
+  push: {}
+
+jobs:
+  server-fmt:
+    runs-on: ubuntu-latest
+    steps: 
+    - uses: actions/checkout@v3
+    - run: rustup toolchain install stable --profile minimal
+    - run: rustup component add rustfmt
+    - uses: Svatinem/rust-cache@v2
+      with:
+        save-if: ${{ github.ref == 'refs/heads/master' }}
+    - run: cargo fmt --all --check
+      working-directory: server
+  
+  server-test:
+    runs-on: ubuntu-latest
+    steps: 
+    - uses: actions/checkout@v3
+    - run: rustup toolchain install stable --profile minimal
+    - uses: Svatinem/rust-cache@v2
+      with:
+        save-if: ${{ github.ref == 'refs/heads/master' }}
+    - run: cargo test
+      working-directory: server
+
+  server-clippy:
+    runs-on: ubuntu-latest
+    steps: 
+    - uses: actions/checkout@v3
+    - run: rustup toolchain install stable --profile minimal
+    - run: rustup component add clippy
+    - uses: Svatinem/rust-cache@v2
+      with:
+        save-if: ${{ github.ref == 'refs/heads/master' }}
+    - run: cargo clippy
+      working-directory: server
+    

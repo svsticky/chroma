@@ -23,13 +23,12 @@ pub async fn update(
     data: WebData,
     payload: Payload<UpdateAlbumRequest>,
 ) -> WebResult<Empty> {
-    if !auth.is_admin {
-        if !auth
+    if !auth.is_admin
+        && !auth
             .has_scope(&data.db, "nl.svsticky.chroma.album.update")
             .await?
-        {
-            return Err(Error::Forbidden);
-        }
+    {
+        return Err(Error::Forbidden);
     }
 
     let mut album = Album::get_by_id(&data.db, &payload.id)

@@ -30,7 +30,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
     trace!("Exchanging received code for Oauth2 tokens with Koala");
     let oauth_tokens = crate::koala::exchange_code(&data.config, &query.code)
         .await
-        .map_err(|e| Error::Koala(e))?;
+        .map_err(Error::Koala)?;
 
     let is_admin = oauth_tokens.credentials_type == CredentialsType::Admin;
     trace!("Is signed-in user admin?: {is_admin}");
@@ -92,10 +92,10 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
 
 async fn get_user_name(config: &Config, koala_id: i32, access_token: &str) -> WebResult<String> {
     // Retrieve the user's name
-    let user_info = crate::koala::get_user_info(&config, access_token, koala_id)
+    let user_info = crate::koala::get_user_info(config, access_token, koala_id)
         .await
         .tap_err(|e| warn!("Failed to retrieve user info from Koala: {e}"))
-        .map_err(|e| Error::Koala(e))?;
+        .map_err(Error::Koala)?;
 
     let user_name = if let Some(infix) = user_info.infix {
         format!("{} {} {}", user_info.first_name, infix, user_info.last_name)

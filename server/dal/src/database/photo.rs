@@ -18,7 +18,7 @@ struct _Photo {
 }
 
 impl _Photo {
-    pub fn to_photo(self, db: &Database) -> Photo {
+    pub fn into_photo(self, db: &Database) -> Photo {
         Photo {
             db,
             id: self.id,
@@ -92,7 +92,7 @@ impl<'a> Photo<'a> {
                 .fetch_optional(&**db)
                 .await?;
 
-        Ok(photo.map(|photo| photo.to_photo(db)))
+        Ok(photo.map(|photo| photo.into_photo(db)))
     }
 
     pub async fn delete(self) -> DbResult<()> {
@@ -122,7 +122,10 @@ impl<'a> Photo<'a> {
             sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata")
                 .fetch_all(&**db)
                 .await?;
-        Ok(selfs.into_iter().map(|photo| photo.to_photo(db)).collect())
+        Ok(selfs
+            .into_iter()
+            .map(|photo| photo.into_photo(db))
+            .collect())
     }
 
     pub async fn list_in_album<S: AsRef<str>>(
@@ -135,6 +138,9 @@ impl<'a> Photo<'a> {
         .bind(album_id.as_ref())
         .fetch_all(&**db)
         .await?;
-        Ok(selfs.into_iter().map(|photo| photo.to_photo(db)).collect())
+        Ok(selfs
+            .into_iter()
+            .map(|photo| photo.into_photo(db))
+            .collect())
     }
 }

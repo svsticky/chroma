@@ -124,10 +124,11 @@ impl StorageEngine {
         quality: PhotoQuality,
     ) -> Result<(), StorageEngineError> {
         let quality_id = fmt_id_with_quality(photo_id.as_ref(), &quality);
-        Ok(match &self.0 {
+        match &self.0 {
             StorageEngineMode::S3(s3) => s3.create_photo(quality_id, bytes).await?,
             StorageEngineMode::File(engine) => engine.create_photo(quality_id, bytes).await?,
-        })
+        };
+        Ok(())
     }
 
     /// Delete a photo by its ID.
@@ -141,10 +142,11 @@ impl StorageEngine {
         quality: PhotoQuality,
     ) -> Result<(), StorageEngineError> {
         let quality_id = fmt_id_with_quality(photo_id.as_ref(), &quality);
-        Ok(match &self.0 {
+        match &self.0 {
             StorageEngineMode::S3(s3) => s3.delete_photo(quality_id).await?,
             StorageEngineMode::File(engine) => engine.delete_photo(quality_id).await?,
-        })
+        };
+        Ok(())
     }
 }
 

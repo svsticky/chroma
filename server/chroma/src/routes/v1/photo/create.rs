@@ -28,13 +28,12 @@ pub async fn create(
     data: WebData,
     payload: Payload<CreatePhotoRequest>,
 ) -> WebResult<Payload<CreatePhotoResponse>> {
-    if !auth.is_admin {
-        if !auth
+    if !auth.is_admin
+        && !auth
             .has_scope(&data.db, "nl.svsticky.chroma.photo.create")
             .await?
-        {
-            return Err(Error::Forbidden);
-        }
+    {
+        return Err(Error::Forbidden);
     }
 
     let album = Album::get_by_id(&data.db, &payload.album_id)
@@ -91,7 +90,7 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
     );
 
     // Create the photo metadata
-    let photo_metadata = Photo::create(&data.db, &album, timestamp).await?;
+    let photo_metadata = Photo::create(&data.db, album, timestamp).await?;
 
     // Upload original quality image
     trace!("Uploading original image on another Task");
@@ -214,7 +213,7 @@ fn try_parse_exif_timestamp(image_bytes: Vec<u8>) -> Result<i64, ImagePipelineEr
 
                 // The datetime stored isn't in the format we can use for parsing.
                 // Convert it to RFC 3339 format.
-                let components = datetime_string.trim().split(" ").collect::<Vec<_>>();
+                let components = datetime_string.trim().split(' ').collect::<Vec<_>>();
                 let date = components
                     .first()
                     .ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
@@ -223,7 +222,7 @@ fn try_parse_exif_timestamp(image_bytes: Vec<u8>) -> Result<i64, ImagePipelineEr
                     .ok_or(ImagePipelineError::InvalidExifFieldType("DateTimeOriginal"))?;
 
                 // Replace ':' with '-' in date
-                let date = date.replace(":", "-");
+                let date = date.replace(':', "-");
 
                 // Join them using the RFC 3339 seperator, 'T' and add a 'Z' at the end.
                 let datetime_string = format!("{date}T{time}Z");

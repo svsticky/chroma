@@ -170,7 +170,7 @@ impl Config {
 
     /// Get configured service tokens
     pub fn service_tokens(&self) -> Vec<&str> {
-        self.service_tokens.split(",").collect()
+        self.service_tokens.split(',').collect()
     }
 
     /// Check if the configuration is valid.

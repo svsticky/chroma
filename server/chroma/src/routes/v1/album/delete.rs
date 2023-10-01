@@ -19,13 +19,12 @@ pub async fn delete(
     data: WebData,
     payload: Payload<DeleteAlbumRequest>,
 ) -> WebResult<Empty> {
-    if !auth.is_admin {
-        if !auth
+    if !auth.is_admin
+        && !auth
             .has_scope(&data.db, "nl.svsticky.chroma.album.delete")
             .await?
-        {
-            return Err(Error::Forbidden);
-        }
+    {
+        return Err(Error::Forbidden);
     }
 
     let album = Album::get_by_id(&data.db, &payload.id)

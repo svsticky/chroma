@@ -3,7 +3,7 @@ use rand::Rng;
 use sqlx::{FromRow, Type};
 use std::borrow::Cow;
 use std::fmt;
-use std::fmt::{Formatter, Pointer};
+use std::fmt::Formatter;
 use time::OffsetDateTime;
 
 pub struct Album<'a> {
@@ -62,7 +62,7 @@ enum _UserType {
 }
 
 impl _Album {
-    fn to_album(self, db: &Database) -> Album {
+    fn into_album(self, db: &Database) -> Album {
         Album {
             db,
             id: self.id,
@@ -125,9 +125,9 @@ impl<'a> Album<'a> {
             created_at: self.created_at,
             cover_photo_id: self.cover_photo_id,
             is_draft: self.is_draft,
-            created_by: Some(Self::user_type_to_proto(&self.db, self.created_by).await?),
+            created_by: Some(Self::user_type_to_proto(self.db, self.created_by).await?),
             published_by: match self.published_by {
-                Some(published_by) => Some(Self::user_type_to_proto(&self.db, published_by).await?),
+                Some(published_by) => Some(Self::user_type_to_proto(self.db, published_by).await?),
                 None => None,
             },
         })
@@ -152,7 +152,7 @@ impl<'a> Album<'a> {
         // If an album at creation is a published one, then the publisher is also the creator.
         let published_at = (!is_draft).then_some(created_at);
         let published_by_type = (!is_draft).then_some(created_by_type.clone());
-        let published_by_id = (!is_draft).then(|| match &created_by {
+        let published_by_id = (!is_draft).then_some(match &created_by {
             UserType::Koala(id) => *id,
             UserType::ServiceToken(id) => *id,
         });
@@ -196,7 +196,7 @@ impl<'a> Album<'a> {
             .fetch_optional(&**db)
             .await?;
 
-        Ok(album.map(|x| x.to_album(db)))
+        Ok(album.map(|x| x.into_album(db)))
     }
 
     pub async fn update_cover_photo(&mut self, cover_photo: &Photo<'_>) -> DbResult<()> {
@@ -287,6 +287,6 @@ impl<'a> Album<'a> {
             .fetch_all(&**db)
             .await?;
 
-        Ok(selfs.into_iter().map(|x| x.to_album(db)).collect())
+        Ok(selfs.into_iter().map(|x| x.into_album(db)).collect())
     }
 }

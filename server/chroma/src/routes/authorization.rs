@@ -44,8 +44,7 @@ impl Authorization {
             AuthorizedUser::Koala { koala_id } => ChromaScope::list_for_user(db, koala_id)
                 .await?
                 .into_iter()
-                .find(|f| f.scope.eq(scope.as_ref()))
-                .is_some(),
+                .any(|f| f.scope.eq(scope.as_ref())),
             AuthorizedUser::Service { .. } => true,
         })
     }
