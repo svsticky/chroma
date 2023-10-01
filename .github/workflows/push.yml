@@ -11,6 +11,7 @@ jobs:
     - run: rustup component add rustfmt
     - uses: Swatinem/rust-cache@v2.7.0
       with:
+        workspaces: "server"
         save-if: ${{ github.ref == 'refs/heads/master' }}
     - run: cargo fmt --all --check
       working-directory: server
@@ -23,6 +24,7 @@ jobs:
     - run: rustup toolchain install stable --profile minimal
     - uses: Swatinem/rust-cache@v2.7.0
       with:
+        workspaces: "server"
         save-if: ${{ github.ref == 'refs/heads/master' }}
     - run: cargo test
       working-directory: server
@@ -36,6 +38,7 @@ jobs:
     - run: rustup component add clippy
     - uses: Swatinem/rust-cache@v2.7.0
       with:
+        workspaces: "server"
         save-if: ${{ github.ref == 'refs/heads/master' }}
     - run: cargo clippy
       working-directory: server
