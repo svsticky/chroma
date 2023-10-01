@@ -186,10 +186,10 @@ impl Config {
             }
             StorageEngine::S3 => {
                 let result = self.s3_bucket_name.is_some()
-                    ^ self.s3_region.is_some()
-                    ^ self.s3_endpoint_url.is_some()
-                    ^ self.s3_access_key_id.is_some()
-                    ^ self.s3_secret_access_key.is_some();
+                    && self.s3_region.is_some()
+                    && self.s3_endpoint_url.is_some()
+                    && self.s3_access_key_id.is_some()
+                    && self.s3_secret_access_key.is_some();
 
                 if !result {
                     warn!("Config validation failed on S3 fields.");
