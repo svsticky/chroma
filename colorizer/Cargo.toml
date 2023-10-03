@@ -11,12 +11,10 @@ proto = { path = "../server/proto" }
 reqwest = { version = "0.11.18", default-features = false, features = ["rustls-tls", "json"] }
 tokio = { version = "1.29.1", features = ["full"] }
 clap = { version = "4.3.19", features = ["derive", "env"] }
-aws-types = "0.54.1"
-aws-credential-types = { version = "0.54.1", features = ["hardcoded-credentials"] }
-aws-sdk-s3 = { default-features = false, version = "0.24.0", features = ["rustls"] }
-aws-smithy-http = "0.54.3"
 thiserror = "1.0.44"
 reqwest-protobuf = "0.1.0"
 serde = { version = "1.0.176", features = ["derive"] }
 serde_json = "1.0.104"
 uuid = "1.4.1"
+lazy_static = "1.4.0"
+regex = "1.9.6"

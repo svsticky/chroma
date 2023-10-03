@@ -185,14 +185,23 @@ impl Config {
                 }
             }
             StorageEngine::S3 => {
-                let result = self.s3_bucket_name.is_some()
-                    && self.s3_region.is_some()
-                    && self.s3_endpoint_url.is_some()
-                    && self.s3_access_key_id.is_some()
-                    && self.s3_secret_access_key.is_some();
+                let check_field = |fname: &'static str, f: &Option<_>| {
+                    if f.is_none() {
+                        warn!("Config validation failed on S3_{fname}");
+                        false
+                    } else {
+                        true
+                    }
+                };
 
-                if !result {
-                    warn!("Config validation failed on S3 fields.");
+                let config_ok = check_field("ACCESS_KEY_ID", &self.s3_access_key_id)
+                    && check_field("SECRET_ACCESS_KEY", &self.s3_secret_access_key)
+                    && check_field("BUCKET_NAME", &self.s3_bucket_name)
+                    && check_field("ENDPOINT_URL", &self.s3_endpoint_url)
+                    && check_field("REGION", &self.s3_region);
+
+                if !config_ok {
+                    warn!("Config validation failed.");
                     return false;
                 }
             }

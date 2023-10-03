@@ -26,6 +26,7 @@ impl Chroma {
 
         let client = Client::builder()
             .default_headers(headers)
+            .danger_accept_invalid_certs(true)
             .user_agent("Colorizer Pxl-To-Chroma migrator")
             .build()?;
         Ok(Self { api_url, client })
@@ -39,6 +40,7 @@ impl Chroma {
         let response: CreateAlbumResponse = self
             .client
             .post(self.path("/api/v1/album"))
+            .accept_protobuf()
             .protobuf(CreateAlbumRequest {
                 is_draft: Some(false),
                 name,
@@ -56,6 +58,7 @@ impl Chroma {
         let response: CreatePhotoResponse = self
             .client
             .post(self.path("/api/v1/photo"))
+            .accept_protobuf()
             .protobuf(CreatePhotoRequest {
                 album_id: album.0.clone(),
                 photo_data: data,
@@ -72,7 +75,8 @@ impl Chroma {
     pub async fn access(&self) -> Result<bool> {
         let response: AccessResponse = self
             .client
-            .post("/access")
+            .get(self.path("/api/v1/access"))
+            .accept_protobuf()
             .send()
             .await?
             .error_for_status()?
