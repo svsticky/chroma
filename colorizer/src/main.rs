@@ -43,6 +43,7 @@ async fn main() -> color_eyre::Result<()> {
             images.len()
         );
         let album_id = chroma.create_album(album.name).await?;
+        let mut first_photo = None;
 
         for photo in images {
             let components = photo.s3_url.split("_").collect::<Vec<_>>();
@@ -54,8 +55,21 @@ async fn main() -> color_eyre::Result<()> {
             let photo_bytes = reqwest::get(s3_url).await?.bytes().await?.to_vec();
             let image_id = chroma.create_photo(&album_id, photo_bytes).await?;
 
-            info!("Creating Chroma photo {image_id}");
+            info!("Created Chroma photo {image_id}");
+
+            if first_photo.is_none() {
+                first_photo = Some(image_id);
+            }
         }
+
+        match first_photo {
+            Some(photo_id) => {
+                info!("Updating thumbnail");
+                chroma.set_album_thumbnail(&album_id, &photo_id).await?;
+            },
+            None => {},
+        }
+
 
         info!("Created Chroma album {album_id}");
     }

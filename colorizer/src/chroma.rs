@@ -1,8 +1,5 @@
 use color_eyre::Result;
-use proto::{
-    AccessResponse, CreateAlbumRequest, CreateAlbumResponse, CreatePhotoRequest,
-    CreatePhotoResponse,
-};
+use proto::{AccessResponse, CreateAlbumRequest, CreateAlbumResponse, CreatePhotoRequest, CreatePhotoResponse, UpdateAlbumRequest};
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
 use reqwest_protobuf::{ProtobufRequestExt, ProtobufResponseExt};
@@ -52,6 +49,21 @@ impl Chroma {
             .await?;
 
         Ok(AlbumId(response.id))
+    }
+
+    pub async fn set_album_thumbnail(&self, album: &AlbumId, photo: &PhotoId) -> Result<()> {
+        self.client
+            .patch(self.path("/api/v1/album"))
+            .protobuf(UpdateAlbumRequest {
+                id: album.to_string(),
+                cover_photo_id: Some(photo.to_string()),
+                name: None,
+                draft_settings: None,
+            })?
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(())
     }
 
     pub async fn create_photo(&self, album: &AlbumId, data: Vec<u8>) -> Result<PhotoId> {
