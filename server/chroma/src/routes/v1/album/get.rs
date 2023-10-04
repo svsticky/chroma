@@ -5,10 +5,10 @@ use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::{Album, Photo};
 use dal::storage_engine::PhotoQuality;
+use dal::DalError;
 use futures::future::join_all;
 use proto::GetAlbumResponse;
 use serde::Deserialize;
-use dal::DalError;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {

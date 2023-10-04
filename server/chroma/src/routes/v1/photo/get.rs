@@ -5,13 +5,13 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
+use dal::DalError;
 use image::{DynamicImage, ImageOutputFormat};
 use proto::GetPhotoResponse;
 use serde::Deserialize;
 use std::io::Cursor;
 use tap::TapFallible;
 use tracing::warn;
-use dal::DalError;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -50,18 +50,17 @@ pub async fn get(
         .await?
         .ok_or(Error::NotFound)?;
 
-    let mut proto = photo.photo_to_proto(&data.storage, query.quality_preference.clone().into()).await
+    let mut proto = photo
+        .photo_to_proto(&data.storage, query.quality_preference.clone().into())
+        .await
         .map_err(|e| match e {
             DalError::Storage(e) => Error::from(e),
             DalError::Db(e) => Error::from(e),
         })?;
 
-
     proto.photo_data = convert_format(proto.photo_data, &query.format)?;
 
-    Ok(Payload(GetPhotoResponse {
-        photo: Some(proto)
-    }))
+    Ok(Payload(GetPhotoResponse { photo: Some(proto) }))
 }
 
 fn convert_format(bytes: Vec<u8>, format: &ImageFormat) -> WebResult<Vec<u8>> {

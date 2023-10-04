@@ -1,8 +1,8 @@
 use crate::database::{Album, Database, DbResult};
 use crate::storage_engine::{PhotoQuality, StorageEngine};
+use crate::DalError;
 use rand::Rng;
 use sqlx::FromRow;
-use crate::DalError;
 
 pub struct Photo<'a> {
     db: &'a Database,
@@ -51,9 +51,7 @@ impl<'a> Photo<'a> {
             PhotoQuality::Original
         };
 
-        let photo_bytes = storage
-            .get_photo_by_id(&self.id, quality)
-            .await?;
+        let photo_bytes = storage.get_photo_by_id(&self.id, quality).await?;
         Ok(proto::Photo {
             id: self.id,
             album_id: self.album_id,
@@ -167,18 +165,20 @@ impl<'a> Photo<'a> {
     }
 
     async fn is_quality_w400_created(&self) -> DbResult<bool> {
-        let value: bool = sqlx::query_scalar("SELECT w400_created FROM photo_metadata WHERE id = $1")
-            .bind(&self.id)
-            .fetch_one(&**self.db)
-            .await?;
+        let value: bool =
+            sqlx::query_scalar("SELECT w400_created FROM photo_metadata WHERE id = $1")
+                .bind(&self.id)
+                .fetch_one(&**self.db)
+                .await?;
         Ok(value)
     }
 
     async fn is_quality_w1600_created(&self) -> DbResult<bool> {
-        let value: bool = sqlx::query_scalar("SELECT w1600_created FROM photo_metadata WHERE id = $1")
-            .bind(&self.id)
-            .fetch_one(&**self.db)
-            .await?;
+        let value: bool =
+            sqlx::query_scalar("SELECT w1600_created FROM photo_metadata WHERE id = $1")
+                .bind(&self.id)
+                .fetch_one(&**self.db)
+                .await?;
         Ok(value)
     }
 

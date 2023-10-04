@@ -110,13 +110,18 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
         let image = encoder.encode(100.0).to_vec();
 
         // Upload
-        trace!("Saving image '{photo_id}' in quality '{:?}'", PhotoQuality::Original);
-        match engine.create_photo(&photo_id, image, PhotoQuality::Original).await {
+        trace!(
+            "Saving image '{photo_id}' in quality '{:?}'",
+            PhotoQuality::Original
+        );
+        match engine
+            .create_photo(&photo_id, image, PhotoQuality::Original)
+            .await
+        {
             Ok(_) => {}
             Err(e) => {
                 warn!("Failed to upload photo: {e}");
-                return;
-            },
+            }
         }
     });
 
@@ -166,16 +171,19 @@ fn resize_and_save(
             Err(e) => {
                 warn!("Failed to scale to W{target_width}: {e}");
                 return;
-            },
+            }
         };
 
         trace!("Saving image '{photo_id}' in quality '{quality:?}'");
-        match engine.create_photo(&photo_id, converted_image_data, quality.clone()).await {
+        match engine
+            .create_photo(&photo_id, converted_image_data, quality.clone())
+            .await
+        {
             Ok(_) => {}
             Err(e) => {
                 warn!("Failed to upload photo: {e}");
                 return;
-            },
+            }
         }
 
         let photo = match Photo::get_by_id(&db, &photo_id).await {
@@ -183,7 +191,7 @@ fn resize_and_save(
             Ok(None) => {
                 warn!("Unable to get photo metadata: It doesn't exist");
                 return;
-            },
+            }
             Err(e) => {
                 warn!("Failed to get photo metadata: {e}");
                 return;
@@ -191,10 +199,9 @@ fn resize_and_save(
         };
 
         match photo.set_quality_created(quality, true).await {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 warn!("Failed to set quality created flag for photo: {e}");
-                return;
             }
         }
     });

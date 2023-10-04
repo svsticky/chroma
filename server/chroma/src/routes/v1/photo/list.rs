@@ -5,10 +5,10 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
+use dal::DalError;
 use futures::future::join_all;
 use proto::ListPhotoResponse;
 use serde::Deserialize;
-use dal::DalError;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
