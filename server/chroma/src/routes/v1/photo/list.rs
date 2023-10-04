@@ -1,14 +1,14 @@
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
-use crate::routes::error::WebResult;
+use crate::routes::error::{Error, WebResult};
 use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
-use dal::storage_engine::StorageEngineError;
 use futures::future::join_all;
 use proto::ListPhotoResponse;
 use serde::Deserialize;
+use dal::DalError;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -44,6 +44,10 @@ pub async fn list(
         }))
         .await
         .into_iter()
-        .collect::<Result<Vec<_>, StorageEngineError>>()?,
+        .collect::<Result<Vec<_>, DalError>>()
+        .map_err(|e| match e {
+            DalError::Storage(e) => Error::from(e),
+            DalError::Db(e) => Error::from(e),
+        })?,
     }))
 }

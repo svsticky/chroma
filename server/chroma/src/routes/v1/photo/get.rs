@@ -11,6 +11,7 @@ use serde::Deserialize;
 use std::io::Cursor;
 use tap::TapFallible;
 use tracing::warn;
+use dal::DalError;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -49,20 +50,17 @@ pub async fn get(
         .await?
         .ok_or(Error::NotFound)?;
 
-    let photo_bytes = data
-        .storage
-        .get_photo_by_id(&photo.id, query.quality_preference.clone().into())
-        .await?;
+    let mut proto = photo.photo_to_proto(&data.storage, query.quality_preference.clone().into()).await
+        .map_err(|e| match e {
+            DalError::Storage(e) => Error::from(e),
+            DalError::Db(e) => Error::from(e),
+        })?;
 
-    let converted = convert_format(photo_bytes, &query.format)?;
+
+    proto.photo_data = convert_format(proto.photo_data, &query.format)?;
 
     Ok(Payload(GetPhotoResponse {
-        photo: Some(proto::Photo {
-            id: photo.id,
-            album_id: photo.album_id,
-            created_at: photo.created_at,
-            photo_data: converted,
-        }),
+        photo: Some(proto)
     }))
 }
 

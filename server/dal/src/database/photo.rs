@@ -1,7 +1,8 @@
 use crate::database::{Album, Database, DbResult};
-use crate::storage_engine::{PhotoQuality, StorageEngine, StorageEngineError};
+use crate::storage_engine::{PhotoQuality, StorageEngine};
 use rand::Rng;
 use sqlx::FromRow;
+use crate::DalError;
 
 pub struct Photo<'a> {
     db: &'a Database,
@@ -42,9 +43,16 @@ impl<'a> Photo<'a> {
         self,
         storage: &StorageEngine,
         quality_preference: PhotoQuality,
-    ) -> Result<proto::Photo, StorageEngineError> {
+    ) -> Result<proto::Photo, DalError> {
+        let has_pref = self.is_quality_created(quality_preference.clone()).await?;
+        let quality = if has_pref {
+            quality_preference
+        } else {
+            PhotoQuality::Original
+        };
+
         let photo_bytes = storage
-            .get_photo_by_id(&self.id, quality_preference)
+            .get_photo_by_id(&self.id, quality)
             .await?;
         Ok(proto::Photo {
             id: self.id,
@@ -142,5 +150,67 @@ impl<'a> Photo<'a> {
             .into_iter()
             .map(|photo| photo.into_photo(db))
             .collect())
+    }
+
+    /// Check whether an image quality has been created yet.
+    /// This will always return true for [PhotoQuality::Original].
+    ///
+    /// # Errors
+    ///
+    /// If a database error occurs
+    pub async fn is_quality_created(&self, quality: PhotoQuality) -> DbResult<bool> {
+        match quality {
+            PhotoQuality::Original => Ok(true),
+            PhotoQuality::W400 => self.is_quality_w400_created().await,
+            PhotoQuality::W1600 => self.is_quality_w1600_created().await,
+        }
+    }
+
+    async fn is_quality_w400_created(&self) -> DbResult<bool> {
+        let value: bool = sqlx::query_scalar("SELECT w400_created FROM photo_metadata WHERE id = $1")
+            .bind(&self.id)
+            .fetch_one(&**self.db)
+            .await?;
+        Ok(value)
+    }
+
+    async fn is_quality_w1600_created(&self) -> DbResult<bool> {
+        let value: bool = sqlx::query_scalar("SELECT w1600_created FROM photo_metadata WHERE id = $1")
+            .bind(&self.id)
+            .fetch_one(&**self.db)
+            .await?;
+        Ok(value)
+    }
+
+    /// Set whether an image quality has been created or not.
+    /// This is a no-op for [PhotoQuality::Original].
+    ///
+    /// # Errors
+    ///
+    /// If a database error occurs
+    pub async fn set_quality_created(&self, quality: PhotoQuality, created: bool) -> DbResult<()> {
+        match quality {
+            PhotoQuality::Original => Ok(()),
+            PhotoQuality::W400 => self.set_quality_w400_created(created).await,
+            PhotoQuality::W1600 => self.set_quality_w1600_created(created).await,
+        }
+    }
+
+    async fn set_quality_w400_created(&self, created: bool) -> DbResult<()> {
+        sqlx::query("UPDATE photo_metadata SET w400_created = $1 WHERE id = $2")
+            .bind(created)
+            .bind(&self.id)
+            .execute(&**self.db)
+            .await?;
+        Ok(())
+    }
+
+    async fn set_quality_w1600_created(&self, created: bool) -> DbResult<()> {
+        sqlx::query("UPDATE photo_metadata SET w1600_created = $1 WHERE id = $2")
+            .bind(created)
+            .bind(&self.id)
+            .execute(&**self.db)
+            .await?;
+        Ok(())
     }
 }

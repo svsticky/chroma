@@ -5,10 +5,10 @@ use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::{Album, Photo};
 use dal::storage_engine::PhotoQuality;
-use dal::storage_engine::StorageEngineError;
 use futures::future::join_all;
 use proto::GetAlbumResponse;
 use serde::Deserialize;
+use dal::DalError;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -47,7 +47,11 @@ pub async fn get(
             )
             .await
             .into_iter()
-            .collect::<Result<Vec<_>, StorageEngineError>>()?
+            .collect::<Result<Vec<_>, DalError>>()
+            .map_err(|e| match e {
+                DalError::Db(e) => Error::from(e),
+                DalError::Storage(e) => Error::from(e),
+            })?
         }
     };
 

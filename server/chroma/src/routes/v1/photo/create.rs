@@ -2,7 +2,7 @@ use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, ImagePipelineError, WebResult};
 use actix_multiresponse::Payload;
-use dal::database::{Album, Photo};
+use dal::database::{Album, Database, Photo};
 use dal::storage_engine::{PhotoQuality, StorageEngine};
 use exif::{In, Tag};
 use image::imageops::FilterType;
@@ -110,7 +110,14 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
         let image = encoder.encode(100.0).to_vec();
 
         // Upload
-        save_to_engine(engine, image, photo_id, PhotoQuality::Original).await;
+        trace!("Saving image '{photo_id}' in quality '{:?}'", PhotoQuality::Original);
+        match engine.create_photo(&photo_id, image, PhotoQuality::Original).await {
+            Ok(_) => {}
+            Err(e) => {
+                warn!("Failed to upload photo: {e}");
+                return;
+            },
+        }
     });
 
     trace!("Resizing to W400 on another Task");
@@ -118,6 +125,7 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
         image.clone(),
         PhotoQuality::W400,
         data.storage.clone(),
+        data.db.clone(),
         photo_metadata.id.clone(),
     );
 
@@ -126,6 +134,7 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
         image,
         PhotoQuality::W1600,
         data.storage.clone(),
+        data.db.clone(),
         photo_metadata.id.clone(),
     );
 
@@ -134,10 +143,12 @@ async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> We
 
 /// Resize an image and save the resulting image.
 /// Spawns a new Tokio task.
+#[instrument(skip(image, engine, db))]
 fn resize_and_save(
     image: DynamicImage,
     quality: PhotoQuality,
     engine: StorageEngine,
+    db: Database,
     photo_id: String,
 ) {
     let target_width = match quality.width() {
@@ -150,26 +161,43 @@ fn resize_and_save(
 
     tokio::spawn(async move {
         trace!("Converting image to W{target_width}");
-        match convert_quality(&image, target_width) {
-            Ok(data) => save_to_engine(engine, data, &photo_id, quality).await,
-            Err(e) => warn!("Failed to scale to W{target_width}: {e}"),
+        let converted_image_data = match convert_quality(&image, target_width) {
+            Ok(data) => data,
+            Err(e) => {
+                warn!("Failed to scale to W{target_width}: {e}");
+                return;
+            },
+        };
+
+        trace!("Saving image '{photo_id}' in quality '{quality:?}'");
+        match engine.create_photo(&photo_id, converted_image_data, quality.clone()).await {
+            Ok(_) => {}
+            Err(e) => {
+                warn!("Failed to upload photo: {e}");
+                return;
+            },
+        }
+
+        let photo = match Photo::get_by_id(&db, &photo_id).await {
+            Ok(Some(p)) => p,
+            Ok(None) => {
+                warn!("Unable to get photo metadata: It doesn't exist");
+                return;
+            },
+            Err(e) => {
+                warn!("Failed to get photo metadata: {e}");
+                return;
+            }
+        };
+
+        match photo.set_quality_created(quality, true).await {
+            Ok(_) => {},
+            Err(e) => {
+                warn!("Failed to set quality created flag for photo: {e}");
+                return;
+            }
         }
     });
-}
-
-/// Save the provided data.
-/// Errors are logged, rather than bubbled up.
-async fn save_to_engine(
-    engine: StorageEngine,
-    bytes: Vec<u8>,
-    id: impl AsRef<str>,
-    quality: PhotoQuality,
-) {
-    trace!("Saving image '{}' in quality '{quality:?}'", id.as_ref());
-    match engine.create_photo(id.as_ref(), bytes, quality).await {
-        Ok(_) => {}
-        Err(e) => warn!("Failed to upload photo: {e}"),
-    }
 }
 
 /// Try to parse the EXIF timestamp from the image.
