@@ -1,4 +1,4 @@
-use crate::koala::{get_koala_login_url, get_user_id_from_token, UserIdFromTokenError};
+use crate::koala::{get_koala_login_url, get_user_info, UserIdFromTokenError};
 use crate::routes::appdata::WebData;
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
@@ -98,7 +98,7 @@ impl FromRequest for Authorization {
 
             // Check if the access token is still valid
             // E.g. it could have been revoked by Koala
-            let _user_id = get_user_id_from_token(&data.config, &user.access_token)
+            let _user_info = get_user_info(&data.config, &user.access_token)
                 .await
                 .map_err(|e| match e {
                     UserIdFromTokenError::Reqwest(e) => match e.status() {

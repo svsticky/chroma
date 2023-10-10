@@ -69,7 +69,13 @@ export class KoalaLoginUrl {
 export async function checkScope(scope: string): Promise<boolean | undefined> {
     const result = await Http.getBody<AccessResponse>(`/api/v1/access?scope=${scope}`, null, AccessResponse);
     if(result instanceof Response) {
-        return undefined;
+        if(result.status == 429) {
+            console.error("We got a 429 from the server, waiting for a bit and trying again.")
+            await new Promise( resolve => setTimeout(resolve, 2000));
+            return await checkScope(scope);
+        } else {
+            return undefined;
+        }
     }
 
     return result.hasRequestedScope;
@@ -89,6 +95,11 @@ export async function checkLoggedIn(sessionId: string | null = null): Promise<Lo
             case 401:
                 let loginUrl = r.headers.get('location');
                 return new KoalaLoginUrl(loginUrl!);
+            case 429:
+                // wait a bit and try again
+                console.error("We got a 429 from the server, waiting for a bit and trying again.")
+                await new Promise( resolve => setTimeout(resolve, 2000));
+                return await checkLoggedIn(sessionId);
             default:
                 console.error(`Invalid session ID`);
                 return null;

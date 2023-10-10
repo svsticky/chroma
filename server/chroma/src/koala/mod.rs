@@ -82,23 +82,23 @@ pub async fn exchange_code<S: AsRef<str>>(
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UserInfo {
+pub struct UserNameInfo {
     pub first_name: String,
     pub infix: Option<String>,
     pub last_name: String,
 }
 
-fn get_user_info_url(config: &Config, id: i32) -> String {
+fn get_member_info_url(config: &Config, id: i32) -> String {
     format!("{}/api/members/{id}", config.koala_base_uri)
 }
 
-pub async fn get_user_info<S: AsRef<str>>(
+pub async fn get_member<S: AsRef<str>>(
     config: &Config,
     access_token: S,
     koala_id: i32,
-) -> Result<UserInfo, reqwest::Error> {
+) -> Result<UserNameInfo, reqwest::Error> {
     Client::new()
-        .get(get_user_info_url(config, koala_id))
+        .get(get_member_info_url(config, koala_id))
         .header("User-Agent", config.koala_user_agent())
         .bearer_auth(access_token.as_ref())
         .send()
@@ -135,6 +135,7 @@ pub async fn get_new_access_token<S: AsRef<str>>(
 #[derive(Deserialize)]
 struct OauthUserInfoResponse {
     sub: String,
+    is_admin: bool,
 }
 
 #[derive(Debug, Error)]
@@ -149,10 +150,15 @@ fn get_token_info_url(config: &Config) -> String {
     format!("{}/oauth/userinfo", config.koala_base_uri)
 }
 
-pub async fn get_user_id_from_token<S: AsRef<str>>(
+pub struct UserInfo {
+    pub koala_id: i32,
+    pub is_admin: bool,
+}
+
+pub async fn get_user_info<S: AsRef<str>>(
     config: &Config,
     access_token: S,
-) -> Result<i32, UserIdFromTokenError> {
+) -> Result<UserInfo, UserIdFromTokenError> {
     let res: OauthUserInfoResponse = Client::new()
         .get(get_token_info_url(config))
         .header("User-Agent", config.koala_user_agent())
@@ -164,5 +170,8 @@ pub async fn get_user_id_from_token<S: AsRef<str>>(
         .json()
         .await?;
 
-    Ok(res.sub.parse::<i32>()?)
+    Ok(UserInfo {
+        koala_id: res.sub.parse::<i32>()?,
+        is_admin: res.is_admin,
+    })
 }

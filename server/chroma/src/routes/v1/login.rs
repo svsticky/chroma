@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::koala::{get_user_id_from_token, CredentialsType, UserIdFromTokenError};
+use crate::koala::{get_user_info, UserIdFromTokenError};
 use crate::routes::appdata::WebData;
 use crate::routes::error::{Error, WebResult};
 use crate::routes::redirect::Redirect;
@@ -32,9 +32,6 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         .await
         .map_err(Error::Koala)?;
 
-    let is_admin = oauth_tokens.credentials_type == CredentialsType::Admin;
-    trace!("Is signed-in user admin?: {is_admin}");
-
     let created_at_epoch =
         chrono::DateTime::parse_from_rfc3339(&oauth_tokens.created_at)?.timestamp();
     let expires_at = created_at_epoch - oauth_tokens.expires_in;
@@ -55,7 +52,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         None => {
             trace!("User does not yet exist in database, creating new user.");
 
-            let koala_id = get_user_id_from_token(&data.config, &oauth_tokens.access_token)
+            let user_info = get_user_info(&data.config, &oauth_tokens.access_token)
                 .await
                 .map_err(|e| match e {
                     UserIdFromTokenError::Reqwest(e) => Error::Koala(e),
@@ -65,16 +62,19 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
                     }
                 })?;
 
-            let name = get_user_name(&data.config, koala_id, &oauth_tokens.access_token).await?;
+            trace!("Is signed-in user admin?: {}", user_info.is_admin);
+
+            let name =
+                get_user_name(&data.config, user_info.koala_id, &oauth_tokens.access_token).await?;
             User::create(
                 &data.db,
-                koala_id,
+                user_info.koala_id,
                 OAuthAccess {
                     access_token: oauth_tokens.access_token,
                     refresh_token: oauth_tokens.refresh_token,
                     expires_at,
                 },
-                is_admin,
+                user_info.is_admin,
                 name,
             )
             .await?
@@ -85,14 +85,14 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
     let session_id = user.create_session().await?;
     let redirect_to = format!(
         "{}?session_id={}&is_admin={}",
-        data.config.login_complete_redirect_uri, session_id, is_admin
+        data.config.login_complete_redirect_uri, session_id, user.is_admin
     );
     Ok(Redirect::new(redirect_to))
 }
 
 async fn get_user_name(config: &Config, koala_id: i32, access_token: &str) -> WebResult<String> {
     // Retrieve the user's name
-    let user_info = crate::koala::get_user_info(config, access_token, koala_id)
+    let user_info = crate::koala::get_member(config, access_token, koala_id)
         .await
         .tap_err(|e| warn!("Failed to retrieve user info from Koala: {e}"))
         .map_err(Error::Koala)?;
