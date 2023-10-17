@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 actix-cors = "0.6.4"
-actix-multiresponse = "0.4.2"
+actix-multiresponse = { version = "0.4.2", features = ["xml"]}
 actix-web = "4.3.0"
 actix-governor = "0.4.0"
 color-eyre = "0.6.2"
