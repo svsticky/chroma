@@ -33,12 +33,26 @@ impl<'a> Photo<'a> {
     pub const ID_PREFIX: &'static str = "PH_";
     pub const MAX_ID_LEN: usize = 32;
 
+    pub async fn photo_to_url(
+        &self,
+        storage: &StorageEngine,
+        quality_preference: PhotoQuality,
+    ) -> Result<String, DalError> {
+        let has_pref = self.is_quality_created(quality_preference.clone()).await?;
+        let quality = if has_pref {
+            quality_preference
+        } else {
+            PhotoQuality::Original
+        };
+
+        Ok(storage.get_photo_by_id_as_url(&self.id, quality).await?)
+    }
+
     /// Convert a [Photo] to a [proto::Photo].
     /// Retrieves the photo's content from S3.
     ///
     /// # Errors
     ///
-
     pub async fn photo_to_proto(
         self,
         storage: &StorageEngine,

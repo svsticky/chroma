@@ -12,6 +12,8 @@ use tracing::debug;
 
 #[derive(Debug, Error)]
 pub enum StorageEngineError {
+    #[error("Operation not supported")]
+    NotSupported,
     /// S3 Error
     #[error("{0}")]
     S3(#[from] S3Error),
@@ -54,6 +56,19 @@ impl StorageEngine {
         }
 
         Ok(Self(StorageEngineMode::File(FileEngine { base_path })))
+    }
+
+    pub async fn get_photo_by_id_as_url<S: AsRef<str>>(
+        &self,
+        photo_id: S,
+        quality_preference: PhotoQuality,
+    ) -> Result<String, StorageEngineError> {
+        let quality_id = fmt_id_with_quality(photo_id.as_ref(), &quality_preference);
+
+        match &self.0 {
+            StorageEngineMode::File(_) => Err(StorageEngineError::NotSupported),
+            StorageEngineMode::S3(client) => Ok(client.get_signed_url_by_id(&quality_id).await?),
+        }
     }
 
     /// Retrieve a photo by ID.

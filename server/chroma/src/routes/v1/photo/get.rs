@@ -5,9 +5,11 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
+use dal::storage_engine::StorageEngineError;
 use dal::DalError;
 use image::{DynamicImage, ImageOutputFormat};
-use proto::GetPhotoResponse;
+use proto::get_photo_response::Response;
+use proto::{GetPhotoResponse, PhotoResponseType};
 use serde::Deserialize;
 use std::io::Cursor;
 use tap::TapFallible;
@@ -27,7 +29,7 @@ pub struct Query {
     format: ImageFormat,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Eq, PartialEq, Debug, Default, Deserialize)]
 pub enum ImageFormat {
     #[default]
     Png,
@@ -50,6 +52,28 @@ pub async fn get(
         .await?
         .ok_or(Error::NotFound)?;
 
+    if query.format.eq(&ImageFormat::WebP) {
+        match photo
+            .photo_to_url(&data.storage, query.quality_preference.clone().into())
+            .await
+        {
+            Ok(p) => {
+                return Ok(Payload(GetPhotoResponse {
+                    response_type: PhotoResponseType::Url as i32,
+                    response: Some(Response::Url(p)),
+                }));
+            }
+            Err(e) => match e {
+                DalError::Storage(e) => match e {
+                    // URL mode is not supported
+                    StorageEngineError::NotSupported => {}
+                    _ => return Err(e.into()),
+                },
+                DalError::Db(e) => return Err(e.into()),
+            },
+        }
+    }
+
     let mut proto = photo
         .photo_to_proto(&data.storage, query.quality_preference.clone().into())
         .await
@@ -60,7 +84,10 @@ pub async fn get(
 
     proto.photo_data = convert_format(proto.photo_data, &query.format)?;
 
-    Ok(Payload(GetPhotoResponse { photo: Some(proto) }))
+    Ok(Payload(GetPhotoResponse {
+        response_type: PhotoResponseType::InResponse as i32,
+        response: Some(Response::Photo(proto)),
+    }))
 }
 
 fn convert_format(bytes: Vec<u8>, format: &ImageFormat) -> WebResult<Vec<u8>> {

@@ -4,5 +4,14 @@ package nl.svsticky.chroma;
 import "entity/photo.proto";
 
 message GetPhotoResponse {
-  Photo photo = 1;
+  PhotoResponseType responseType = 1;
+  oneof response {
+    string url = 2;
+    Photo photo = 3;
+  }
+}
+
+enum PhotoResponseType {
+  URL = 0;
+  InResponse = 1;
 }

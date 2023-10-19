@@ -1,9 +1,10 @@
-use async_recursion::async_recursion;
 use aws_credential_types::Credentials;
 use aws_sdk_s3::error::{DeleteObjectError, GetObjectError, PutObjectError};
+use aws_sdk_s3::presigning::config::PresigningConfig;
 use aws_sdk_s3::types::{ByteStream, SdkError};
 use aws_sdk_s3::{Client, Config, Region};
 use std::ops::Deref;
+use std::time::Duration;
 use thiserror::Error;
 
 pub mod aws_errors {
@@ -40,6 +41,8 @@ pub enum S3Error {
     DeleteObject(#[from] SdkError<DeleteObjectError>),
     #[error("Failed to convert ByteStream: {0}")]
     ByteStream(#[from] aws_smithy_http::byte_stream::error::Error),
+    #[error("Failed to create presigning config: {0}")]
+    Presigning(#[from] aws_sdk_s3::presigning::config::Error),
 }
 
 pub struct S3Config {
@@ -72,11 +75,20 @@ impl S3 {
         })
     }
 
-    #[async_recursion]
-    pub async fn get_photo_by_id<S: AsRef<str> + Send + Sync>(
-        &self,
-        photo_id: S,
-    ) -> Result<Vec<u8>, S3Error> {
+    pub async fn get_signed_url_by_id<S: AsRef<str>>(&self, id: S) -> Result<String, S3Error> {
+        let response = self
+            .client
+            .get_object()
+            .bucket(&self.bucket_name)
+            .key(id.as_ref())
+            .presigned(PresigningConfig::expires_in(Duration::from_secs(6000))?)
+            .await?;
+
+        let url = response.uri();
+        Ok(url.to_string())
+    }
+
+    pub async fn get_photo_by_id<S: AsRef<str>>(&self, photo_id: S) -> Result<Vec<u8>, S3Error> {
         let photo = self
             .get_object()
             .bucket(&self.bucket_name)
