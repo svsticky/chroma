@@ -53,7 +53,9 @@ pub async fn list(
 
                     let quality = if !photo.is_quality_created(qpref.clone()).await? {
                         dal::storage_engine::PhotoQuality::Original
-                    } else { qpref };
+                    } else {
+                        qpref
+                    };
 
                     let photo = match storage.engine_type() {
                         EngineType::S3 => photo.photo_to_proto_url(&storage, quality).await?,
