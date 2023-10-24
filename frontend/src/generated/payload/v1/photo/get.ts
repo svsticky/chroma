@@ -5,81 +5,32 @@
  * git: https://github.com/thesayyn/protoc-gen-ts */
 import * as dependency_1 from "./../../../entity/photo";
 import * as pb_1 from "google-protobuf";
-export enum PhotoResponseType {
-    URL = 0,
-    InResponse = 1
-}
 export class GetPhotoResponse extends pb_1.Message {
-    #one_of_decls: number[][] = [[2, 3]];
-    constructor(data?: any[] | ({
-        responseType?: PhotoResponseType;
-    } & (({
-        url?: string;
-        photo?: never;
-    } | {
-        url?: never;
+    #one_of_decls: number[][] = [];
+    constructor(data?: any[] | {
         photo?: dependency_1.Photo;
-    })))) {
+    }) {
         super();
         pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
         if (!Array.isArray(data) && typeof data == "object") {
-            if ("responseType" in data && data.responseType != undefined) {
-                this.responseType = data.responseType;
-            }
-            if ("url" in data && data.url != undefined) {
-                this.url = data.url;
-            }
             if ("photo" in data && data.photo != undefined) {
                 this.photo = data.photo;
             }
         }
     }
-    get responseType() {
-        return pb_1.Message.getFieldWithDefault(this, 1, PhotoResponseType.URL) as PhotoResponseType;
-    }
-    set responseType(value: PhotoResponseType) {
-        pb_1.Message.setField(this, 1, value);
-    }
-    get url() {
-        return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
-    }
-    set url(value: string) {
-        pb_1.Message.setOneofField(this, 2, this.#one_of_decls[0], value);
-    }
-    get hasUrl() {
-        return pb_1.Message.getField(this, 2) != null;
-    }
     get photo() {
-        return pb_1.Message.getWrapperField(this, dependency_1.Photo, 3) as dependency_1.Photo;
+        return pb_1.Message.getWrapperField(this, dependency_1.Photo, 1) as dependency_1.Photo;
     }
     set photo(value: dependency_1.Photo) {
-        pb_1.Message.setOneofWrapperField(this, 3, this.#one_of_decls[0], value);
+        pb_1.Message.setWrapperField(this, 1, value);
     }
     get hasPhoto() {
-        return pb_1.Message.getField(this, 3) != null;
-    }
-    get response() {
-        const cases: {
-            [index: number]: "none" | "url" | "photo";
-        } = {
-            0: "none",
-            2: "url",
-            3: "photo"
-        };
-        return cases[pb_1.Message.computeOneofCase(this, [2, 3])];
+        return pb_1.Message.getField(this, 1) != null;
     }
     static fromObject(data: {
-        responseType?: PhotoResponseType;
-        url?: string;
         photo?: ReturnType<typeof dependency_1.Photo.prototype.toObject>;
     }): GetPhotoResponse {
         const message = new GetPhotoResponse({});
-        if (data.responseType != null) {
-            message.responseType = data.responseType;
-        }
-        if (data.url != null) {
-            message.url = data.url;
-        }
         if (data.photo != null) {
             message.photo = dependency_1.Photo.fromObject(data.photo);
         }
@@ -87,16 +38,8 @@ export class GetPhotoResponse extends pb_1.Message {
     }
     toObject() {
         const data: {
-            responseType?: PhotoResponseType;
-            url?: string;
             photo?: ReturnType<typeof dependency_1.Photo.prototype.toObject>;
         } = {};
-        if (this.responseType != null) {
-            data.responseType = this.responseType;
-        }
-        if (this.url != null) {
-            data.url = this.url;
-        }
         if (this.photo != null) {
             data.photo = this.photo.toObject();
         }
@@ -106,12 +49,8 @@ export class GetPhotoResponse extends pb_1.Message {
     serialize(w: pb_1.BinaryWriter): void;
     serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
         const writer = w || new pb_1.BinaryWriter();
-        if (this.responseType != PhotoResponseType.URL)
-            writer.writeEnum(1, this.responseType);
-        if (this.hasUrl)
-            writer.writeString(2, this.url);
         if (this.hasPhoto)
-            writer.writeMessage(3, this.photo, () => this.photo.serialize(writer));
+            writer.writeMessage(1, this.photo, () => this.photo.serialize(writer));
         if (!w)
             return writer.getResultBuffer();
     }
@@ -122,12 +61,6 @@ export class GetPhotoResponse extends pb_1.Message {
                 break;
             switch (reader.getFieldNumber()) {
                 case 1:
-                    message.responseType = reader.readEnum();
-                    break;
-                case 2:
-                    message.url = reader.readString();
-                    break;
-                case 3:
                     reader.readMessage(message.photo, () => message.photo = dependency_1.Photo.deserialize(reader));
                     break;
                 default: reader.skipField();

@@ -3,7 +3,10 @@ use crate::storage_engine::{PhotoQuality, StorageEngine};
 use crate::DalError;
 use rand::Rng;
 use sqlx::FromRow;
+use proto::photo_respone::Response;
+use proto::PhotoRespone;
 
+#[derive(Clone)]
 pub struct Photo<'a> {
     db: &'a Database,
     pub id: String,
@@ -33,11 +36,11 @@ impl<'a> Photo<'a> {
     pub const ID_PREFIX: &'static str = "PH_";
     pub const MAX_ID_LEN: usize = 32;
 
-    pub async fn photo_to_url(
-        &self,
+    pub async fn photo_to_proto_url(
+        self,
         storage: &StorageEngine,
         quality_preference: PhotoQuality,
-    ) -> Result<String, DalError> {
+    ) -> Result<proto::Photo, DalError> {
         let has_pref = self.is_quality_created(quality_preference.clone()).await?;
         let quality = if has_pref {
             quality_preference
@@ -45,7 +48,17 @@ impl<'a> Photo<'a> {
             PhotoQuality::Original
         };
 
-        Ok(storage.get_photo_by_id_as_url(&self.id, quality).await?)
+        let url = storage.get_photo_by_id_as_url(&self.id, quality).await?;
+
+        Ok(proto::Photo {
+            id: self.id,
+            album_id: self.album_id,
+            created_at: self.created_at,
+            data_type: proto::PhotoResponseType::Url as i32,
+            data: Some(PhotoRespone {
+                response: Some(Response::Url(url))
+            })
+        })
     }
 
     /// Convert a [Photo] to a [proto::Photo].
@@ -53,7 +66,7 @@ impl<'a> Photo<'a> {
     ///
     /// # Errors
     ///
-    pub async fn photo_to_proto(
+    pub async fn photo_to_proto_bytes(
         self,
         storage: &StorageEngine,
         quality_preference: PhotoQuality,
@@ -70,7 +83,10 @@ impl<'a> Photo<'a> {
             id: self.id,
             album_id: self.album_id,
             created_at: self.created_at,
-            photo_data: photo_bytes,
+            data_type: proto::PhotoResponseType::InResponse as i32,
+            data: Some(PhotoRespone {
+                response: Some(Response::Bytes(photo_bytes))
+            })
         })
     }
 

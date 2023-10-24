@@ -5,7 +5,8 @@ message Photo {
   string id = 1;
   string albumId = 2;
   int64 createdAt = 3;
-  bytes photoData = 4;
+  PhotoResponseType dataType = 4;
+  PhotoRespone data = 5;
 }
 
 enum PhotoResponseType {
@@ -16,6 +17,6 @@ enum PhotoResponseType {
 message PhotoRespone {
   oneof response {
     string url = 1;
-    Photo photo = 2;
+    bytes bytes = 2;
   }
 }

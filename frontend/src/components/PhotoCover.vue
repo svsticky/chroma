@@ -32,12 +32,13 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
+import Vue, {PropType} from 'vue';
+import {PhotoDataKind, PhotoModel} from "@/views/photo/photo";
 
 export default Vue.extend({
     props: {
-        bytes: {
-            type: Uint8Array,
+        photo: {
+            type: Object as PropType<PhotoModel>,
             required: true,
         },
         canSetThumbnail: Boolean,
@@ -49,9 +50,7 @@ export default Vue.extend({
     },
     computed: {
         coverPhotoUrl(): string {
-            return 'data:image/webp;base64,' + btoa(
-                this.bytes.reduce((data, byte) => data + String.fromCharCode(byte), '')
-            );
+            return this.photo.getAsSrcUrl();
         }
     }
 })

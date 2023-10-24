@@ -8,7 +8,7 @@ use dal::database::Photo;
 use dal::storage_engine::StorageEngineError;
 use dal::DalError;
 use image::{DynamicImage, ImageOutputFormat};
-use proto::{GetPhotoResponse, PhotoRespone, PhotoResponseType};
+use proto::{GetPhotoResponse, PhotoRespone};
 use serde::Deserialize;
 use std::io::Cursor;
 use tap::TapFallible;
@@ -54,21 +54,19 @@ pub async fn get(
 
     if query.format.eq(&ImageFormat::WebP) {
         match photo
-            .photo_to_url(&data.storage, query.quality_preference.clone().into())
+            .clone()
+            .photo_to_proto_url(&data.storage, query.quality_preference.clone().into())
             .await
         {
             Ok(p) => {
                 return Ok(Payload(GetPhotoResponse {
-                    response_type: PhotoResponseType::Url as i32,
-                    response: Some(PhotoRespone {
-                        response: Some(Response::Url(p))
-                    }),
+                    photo: Some(p)
                 }));
             }
             Err(e) => match e {
                 DalError::Storage(e) => match e {
                     // URL mode is not supported
-                    StorageEngineError::NotSupported => {}
+                    StorageEngineError::NotSupported => {},
                     _ => return Err(e.into()),
                 },
                 DalError::Db(e) => return Err(e.into()),
@@ -77,20 +75,20 @@ pub async fn get(
     }
 
     let mut proto = photo
-        .photo_to_proto(&data.storage, query.quality_preference.clone().into())
+        .photo_to_proto_bytes(&data.storage, query.quality_preference.clone().into())
         .await
         .map_err(|e| match e {
             DalError::Storage(e) => Error::from(e),
             DalError::Db(e) => Error::from(e),
         })?;
 
-    proto.photo_data = convert_format(proto.photo_data, &query.format)?;
+    let bytes = if let Response::Bytes(b) = proto.data.unwrap().response.unwrap() { b } else { unreachable!() };
+    proto.data = Some(PhotoRespone {
+        response: Some(Response::Bytes(convert_format(bytes, &query.format)?))
+    });
 
     Ok(Payload(GetPhotoResponse {
-        response_type: PhotoResponseType::InResponse as i32,
-        response: Some(PhotoRespone {
-            response: Some(Response::Photo(proto))
-        }),
+        photo: Some(proto),
     }))
 }
 

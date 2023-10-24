@@ -1,20 +1,44 @@
-import {Photo} from "@/generated/entity/photo";
+import {Photo, PhotoResponseType} from "@/generated/entity/photo";
 import {Http} from "@/http";
 import {ListPhotoResponse} from "@/generated/payload/v1/photo/list";
 import {CreatePhotoRequest} from "@/generated/payload/v1/photo/create";
 import {DeletePhotoRequest} from "@/generated/payload/v1/photo/delete";
 import {GetPhotoResponse} from "@/generated/payload/v1/photo/get";
 
-export interface PhotoModel {
+
+export enum PhotoDataKind {
+    URL,
+    BYTES,
+}
+
+export class PhotoModel {
     /**
      * The ID of the photo
      */
-    id: string,
-    /**
-     * The bytes of the photo.
-     * Always in `PNG` format.
-     */
-    photoBytes: Uint8Array,
+    id: string;
+    dataKind: PhotoDataKind;
+    photoUrl: string | undefined;
+    photoBytes: Uint8Array | undefined;
+
+    constructor(id: string, dataKind: PhotoDataKind, photoUrl: string | undefined, photoBytes: Uint8Array | undefined) {
+        this.id = id;
+        this.dataKind = dataKind;
+        this.photoUrl = photoUrl;
+        this.photoBytes = photoBytes;
+    }
+
+    getAsSrcUrl(): string {
+        switch(this.dataKind) {
+            case PhotoDataKind.URL: {
+                return this.photoUrl!;
+            }
+            case PhotoDataKind.BYTES: {
+                return 'data:image/webp;base64,' + btoa(
+                    this.photoBytes!.reduce((data, byte) => data + String.fromCharCode(byte), '')
+                );
+            }
+        }
+    }
 }
 
 /**
@@ -22,15 +46,20 @@ export interface PhotoModel {
  * @param photo The proto Photo to convert
  */
 function protoPhotoToPhotoModel(photo: Photo): PhotoModel {
-    return <PhotoModel>{
-        id: photo.id,
-        photoBytes: photo.photoData,
+    switch(photo.dataType) {
+        case PhotoResponseType.URL: {
+            return new PhotoModel(photo.id, PhotoDataKind.URL, photo.data.url, undefined);
+        }
+        case PhotoResponseType.InResponse: {
+            return new PhotoModel(photo.id, PhotoDataKind.BYTES, undefined, photo.data.bytes);
+        }
     }
 }
 
 /**
  * List photos in an album
- * @param albumId The ID of the album
+ * @param albumId The ID of the album.
+ * @param low_res Get the Low resolution variant of the image.
  * @return The photos in the album on success. `undefined` on failure.
  */
 export async function listPhotosInAlbum(albumId: string, low_res: boolean = false): Promise<PhotoModel[] | undefined> {

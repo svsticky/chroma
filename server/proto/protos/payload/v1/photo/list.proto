@@ -4,6 +4,5 @@ package nl.svsticky.chroma;
 import "entity/photo.proto";
 
 message ListPhotoResponse {
-  PhotoResponseType responseType = 1;
-  repeated PhotoRespone response = 2;
+  repeated Photo photos = 1;
 }

@@ -32,7 +32,19 @@ enum StorageEngineMode {
     File(FileEngine),
 }
 
+pub enum EngineType {
+    S3,
+    File,
+}
+
 impl StorageEngine {
+    pub fn engine_type(&self) -> EngineType {
+        match self.0 {
+            StorageEngineMode::S3(_) => EngineType::S3,
+            StorageEngineMode::File(_) => EngineType::File,
+        }
+    }
+
     /// Create a storage engine backed by S3.
     ///
     /// # Errors

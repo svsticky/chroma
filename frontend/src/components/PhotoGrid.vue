@@ -9,7 +9,7 @@
                         :can-delete="edit && canDeletePhoto"
                         :can-set-thumbnail="edit && canEdit"
                         :is-cover="albumModel?.coverPhotoId === pair[0].id"
-                        :bytes="pair[0].photoBytes"
+                        :photo="pair[0]"
                         @select-cover="selectCover(pair[0])"
                         @deleted="deletePhoto(pair[0])"
                     ></PhotoCover>
@@ -19,7 +19,7 @@
                         :can-delete="edit && canDeletePhoto"
                         :can-set-thumbnail="edit && canEdit"
                         :is-cover="albumModel?.coverPhotoId === pair[1].id"
-                        :bytes="pair[1].photoBytes"
+                        :photo="pair[1]"
                         @select-cover="selectCover(pair[1])"
                         @deleted="deletePhoto(pair[1])"
                     ></PhotoCover>

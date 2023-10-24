@@ -55,12 +55,12 @@
 <script lang="ts">
 import Vue, {PropType} from 'vue';
 import {AlbumModel, deleteAlbum} from "@/views/album/album";
-import {checkScope, errorText, Storage} from "@/api";
-import {getPhoto} from "@/views/photo/photo";
+import {errorText} from "@/api";
+import {getPhoto, PhotoModel} from "@/views/photo/photo";
 
 interface Data {
     snackbar: string | null,
-    coverPhotoBytes: Uint8Array | null,
+    coverPhoto: PhotoModel | null,
     loading: boolean,
 }
 
@@ -76,7 +76,7 @@ export default Vue.extend({
     data(): Data {
         return {
             snackbar: null,
-            coverPhotoBytes: null,
+            coverPhoto: null,
             loading: true,
         }
     },
@@ -85,13 +85,11 @@ export default Vue.extend({
     },
     computed: {
         coverPhotoUrl(): string | null {
-            if(this.loading || this.coverPhotoBytes == null) {
+            if(this.loading || this.coverPhoto == null) {
                 return null;
             }
 
-            return 'data:image/webp;base64,' + btoa(
-                this.coverPhotoBytes.reduce((data, byte) => data + String.fromCharCode(byte), '')
-            );
+            return this.coverPhoto.getAsSrcUrl();
         }
     },
     methods: {
@@ -108,7 +106,7 @@ export default Vue.extend({
                 return;
             }
 
-            this.coverPhotoBytes = result.photoBytes;
+            this.coverPhoto = result;
         },
         async deleteAlbum() {
             const result = await deleteAlbum(this.album.id);

@@ -43,7 +43,7 @@ pub async fn get(
             join_all(
                 photos
                     .into_iter()
-                    .map(|photo| photo.photo_to_proto(&data.storage, PhotoQuality::Original)),
+                    .map(|photo| photo.photo_to_proto_bytes(&data.storage, PhotoQuality::Original)),
             )
             .await
             .into_iter()

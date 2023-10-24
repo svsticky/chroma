@@ -7,9 +7,9 @@ use actix_web::web;
 use dal::database::Photo;
 use dal::DalError;
 use futures::future::join_all;
-use proto::{ListPhotoResponse, PhotoRespone, PhotoResponseType};
+use proto::ListPhotoResponse;
 use serde::Deserialize;
-use proto::photo_respone::Response;
+use dal::storage_engine::EngineType;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -40,20 +40,21 @@ pub async fn list(
     };
 
 
-    let response = join_all(photos.into_iter()
+    let photos = join_all(photos.into_iter()
         .map(|p| {
             let storage = data.storage.clone();
             let qpref: dal::storage_engine::PhotoQuality = query.quality_preference.clone().into();
 
             async move {
-                p.photo_to_url(&storage, qpref).await
+                match storage.engine_type() {
+                    EngineType::S3 => p.photo_to_proto_url(&storage, qpref).await,
+                    // File engine doesn't support URL mode
+                    EngineType::File => p.photo_to_proto_bytes(&storage, qpref).await,
+                }
             }
         }))
         .await
         .into_iter()
-        .map(|rstring| rstring.map(|string| PhotoRespone {
-            response: Some(Response::Url(string))
-        }))
         .collect::<Result<Vec<_>, DalError>>()
         .map_err(|e| match e {
             DalError::Storage(e) => Error::from(e),
@@ -61,7 +62,6 @@ pub async fn list(
         })?;
 
     Ok(Payload(ListPhotoResponse {
-        response_type: PhotoResponseType::Url as i32,
-        response,
+        photos
     }))
 }

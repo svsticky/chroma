@@ -4,13 +4,18 @@
  * source: entity/photo.proto
  * git: https://github.com/thesayyn/protoc-gen-ts */
 import * as pb_1 from "google-protobuf";
+export enum PhotoResponseType {
+    URL = 0,
+    InResponse = 1
+}
 export class Photo extends pb_1.Message {
     #one_of_decls: number[][] = [];
     constructor(data?: any[] | {
         id?: string;
         albumId?: string;
         createdAt?: number;
-        photoData?: Uint8Array;
+        dataType?: PhotoResponseType;
+        data?: PhotoRespone;
     }) {
         super();
         pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -24,8 +29,11 @@ export class Photo extends pb_1.Message {
             if ("createdAt" in data && data.createdAt != undefined) {
                 this.createdAt = data.createdAt;
             }
-            if ("photoData" in data && data.photoData != undefined) {
-                this.photoData = data.photoData;
+            if ("dataType" in data && data.dataType != undefined) {
+                this.dataType = data.dataType;
+            }
+            if ("data" in data && data.data != undefined) {
+                this.data = data.data;
             }
         }
     }
@@ -47,17 +55,27 @@ export class Photo extends pb_1.Message {
     set createdAt(value: number) {
         pb_1.Message.setField(this, 3, value);
     }
-    get photoData() {
-        return pb_1.Message.getFieldWithDefault(this, 4, new Uint8Array(0)) as Uint8Array;
+    get dataType() {
+        return pb_1.Message.getFieldWithDefault(this, 4, PhotoResponseType.URL) as PhotoResponseType;
     }
-    set photoData(value: Uint8Array) {
+    set dataType(value: PhotoResponseType) {
         pb_1.Message.setField(this, 4, value);
+    }
+    get data() {
+        return pb_1.Message.getWrapperField(this, PhotoRespone, 5) as PhotoRespone;
+    }
+    set data(value: PhotoRespone) {
+        pb_1.Message.setWrapperField(this, 5, value);
+    }
+    get hasData() {
+        return pb_1.Message.getField(this, 5) != null;
     }
     static fromObject(data: {
         id?: string;
         albumId?: string;
         createdAt?: number;
-        photoData?: Uint8Array;
+        dataType?: PhotoResponseType;
+        data?: ReturnType<typeof PhotoRespone.prototype.toObject>;
     }): Photo {
         const message = new Photo({});
         if (data.id != null) {
@@ -69,8 +87,11 @@ export class Photo extends pb_1.Message {
         if (data.createdAt != null) {
             message.createdAt = data.createdAt;
         }
-        if (data.photoData != null) {
-            message.photoData = data.photoData;
+        if (data.dataType != null) {
+            message.dataType = data.dataType;
+        }
+        if (data.data != null) {
+            message.data = PhotoRespone.fromObject(data.data);
         }
         return message;
     }
@@ -79,7 +100,8 @@ export class Photo extends pb_1.Message {
             id?: string;
             albumId?: string;
             createdAt?: number;
-            photoData?: Uint8Array;
+            dataType?: PhotoResponseType;
+            data?: ReturnType<typeof PhotoRespone.prototype.toObject>;
         } = {};
         if (this.id != null) {
             data.id = this.id;
@@ -90,8 +112,11 @@ export class Photo extends pb_1.Message {
         if (this.createdAt != null) {
             data.createdAt = this.createdAt;
         }
-        if (this.photoData != null) {
-            data.photoData = this.photoData;
+        if (this.dataType != null) {
+            data.dataType = this.dataType;
+        }
+        if (this.data != null) {
+            data.data = this.data.toObject();
         }
         return data;
     }
@@ -105,8 +130,10 @@ export class Photo extends pb_1.Message {
             writer.writeString(2, this.albumId);
         if (this.createdAt != 0)
             writer.writeInt64(3, this.createdAt);
-        if (this.photoData.length)
-            writer.writeBytes(4, this.photoData);
+        if (this.dataType != PhotoResponseType.URL)
+            writer.writeEnum(4, this.dataType);
+        if (this.hasData)
+            writer.writeMessage(5, this.data, () => this.data.serialize(writer));
         if (!w)
             return writer.getResultBuffer();
     }
@@ -126,7 +153,10 @@ export class Photo extends pb_1.Message {
                     message.createdAt = reader.readInt64();
                     break;
                 case 4:
-                    message.photoData = reader.readBytes();
+                    message.dataType = reader.readEnum();
+                    break;
+                case 5:
+                    reader.readMessage(message.data, () => message.data = PhotoRespone.deserialize(reader));
                     break;
                 default: reader.skipField();
             }
@@ -138,5 +168,114 @@ export class Photo extends pb_1.Message {
     }
     static deserializeBinary(bytes: Uint8Array): Photo {
         return Photo.deserialize(bytes);
+    }
+}
+export class PhotoRespone extends pb_1.Message {
+    #one_of_decls: number[][] = [[1, 2]];
+    constructor(data?: any[] | ({} & (({
+        url?: string;
+        bytes?: never;
+    } | {
+        url?: never;
+        bytes?: Uint8Array;
+    })))) {
+        super();
+        pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+        if (!Array.isArray(data) && typeof data == "object") {
+            if ("url" in data && data.url != undefined) {
+                this.url = data.url;
+            }
+            if ("bytes" in data && data.bytes != undefined) {
+                this.bytes = data.bytes;
+            }
+        }
+    }
+    get url() {
+        return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+    }
+    set url(value: string) {
+        pb_1.Message.setOneofField(this, 1, this.#one_of_decls[0], value);
+    }
+    get hasUrl() {
+        return pb_1.Message.getField(this, 1) != null;
+    }
+    get bytes() {
+        return pb_1.Message.getFieldWithDefault(this, 2, new Uint8Array(0)) as Uint8Array;
+    }
+    set bytes(value: Uint8Array) {
+        pb_1.Message.setOneofField(this, 2, this.#one_of_decls[0], value);
+    }
+    get hasBytes() {
+        return pb_1.Message.getField(this, 2) != null;
+    }
+    get response() {
+        const cases: {
+            [index: number]: "none" | "url" | "bytes";
+        } = {
+            0: "none",
+            1: "url",
+            2: "bytes"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [1, 2])];
+    }
+    static fromObject(data: {
+        url?: string;
+        bytes?: Uint8Array;
+    }): PhotoRespone {
+        const message = new PhotoRespone({});
+        if (data.url != null) {
+            message.url = data.url;
+        }
+        if (data.bytes != null) {
+            message.bytes = data.bytes;
+        }
+        return message;
+    }
+    toObject() {
+        const data: {
+            url?: string;
+            bytes?: Uint8Array;
+        } = {};
+        if (this.url != null) {
+            data.url = this.url;
+        }
+        if (this.bytes != null) {
+            data.bytes = this.bytes;
+        }
+        return data;
+    }
+    serialize(): Uint8Array;
+    serialize(w: pb_1.BinaryWriter): void;
+    serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+        const writer = w || new pb_1.BinaryWriter();
+        if (this.hasUrl)
+            writer.writeString(1, this.url);
+        if (this.hasBytes)
+            writer.writeBytes(2, this.bytes);
+        if (!w)
+            return writer.getResultBuffer();
+    }
+    static deserialize(bytes: Uint8Array | pb_1.BinaryReader): PhotoRespone {
+        const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new PhotoRespone();
+        while (reader.nextField()) {
+            if (reader.isEndGroup())
+                break;
+            switch (reader.getFieldNumber()) {
+                case 1:
+                    message.url = reader.readString();
+                    break;
+                case 2:
+                    message.bytes = reader.readBytes();
+                    break;
+                default: reader.skipField();
+            }
+        }
+        return message;
+    }
+    serializeBinary(): Uint8Array {
+        return this.serialize();
+    }
+    static deserializeBinary(bytes: Uint8Array): PhotoRespone {
+        return PhotoRespone.deserialize(bytes);
     }
 }
