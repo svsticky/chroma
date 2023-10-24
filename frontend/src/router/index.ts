@@ -21,10 +21,6 @@ const routes: Array<RouteConfig> = [
     component: () => import('../views/album/AlbumEditView.vue'),
   },
   {
-    path: '/photo',
-    component: () => import('../views/photo/PhotoGridView.vue'),
-  },
-  {
     path: '/photo/view',
     component: () => import('../views/photo/PhotoDetailView.vue'),
   },

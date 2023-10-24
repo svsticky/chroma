@@ -33,9 +33,24 @@ export class PhotoModel {
                 return this.photoUrl!;
             }
             case PhotoDataKind.BYTES: {
-                return 'data:image/webp;base64,' + btoa(
-                    this.photoBytes!.reduce((data, byte) => data + String.fromCharCode(byte), '')
-                );
+                const blob = new Blob([this.photoBytes!], {
+                    type: "image/webp"
+                });
+                return URL.createObjectURL(blob);
+            }
+        }
+    }
+
+    downloadOrNewTab() {
+        switch(this.dataKind) {
+            case PhotoDataKind.URL: {
+                window.open(this.photoUrl!, "_blank");
+                break;
+            }
+            case PhotoDataKind.BYTES: {
+                const file = new File([this.photoBytes!], `${this.id}.webp`, { type: "application/webp"}, );
+                const exportUrl = URL.createObjectURL(file);
+                window.location.assign(exportUrl);
             }
         }
     }
@@ -103,12 +118,31 @@ export async function deletePhoto(photoId: string): Promise<boolean | undefined>
     return result.ok ? true : undefined;
 }
 
-export async function getPhoto(photoId: string, low_res: boolean = false): Promise<PhotoModel | null | undefined> {
-    let query = `id=${photoId}`;
-    if(low_res) {
-        query = query.concat("&quality_preference=W400");
+export enum Quality {
+    W400,
+    W1600,
+    ORIGINAL,
+}
+
+export async function getPhoto(photoId: string, quality: Quality): Promise<PhotoModel | null | undefined> {
+
+    let qualityString;
+    switch(quality) {
+        case Quality.ORIGINAL: {
+            qualityString = "Original";
+            break;
+        }
+        case Quality.W1600: {
+            qualityString = "W1600";
+            break;
+        }
+        case Quality.W400: {
+            qualityString = "W400";
+            break;
+        }
     }
 
+    const query = `id=${photoId}&quality_preference=${qualityString}`;
     const result = await Http.getBody<GetPhotoResponse>(`/api/v1/photo?${query}`, null, GetPhotoResponse);
     if(result instanceof Response) {
         if(result.status == 404) {
