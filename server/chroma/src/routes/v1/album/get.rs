@@ -59,26 +59,40 @@ pub async fn get(
 
     let cover_photo = if query.include_cover_photo.unwrap_or(true) {
         if let Some(id) = &album.cover_photo_id {
-            let photo = Photo::get_by_id(&data.db, id).await?
+            let photo = Photo::get_by_id(&data.db, id)
+                .await?
                 .ok_or(Error::NotFound)?;
 
             let photo = match data.storage.engine_type() {
-                EngineType::S3 => photo.photo_to_proto_url(&data.storage, PhotoQuality::W400).await,
-                EngineType::File => photo.photo_to_proto_bytes(&data.storage, PhotoQuality::W400).await,
-            }.map_err(|e| match e {
+                EngineType::S3 => {
+                    photo
+                        .photo_to_proto_url(&data.storage, PhotoQuality::W400)
+                        .await
+                }
+                EngineType::File => {
+                    photo
+                        .photo_to_proto_bytes(&data.storage, PhotoQuality::W400)
+                        .await
+                }
+            }
+            .map_err(|e| match e {
                 DalError::Storage(e) => Error::from(e),
                 DalError::Db(e) => Error::from(e),
             })?;
 
             Some(photo)
-        } else { None }
-    } else { None };
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
     Ok(Payload(GetAlbumResponse {
         photos,
         album: Some(AlbumWithCoverPhoto {
             album: Some(album.to_proto().await?),
-            cover_photo
+            cover_photo,
         }),
     }))
 }
