@@ -8,12 +8,12 @@ use dal::database::Photo;
 use dal::storage_engine::StorageEngineError;
 use dal::DalError;
 use image::{DynamicImage, ImageOutputFormat};
+use proto::photo_respone::Response;
 use proto::{GetPhotoResponse, PhotoRespone};
 use serde::Deserialize;
 use std::io::Cursor;
 use tap::TapFallible;
 use tracing::warn;
-use proto::photo_respone::Response;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -59,14 +59,12 @@ pub async fn get(
             .await
         {
             Ok(p) => {
-                return Ok(Payload(GetPhotoResponse {
-                    photo: Some(p)
-                }));
+                return Ok(Payload(GetPhotoResponse { photo: Some(p) }));
             }
             Err(e) => match e {
                 DalError::Storage(e) => match e {
                     // URL mode is not supported
-                    StorageEngineError::NotSupported => {},
+                    StorageEngineError::NotSupported => {}
                     _ => return Err(e.into()),
                 },
                 DalError::Db(e) => return Err(e.into()),
@@ -82,14 +80,16 @@ pub async fn get(
             DalError::Db(e) => Error::from(e),
         })?;
 
-    let bytes = if let Response::Bytes(b) = proto.data.unwrap().response.unwrap() { b } else { unreachable!() };
+    let bytes = if let Response::Bytes(b) = proto.data.unwrap().response.unwrap() {
+        b
+    } else {
+        unreachable!()
+    };
     proto.data = Some(PhotoRespone {
-        response: Some(Response::Bytes(convert_format(bytes, &query.format)?))
+        response: Some(Response::Bytes(convert_format(bytes, &query.format)?)),
     });
 
-    Ok(Payload(GetPhotoResponse {
-        photo: Some(proto),
-    }))
+    Ok(Payload(GetPhotoResponse { photo: Some(proto) }))
 }
 
 fn convert_format(bytes: Vec<u8>, format: &ImageFormat) -> WebResult<Vec<u8>> {

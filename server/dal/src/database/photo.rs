@@ -1,10 +1,10 @@
 use crate::database::{Album, Database, DbResult};
 use crate::storage_engine::{PhotoQuality, StorageEngine};
 use crate::DalError;
-use rand::Rng;
-use sqlx::FromRow;
 use proto::photo_respone::Response;
 use proto::PhotoRespone;
+use rand::Rng;
+use sqlx::FromRow;
 
 #[derive(Clone)]
 pub struct Photo<'a> {
@@ -56,8 +56,8 @@ impl<'a> Photo<'a> {
             created_at: self.created_at,
             data_type: proto::PhotoResponseType::Url as i32,
             data: Some(PhotoRespone {
-                response: Some(Response::Url(url))
-            })
+                response: Some(Response::Url(url)),
+            }),
         })
     }
 
@@ -85,8 +85,8 @@ impl<'a> Photo<'a> {
             created_at: self.created_at,
             data_type: proto::PhotoResponseType::InResponse as i32,
             data: Some(PhotoRespone {
-                response: Some(Response::Bytes(photo_bytes))
-            })
+                response: Some(Response::Bytes(photo_bytes)),
+            }),
         })
     }
 

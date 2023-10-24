@@ -5,11 +5,11 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
+use dal::storage_engine::EngineType;
 use dal::DalError;
 use futures::future::join_all;
 use proto::ListPhotoResponse;
 use serde::Deserialize;
-use dal::storage_engine::EngineType;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -39,29 +39,25 @@ pub async fn list(
         Photo::list(&data.db).await?
     };
 
+    let photos = join_all(photos.into_iter().map(|p| {
+        let storage = data.storage.clone();
+        let qpref: dal::storage_engine::PhotoQuality = query.quality_preference.clone().into();
 
-    let photos = join_all(photos.into_iter()
-        .map(|p| {
-            let storage = data.storage.clone();
-            let qpref: dal::storage_engine::PhotoQuality = query.quality_preference.clone().into();
-
-            async move {
-                match storage.engine_type() {
-                    EngineType::S3 => p.photo_to_proto_url(&storage, qpref).await,
-                    // File engine doesn't support URL mode
-                    EngineType::File => p.photo_to_proto_bytes(&storage, qpref).await,
-                }
+        async move {
+            match storage.engine_type() {
+                EngineType::S3 => p.photo_to_proto_url(&storage, qpref).await,
+                // File engine doesn't support URL mode
+                EngineType::File => p.photo_to_proto_bytes(&storage, qpref).await,
             }
-        }))
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>, DalError>>()
-        .map_err(|e| match e {
-            DalError::Storage(e) => Error::from(e),
-            DalError::Db(e) => Error::from(e),
-        })?;
-
-    Ok(Payload(ListPhotoResponse {
-        photos
+        }
     }))
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, DalError>>()
+    .map_err(|e| match e {
+        DalError::Storage(e) => Error::from(e),
+        DalError::Db(e) => Error::from(e),
+    })?;
+
+    Ok(Payload(ListPhotoResponse { photos }))
 }
