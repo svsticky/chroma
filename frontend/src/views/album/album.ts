@@ -94,7 +94,7 @@ export async function saveEditedAlbum(album: AlbumModel): Promise<boolean | unde
  * @return The albums on success. `undefined` on failure
  */
 export async function listAlbums(includeCoverPhoto: boolean = true): Promise<AlbumModel[] | undefined> {
-    let query = `include_cover_photo=${includeCoverPhoto}`;
+    let query = `include_cover_photo=${includeCoverPhoto}&quality_preference=W400`;
 
 
     const albums = await Http.getBody<ListAlbumsResponse>(`/api/v1/album/list?${query}`, null, ListAlbumsResponse);
