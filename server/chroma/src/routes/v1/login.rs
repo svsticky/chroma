@@ -1,9 +1,7 @@
 use crate::config::Config;
-use crate::koala::{get_user_info, UserIdFromTokenError};
 use crate::routes::appdata::WebData;
 use crate::routes::error::{Error, WebResult};
 use crate::routes::redirect::Redirect;
-use actix_web::http::StatusCode;
 use actix_web::web;
 use dal::database::{OAuthAccess, User};
 use serde::Deserialize;
@@ -58,15 +56,10 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
         None => {
             trace!("User does not yet exist in database, creating new user.");
 
-            let user_info = get_user_info(&data.config, &oauth_tokens.access_token)
+            let user_info = oauth_api
+                .get_userinfo(&oauth_tokens.access_token)
                 .await
-                .map_err(|e| match e {
-                    UserIdFromTokenError::Reqwest(e) => Error::Koala(e),
-                    UserIdFromTokenError::IntParse(e) => {
-                        warn!("Failed to parse int: {e}");
-                        Error::Other(StatusCode::INTERNAL_SERVER_ERROR)
-                    }
-                })?;
+                .map_err(|e| Error::Koala(e))?;
 
             trace!("Is signed-in user admin?: {}", user_info.is_admin);
 
@@ -78,7 +71,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
                 OAuthAccess {
                     access_token: oauth_tokens.access_token,
                     refresh_token: oauth_tokens.refresh_token,
-                    expires_at,
+                    expires_at: oauth_tokens.expires_at,
                 },
                 user_info.is_admin,
                 name,

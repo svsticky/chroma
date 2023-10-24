@@ -1,4 +1,3 @@
-use crate::koala::{get_koala_login_url, get_user_info, UserIdFromTokenError};
 use crate::routes::appdata::WebData;
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
@@ -9,7 +8,7 @@ use std::future::Future;
 use std::pin::Pin;
 use tap::TapFallible;
 use thiserror::Error;
-use tracing::{info, trace, warn};
+use tracing::{info, trace};
 
 pub struct Authorization {
     pub user: AuthorizedUser,
@@ -58,16 +57,15 @@ impl FromRequest for Authorization {
         let req = req.clone();
         Box::pin(async move {
             let data: &WebData = req.app_data().unwrap();
+            let oauth = data.koala.oauth_api(data.config.oauth_client_config());
 
             let authorization = req
                 .headers()
                 .get("authorization")
-                .ok_or(AuthorizationError::NoHeader(get_koala_login_url(
-                    &data.config,
-                )))
+                .ok_or(AuthorizationError::NoHeader(oauth.get_login_redirect_uri()))
                 .tap_err(|_| trace!("Request is missing authorization header"))?
                 .to_str()
-                .map_err(|_| AuthorizationError::NoHeader(get_koala_login_url(&data.config)))
+                .map_err(|_| AuthorizationError::NoHeader(oauth.get_login_redirect_uri()))
                 .tap_err(|_| {
                     trace!("Value of authorization header could not be converter to UTF-8 String")
                 })?;
@@ -91,29 +89,25 @@ impl FromRequest for Authorization {
 
             let user = User::get_by_session_id(&data.db, authorization)
                 .await?
-                .ok_or(AuthorizationError::InvalidSession(get_koala_login_url(
-                    &data.config,
-                )))
+                .ok_or(AuthorizationError::InvalidSession(
+                    oauth.get_login_redirect_uri(),
+                ))
                 .tap_err(|_| trace!("Invalid session ID provided ('{authorization}')"))?;
 
             // Check if the access token is still valid
             // E.g. it could have been revoked by Koala
-            let _user_info = get_user_info(&data.config, &user.access_token)
-                .await
-                .map_err(|e| match e {
-                    UserIdFromTokenError::Reqwest(e) => match e.status() {
+            let _user_info =
+                oauth
+                    .get_userinfo(&user.access_token)
+                    .await
+                    .map_err(|e| match e.status() {
                         Some(v) if v.as_u16() == 401 => {
                             info!("Stored session was valid, tokens for koala were not.");
-                            AuthorizationError::InvalidSession(get_koala_login_url(&data.config))
+                            AuthorizationError::InvalidSession(oauth.get_login_redirect_uri())
                         }
                         Some(v) if v.as_u16() == 403 => AuthorizationError::Forbidden,
                         _ => AuthorizationError::KoalaUpstream,
-                    },
-                    UserIdFromTokenError::IntParse(e) => {
-                        warn!("ID Returned by koala is not parseable to an i32: {e}");
-                        AuthorizationError::KoalaUpstream
-                    }
-                })?;
+                    })?;
 
             Ok(Self {
                 user: AuthorizedUser::Koala {

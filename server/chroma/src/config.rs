@@ -112,8 +112,8 @@ impl Config {
     pub fn oauth_client_config(&self) -> cabbage::oauth::ClientConfig {
         cabbage::oauth::ClientConfig::new(
             self.koala_client_id.clone(),
-        self.koala_client_secret.clone(),
-        self.koala_oauth_redirect_uri.clone()
+            self.koala_client_secret.clone(),
+            self.koala_oauth_redirect_uri.clone(),
         )
     }
 

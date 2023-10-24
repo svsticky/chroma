@@ -5,6 +5,7 @@ use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
+use cabbage::KoalaApi;
 use color_eyre::eyre::Error;
 use color_eyre::Result;
 use dal::database::Database;
@@ -12,14 +13,12 @@ use dal::s3::S3Config;
 use dal::storage_engine::StorageEngine;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
 use std::path::PathBuf;
-use cabbage::KoalaApi;
 use tracing::{info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
-use dal::database::UserType::Koala;
 
 mod config;
 mod koala;
@@ -65,10 +64,10 @@ async fn main() -> Result<()> {
     };
 
     let appdata = AppData {
+        koala: KoalaApi::new(config.koala_base_redirect_uri().clone())?,
         db,
         storage,
         config,
-        koala: KoalaApi::new(config.koala_base_uri.clone())?,
     };
 
     info!("Starting web server");
