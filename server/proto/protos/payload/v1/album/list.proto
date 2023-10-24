@@ -4,5 +4,6 @@ package nl.svsticky.chroma;
 import "entity/album.proto";
 
 message ListAlbumsResponse {
-  repeated Album albums = 1;
+  repeated AlbumWithCoverPhoto albums = 1;
 }
+

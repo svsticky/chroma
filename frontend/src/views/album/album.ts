@@ -1,10 +1,12 @@
 import {Http} from "@/http";
 import {ListAlbumsResponse} from "@/generated/payload/v1/album/list";
 import {GetAlbumResponse} from "@/generated/payload/v1/album/get";
-import {Album} from "@/generated/entity/album";
 import {CreateAlbumRequest, CreateAlbumResponse} from "@/generated/payload/v1/album/create";
 import {UpdateAlbumRequest} from "@/generated/payload/v1/album/update";
 import {DeleteAlbumRequest} from "@/generated/payload/v1/album/delete";
+import {PhotoModel, protoPhotoToPhotoModel} from "@/views/photo/photo";
+import {AlbumWithCoverPhoto} from "@/generated/entity/album";
+
 
 export interface AlbumModel {
     /**
@@ -34,20 +36,23 @@ export interface AlbumModel {
      * If `is_draft` is false and this value is `null`, the publisher is a service token.
      */
     publishedBy: string | null,
+
+    coverPhoto: PhotoModel | null,
 }
 
 /**
  * Convert a proto Album to an AlbumModel
  * @param album The proto album to convert
  */
-function protoAlbumToAlbumModel(album: Album): AlbumModel {
+function protoAlbumToAlbumModel(album: AlbumWithCoverPhoto): AlbumModel {
     return <AlbumModel> {
-        id: album.id,
-        coverPhotoId: album.hasCoverPhotoId ? album.coverPhotoId : null,
-        name: album.name,
-        isDraft: album.isDraft,
-        createdBy: album.createdBy.name,
-        publishedBy: album.hasPublishedBy ? album.publishedBy.name : null,
+        id: album.album.id,
+        coverPhotoId: album.album.hasCoverPhotoId ? album.album.coverPhotoId : null,
+        coverPhoto: album.hasCoverPhoto ? protoPhotoToPhotoModel(album.coverPhoto) : null,
+        name: album.album.name,
+        isDraft: album.album.isDraft,
+        createdBy: album.album.createdBy.name,
+        publishedBy: album.album.hasPublishedBy ? album.album.publishedBy.name : null,
     };
 }
 
@@ -88,8 +93,11 @@ export async function saveEditedAlbum(album: AlbumModel): Promise<boolean | unde
  *
  * @return The albums on success. `undefined` on failure
  */
-export async function listAlbums(): Promise<AlbumModel[] | undefined> {
-    const albums = await Http.getBody<ListAlbumsResponse>('/api/v1/album/list', null, ListAlbumsResponse);
+export async function listAlbums(includeCoverPhoto: boolean = true): Promise<AlbumModel[] | undefined> {
+    let query = `include_cover_photo=${includeCoverPhoto}`;
+
+
+    const albums = await Http.getBody<ListAlbumsResponse>(`/api/v1/album/list?${query}`, null, ListAlbumsResponse);
     if(albums instanceof Response) {
         return undefined;
     }
@@ -101,24 +109,29 @@ export async function listAlbums(): Promise<AlbumModel[] | undefined> {
  * Get an album by ID
  * @param id The id of the album
  * @param without_photos Do not retrieve the album's photos
+ * @param includeCoverPhoto Include the cover photo in the response
  * @return If the album was found, the album. If the album was not found, `null`. `undefined` on failure.
  */
-export async function getAlbum(id: string, without_photos: boolean = false): Promise<AlbumModel | null | undefined> {
+export async function getAlbum(id: string, without_photos: boolean = false, includeCoverPhoto: boolean = true): Promise<AlbumModel | null | undefined> {
     let query = `id=${id}`;
     if(without_photos) {
         query = query.concat("&without_photos=true");
     }
 
-    const album = await Http.getBody<GetAlbumResponse>(`/api/v1/album?${query}`, null, GetAlbumResponse);
-    if(album instanceof Response) {
-        if(album.status == 404) {
+    if(!includeCoverPhoto) {
+        query = query.concat("&include_cover_photo=false");
+    }
+
+    const response = await Http.getBody<GetAlbumResponse>(`/api/v1/album?${query}`, null, GetAlbumResponse);
+    if(response instanceof Response) {
+        if(response.status == 404) {
             return null;
         } else {
             return;
         }
     }
 
-    return protoAlbumToAlbumModel(album.album);
+    return protoAlbumToAlbumModel(response.album);
 }
 
 /**

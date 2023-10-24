@@ -23,7 +23,7 @@
         </v-card-title>
         <v-card-text @click="openAlbum">
             <v-img
-                v-if="album.coverPhotoId == null"
+                v-if="album.coverPhoto == null"
                 class="mx-auto"
                 title="No cover image is available"
                 width="30%"
@@ -37,7 +37,7 @@
                 aspect-ratio="1.7778"
                 cover
                 lazy-src="@/assets/hoofd_outline_color.png"
-                :src="coverPhotoUrl">
+                :src="album.coverPhoto.getAsSrcUrl()">
 
                 <template v-slot:placeholder>
                     <div class="d-flex align-center justify-center fill-height">
@@ -80,9 +80,6 @@ export default Vue.extend({
             loading: true,
         }
     },
-    mounted() {
-        this.loadCoverPhoto();
-    },
     computed: {
         coverPhotoUrl(): string | null {
             if(this.loading || this.coverPhoto == null) {
@@ -93,21 +90,6 @@ export default Vue.extend({
         }
     },
     methods: {
-        async loadCoverPhoto() {
-            if(this.album.coverPhotoId == null) {
-                return;
-            }
-
-            this.loading = true;
-            const result = await getPhoto(this.album.coverPhotoId, true);
-            this.loading = false;
-            if(result == undefined) {
-                this.snackbar = errorText;
-                return;
-            }
-
-            this.coverPhoto = result;
-        },
         async deleteAlbum() {
             const result = await deleteAlbum(this.album.id);
             if(result) {

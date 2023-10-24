@@ -5,6 +5,6 @@ import "entity/photo.proto";
 import "entity/album.proto";
 
 message GetAlbumResponse {
-  Album album = 1;
+  AlbumWithCoverPhoto album = 1;
   repeated Photo photos = 2;
 }

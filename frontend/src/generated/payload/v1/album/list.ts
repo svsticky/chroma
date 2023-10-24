@@ -8,7 +8,7 @@ import * as pb_1 from "google-protobuf";
 export class ListAlbumsResponse extends pb_1.Message {
     #one_of_decls: number[][] = [];
     constructor(data?: any[] | {
-        albums?: dependency_1.Album[];
+        albums?: dependency_1.AlbumWithCoverPhoto[];
     }) {
         super();
         pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [1], this.#one_of_decls);
@@ -19,26 +19,26 @@ export class ListAlbumsResponse extends pb_1.Message {
         }
     }
     get albums() {
-        return pb_1.Message.getRepeatedWrapperField(this, dependency_1.Album, 1) as dependency_1.Album[];
+        return pb_1.Message.getRepeatedWrapperField(this, dependency_1.AlbumWithCoverPhoto, 1) as dependency_1.AlbumWithCoverPhoto[];
     }
-    set albums(value: dependency_1.Album[]) {
+    set albums(value: dependency_1.AlbumWithCoverPhoto[]) {
         pb_1.Message.setRepeatedWrapperField(this, 1, value);
     }
     static fromObject(data: {
-        albums?: ReturnType<typeof dependency_1.Album.prototype.toObject>[];
+        albums?: ReturnType<typeof dependency_1.AlbumWithCoverPhoto.prototype.toObject>[];
     }): ListAlbumsResponse {
         const message = new ListAlbumsResponse({});
         if (data.albums != null) {
-            message.albums = data.albums.map(item => dependency_1.Album.fromObject(item));
+            message.albums = data.albums.map(item => dependency_1.AlbumWithCoverPhoto.fromObject(item));
         }
         return message;
     }
     toObject() {
         const data: {
-            albums?: ReturnType<typeof dependency_1.Album.prototype.toObject>[];
+            albums?: ReturnType<typeof dependency_1.AlbumWithCoverPhoto.prototype.toObject>[];
         } = {};
         if (this.albums != null) {
-            data.albums = this.albums.map((item: dependency_1.Album) => item.toObject());
+            data.albums = this.albums.map((item: dependency_1.AlbumWithCoverPhoto) => item.toObject());
         }
         return data;
     }
@@ -47,7 +47,7 @@ export class ListAlbumsResponse extends pb_1.Message {
     serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
         const writer = w || new pb_1.BinaryWriter();
         if (this.albums.length)
-            writer.writeRepeatedMessage(1, this.albums, (item: dependency_1.Album) => item.serialize(writer));
+            writer.writeRepeatedMessage(1, this.albums, (item: dependency_1.AlbumWithCoverPhoto) => item.serialize(writer));
         if (!w)
             return writer.getResultBuffer();
     }
@@ -58,7 +58,7 @@ export class ListAlbumsResponse extends pb_1.Message {
                 break;
             switch (reader.getFieldNumber()) {
                 case 1:
-                    reader.readMessage(message.albums, () => pb_1.Message.addToRepeatedWrapperField(message, 1, dependency_1.Album.deserialize(reader), dependency_1.Album));
+                    reader.readMessage(message.albums, () => pb_1.Message.addToRepeatedWrapperField(message, 1, dependency_1.AlbumWithCoverPhoto.deserialize(reader), dependency_1.AlbumWithCoverPhoto));
                     break;
                 default: reader.skipField();
             }

@@ -1,6 +1,8 @@
 syntax = "proto3";
 package nl.svsticky.chroma;
 
+import "entity/photo.proto";
+
 message Album {
   string id = 1;
   string name = 2;
@@ -20,4 +22,9 @@ message AlbumUser {
   UserType type = 1;
   optional string name = 2;
   int32 id = 3;
+}
+
+message AlbumWithCoverPhoto {
+  Album album = 1;
+  optional Photo coverPhoto = 2;
 }

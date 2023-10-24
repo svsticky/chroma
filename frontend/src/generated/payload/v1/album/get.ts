@@ -9,7 +9,7 @@ import * as pb_1 from "google-protobuf";
 export class GetAlbumResponse extends pb_1.Message {
     #one_of_decls: number[][] = [];
     constructor(data?: any[] | {
-        album?: dependency_2.Album;
+        album?: dependency_2.AlbumWithCoverPhoto;
         photos?: dependency_1.Photo[];
     }) {
         super();
@@ -24,9 +24,9 @@ export class GetAlbumResponse extends pb_1.Message {
         }
     }
     get album() {
-        return pb_1.Message.getWrapperField(this, dependency_2.Album, 1) as dependency_2.Album;
+        return pb_1.Message.getWrapperField(this, dependency_2.AlbumWithCoverPhoto, 1) as dependency_2.AlbumWithCoverPhoto;
     }
-    set album(value: dependency_2.Album) {
+    set album(value: dependency_2.AlbumWithCoverPhoto) {
         pb_1.Message.setWrapperField(this, 1, value);
     }
     get hasAlbum() {
@@ -39,12 +39,12 @@ export class GetAlbumResponse extends pb_1.Message {
         pb_1.Message.setRepeatedWrapperField(this, 2, value);
     }
     static fromObject(data: {
-        album?: ReturnType<typeof dependency_2.Album.prototype.toObject>;
+        album?: ReturnType<typeof dependency_2.AlbumWithCoverPhoto.prototype.toObject>;
         photos?: ReturnType<typeof dependency_1.Photo.prototype.toObject>[];
     }): GetAlbumResponse {
         const message = new GetAlbumResponse({});
         if (data.album != null) {
-            message.album = dependency_2.Album.fromObject(data.album);
+            message.album = dependency_2.AlbumWithCoverPhoto.fromObject(data.album);
         }
         if (data.photos != null) {
             message.photos = data.photos.map(item => dependency_1.Photo.fromObject(item));
@@ -53,7 +53,7 @@ export class GetAlbumResponse extends pb_1.Message {
     }
     toObject() {
         const data: {
-            album?: ReturnType<typeof dependency_2.Album.prototype.toObject>;
+            album?: ReturnType<typeof dependency_2.AlbumWithCoverPhoto.prototype.toObject>;
             photos?: ReturnType<typeof dependency_1.Photo.prototype.toObject>[];
         } = {};
         if (this.album != null) {
@@ -82,7 +82,7 @@ export class GetAlbumResponse extends pb_1.Message {
                 break;
             switch (reader.getFieldNumber()) {
                 case 1:
-                    reader.readMessage(message.album, () => message.album = dependency_2.Album.deserialize(reader));
+                    reader.readMessage(message.album, () => message.album = dependency_2.AlbumWithCoverPhoto.deserialize(reader));
                     break;
                 case 2:
                     reader.readMessage(message.photos, () => pb_1.Message.addToRepeatedWrapperField(message, 2, dependency_1.Photo.deserialize(reader), dependency_1.Photo));

@@ -3,6 +3,7 @@
  * compiler version: 3.19.4
  * source: entity/album.proto
  * git: https://github.com/thesayyn/protoc-gen-ts */
+import * as dependency_1 from "./photo";
 import * as pb_1 from "google-protobuf";
 export enum UserType {
     SERVICE = 0,
@@ -366,5 +367,111 @@ export class AlbumUser extends pb_1.Message {
     }
     static deserializeBinary(bytes: Uint8Array): AlbumUser {
         return AlbumUser.deserialize(bytes);
+    }
+}
+export class AlbumWithCoverPhoto extends pb_1.Message {
+    #one_of_decls: number[][] = [[2]];
+    constructor(data?: any[] | ({
+        album?: Album;
+    } & (({
+        coverPhoto?: dependency_1.Photo;
+    })))) {
+        super();
+        pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+        if (!Array.isArray(data) && typeof data == "object") {
+            if ("album" in data && data.album != undefined) {
+                this.album = data.album;
+            }
+            if ("coverPhoto" in data && data.coverPhoto != undefined) {
+                this.coverPhoto = data.coverPhoto;
+            }
+        }
+    }
+    get album() {
+        return pb_1.Message.getWrapperField(this, Album, 1) as Album;
+    }
+    set album(value: Album) {
+        pb_1.Message.setWrapperField(this, 1, value);
+    }
+    get hasAlbum() {
+        return pb_1.Message.getField(this, 1) != null;
+    }
+    get coverPhoto() {
+        return pb_1.Message.getWrapperField(this, dependency_1.Photo, 2) as dependency_1.Photo;
+    }
+    set coverPhoto(value: dependency_1.Photo) {
+        pb_1.Message.setOneofWrapperField(this, 2, this.#one_of_decls[0], value);
+    }
+    get hasCoverPhoto() {
+        return pb_1.Message.getField(this, 2) != null;
+    }
+    get _coverPhoto() {
+        const cases: {
+            [index: number]: "none" | "coverPhoto";
+        } = {
+            0: "none",
+            2: "coverPhoto"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [2])];
+    }
+    static fromObject(data: {
+        album?: ReturnType<typeof Album.prototype.toObject>;
+        coverPhoto?: ReturnType<typeof dependency_1.Photo.prototype.toObject>;
+    }): AlbumWithCoverPhoto {
+        const message = new AlbumWithCoverPhoto({});
+        if (data.album != null) {
+            message.album = Album.fromObject(data.album);
+        }
+        if (data.coverPhoto != null) {
+            message.coverPhoto = dependency_1.Photo.fromObject(data.coverPhoto);
+        }
+        return message;
+    }
+    toObject() {
+        const data: {
+            album?: ReturnType<typeof Album.prototype.toObject>;
+            coverPhoto?: ReturnType<typeof dependency_1.Photo.prototype.toObject>;
+        } = {};
+        if (this.album != null) {
+            data.album = this.album.toObject();
+        }
+        if (this.coverPhoto != null) {
+            data.coverPhoto = this.coverPhoto.toObject();
+        }
+        return data;
+    }
+    serialize(): Uint8Array;
+    serialize(w: pb_1.BinaryWriter): void;
+    serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+        const writer = w || new pb_1.BinaryWriter();
+        if (this.hasAlbum)
+            writer.writeMessage(1, this.album, () => this.album.serialize(writer));
+        if (this.hasCoverPhoto)
+            writer.writeMessage(2, this.coverPhoto, () => this.coverPhoto.serialize(writer));
+        if (!w)
+            return writer.getResultBuffer();
+    }
+    static deserialize(bytes: Uint8Array | pb_1.BinaryReader): AlbumWithCoverPhoto {
+        const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new AlbumWithCoverPhoto();
+        while (reader.nextField()) {
+            if (reader.isEndGroup())
+                break;
+            switch (reader.getFieldNumber()) {
+                case 1:
+                    reader.readMessage(message.album, () => message.album = Album.deserialize(reader));
+                    break;
+                case 2:
+                    reader.readMessage(message.coverPhoto, () => message.coverPhoto = dependency_1.Photo.deserialize(reader));
+                    break;
+                default: reader.skipField();
+            }
+        }
+        return message;
+    }
+    serializeBinary(): Uint8Array {
+        return this.serialize();
+    }
+    static deserializeBinary(bytes: Uint8Array): AlbumWithCoverPhoto {
+        return AlbumWithCoverPhoto.deserialize(bytes);
     }
 }

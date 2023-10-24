@@ -4,10 +4,10 @@ use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::{Album, Photo};
-use dal::storage_engine::PhotoQuality;
+use dal::storage_engine::{EngineType, PhotoQuality};
 use dal::DalError;
 use futures::future::join_all;
-use proto::GetAlbumResponse;
+use proto::{AlbumWithCoverPhoto, GetAlbumResponse};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -16,6 +16,8 @@ pub struct Query {
     id: String,
     /// Do not include the pictures of the album in the response.
     without_photos: Option<bool>,
+
+    include_cover_photo: Option<bool>,
 }
 
 /// Retrieve an album and all its photos by its ID.
@@ -55,8 +57,28 @@ pub async fn get(
         }
     };
 
+    let cover_photo = if query.include_cover_photo.unwrap_or(true) {
+        if let Some(id) = &album.cover_photo_id {
+            let photo = Photo::get_by_id(&data.db, id).await?
+                .ok_or(Error::NotFound)?;
+
+            let photo = match data.storage.engine_type() {
+                EngineType::S3 => photo.photo_to_proto_url(&data.storage, PhotoQuality::W400).await,
+                EngineType::File => photo.photo_to_proto_bytes(&data.storage, PhotoQuality::W400).await,
+            }.map_err(|e| match e {
+                DalError::Storage(e) => Error::from(e),
+                DalError::Db(e) => Error::from(e),
+            })?;
+
+            Some(photo)
+        } else { None }
+    } else { None };
+
     Ok(Payload(GetAlbumResponse {
         photos,
-        album: Some(album.to_proto().await?),
+        album: Some(AlbumWithCoverPhoto {
+            album: Some(album.to_proto().await?),
+            cover_photo
+        }),
     }))
 }

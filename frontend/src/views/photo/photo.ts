@@ -45,7 +45,7 @@ export class PhotoModel {
  * Convert a proto Photo to a PhotoModel
  * @param photo The proto Photo to convert
  */
-function protoPhotoToPhotoModel(photo: Photo): PhotoModel {
+export function protoPhotoToPhotoModel(photo: Photo): PhotoModel {
     switch(photo.dataType) {
         case PhotoResponseType.URL: {
             return new PhotoModel(photo.id, PhotoDataKind.URL, photo.data.url, undefined);
