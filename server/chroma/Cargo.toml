@@ -28,6 +28,7 @@ webp = "0.2.5"
 img-parts = "0.3.0"
 time = "0.3.28"
 kamadak-exif = "0.5.5"
+cabbage = "0.1.0"
 
 [dev-dependencies]
 serde_json = "1.0.93"

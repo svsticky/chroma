@@ -109,6 +109,14 @@ impl Config {
     /// The default user agent for Koala when none is configured
     const DEFAULT_KOALA_USER_AGENT: &'static str = "Chroma server";
 
+    pub fn oauth_client_config(&self) -> cabbage::oauth::ClientConfig {
+        cabbage::oauth::ClientConfig::new(
+            self.koala_client_id.clone(),
+        self.koala_client_secret.clone(),
+        self.koala_oauth_redirect_uri.clone()
+        )
+    }
+
     /// Get the database configuration specified by the configuration
     pub fn database_config(&self) -> color_eyre::Result<DbConfig> {
         if let Some(url) = &self.db_url {

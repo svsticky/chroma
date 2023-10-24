@@ -12,12 +12,14 @@ use dal::s3::S3Config;
 use dal::storage_engine::StorageEngine;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
 use std::path::PathBuf;
+use cabbage::KoalaApi;
 use tracing::{info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
+use dal::database::UserType::Koala;
 
 mod config;
 mod koala;
@@ -66,6 +68,7 @@ async fn main() -> Result<()> {
         db,
         storage,
         config,
+        koala: KoalaApi::new(config.koala_base_uri.clone())?,
     };
 
     info!("Starting web server");

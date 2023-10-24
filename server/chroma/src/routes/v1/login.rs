@@ -28,14 +28,20 @@ pub struct Query {
 pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirect> {
     // Complete the OAuth2 flow by exchanging the code for a token pair
     trace!("Exchanging received code for Oauth2 tokens with Koala");
-    let oauth_tokens = crate::koala::exchange_code(&data.config, &query.code)
+
+    let oauth_api = data.koala.oauth_api(data.config.oauth_client_config());
+
+    let oauth_tokens = oauth_api
+        .exchange_login_code(&query.code)
         .await
         .map_err(Error::Koala)?;
 
-    let created_at_epoch =
-        chrono::DateTime::parse_from_rfc3339(&oauth_tokens.created_at)?.timestamp();
-    let expires_at = created_at_epoch - oauth_tokens.expires_in;
-    let user = match User::get_by_id(&data.db, oauth_tokens.credentials_id).await? {
+    let userinfo = oauth_api
+        .get_userinfo(&oauth_tokens.access_token)
+        .await
+        .map_err(Error::Koala)?;
+
+    let user = match User::get_by_id(&data.db, userinfo.koala_id).await? {
         Some(mut u) => {
             trace!("User already exists in database, setting new OAuth2 tokens");
 
@@ -43,7 +49,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
             u.set_tokens(
                 oauth_tokens.access_token,
                 oauth_tokens.refresh_token,
-                expires_at,
+                oauth_tokens.expires_at,
             )
             .await?;
             u
