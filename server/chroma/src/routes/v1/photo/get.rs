@@ -8,12 +8,12 @@ use dal::database::Photo;
 use dal::storage_engine::StorageEngineError;
 use dal::DalError;
 use image::{DynamicImage, ImageOutputFormat};
-use proto::get_photo_response::Response;
-use proto::{GetPhotoResponse, PhotoResponseType};
+use proto::{GetPhotoResponse, PhotoRespone, PhotoResponseType};
 use serde::Deserialize;
 use std::io::Cursor;
 use tap::TapFallible;
 use tracing::warn;
+use proto::photo_respone::Response;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
@@ -31,9 +31,9 @@ pub struct Query {
 
 #[derive(Eq, PartialEq, Debug, Default, Deserialize)]
 pub enum ImageFormat {
-    #[default]
     Png,
     Jpeg,
+    #[default]
     WebP,
 }
 
@@ -60,7 +60,9 @@ pub async fn get(
             Ok(p) => {
                 return Ok(Payload(GetPhotoResponse {
                     response_type: PhotoResponseType::Url as i32,
-                    response: Some(Response::Url(p)),
+                    response: Some(PhotoRespone {
+                        response: Some(Response::Url(p))
+                    }),
                 }));
             }
             Err(e) => match e {
@@ -86,7 +88,9 @@ pub async fn get(
 
     Ok(Payload(GetPhotoResponse {
         response_type: PhotoResponseType::InResponse as i32,
-        response: Some(Response::Photo(proto)),
+        response: Some(PhotoRespone {
+            response: Some(Response::Photo(proto))
+        }),
     }))
 }
 

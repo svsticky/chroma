@@ -5,13 +5,5 @@ import "entity/photo.proto";
 
 message GetPhotoResponse {
   PhotoResponseType responseType = 1;
-  oneof response {
-    string url = 2;
-    Photo photo = 3;
-  }
-}
-
-enum PhotoResponseType {
-  URL = 0;
-  InResponse = 1;
+  PhotoRespone response = 2;
 }

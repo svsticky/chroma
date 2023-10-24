@@ -7,3 +7,15 @@ message Photo {
   int64 createdAt = 3;
   bytes photoData = 4;
 }
+
+enum PhotoResponseType {
+  URL = 0;
+  InResponse = 1;
+}
+
+message PhotoRespone {
+  oneof response {
+    string url = 1;
+    Photo photo = 2;
+  }
+}

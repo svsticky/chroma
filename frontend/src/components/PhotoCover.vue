@@ -49,7 +49,7 @@ export default Vue.extend({
     },
     computed: {
         coverPhotoUrl(): string {
-            return 'data:image/png;base64,' + btoa(
+            return 'data:image/webp;base64,' + btoa(
                 this.bytes.reduce((data, byte) => data + String.fromCharCode(byte), '')
             );
         }

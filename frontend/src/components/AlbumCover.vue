@@ -89,7 +89,7 @@ export default Vue.extend({
                 return null;
             }
 
-            return 'data:image/png;base64,' + btoa(
+            return 'data:image/webp;base64,' + btoa(
                 this.coverPhotoBytes.reduce((data, byte) => data + String.fromCharCode(byte), '')
             );
         }
