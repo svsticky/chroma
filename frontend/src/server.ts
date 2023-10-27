@@ -1,1 +1,1 @@
-export const server = process.env.NODE_ENV === 'development' ? "http://localhost:8000" : "";
+export const server = process.env.NODE_ENV === 'development' ? "https://chroma.dev.svsticky.nl" : "";

@@ -1,9 +1,7 @@
-import Vue from 'vue'
-import VueRouter, { RouteConfig } from 'vue-router'
+import { createRouter, createWebHistory, RouteRecord, RouteRecordRaw } from 'vue-router'
 
-Vue.use(VueRouter)
 
-const routes: Array<RouteConfig> = [
+const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     component: () => import('../views/album/AlbumGridView.vue')
@@ -37,8 +35,8 @@ const routes: Array<RouteConfig> = [
     component: () => import('../views/user/UserListView.vue'),
   }
 ]
-
-const router = new VueRouter({
+const router = createRouter({
+  history: createWebHistory(),
   routes
 })
 

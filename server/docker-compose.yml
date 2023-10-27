@@ -29,7 +29,7 @@ services:
     volumes:
       - "postgres_data_chroma:/var/lib/postgresql/data/pgdata:rw"
     ports:
-      - "5432:5432"
+      - "5434:5432"
     environment:
       - "POSTGRES_DB=sticky_chroma"
       - "POSTGRES_USER=sticky_chroma"

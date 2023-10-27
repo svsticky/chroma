@@ -17,6 +17,8 @@ pub struct Config {
     pub db_password: Option<String>,
     /// Database connection url
     pub db_url: Option<String>,
+    /// The port to listen on
+    pub db_port: Option<u16>,
 
     /// The storage engine to be used
     #[serde(default = "default_storage_engine")]
@@ -114,8 +116,8 @@ impl Config {
         if let Some(url) = &self.db_url {
             Ok(DbConfig::Url { url })
         } else {
-            match (&self.db_host, &self.db_username, &self.db_password, &self.db_database) {
-                (Some(host), Some(user), Some(passw), Some(database)) => Ok(DbConfig::Parameters { host, user, passw, database }),
+            match (&self.db_host, &self.db_username, &self.db_password, &self.db_database, self.db_port) {
+                (Some(host), Some(user), Some(passw), Some(database), Some(port) ) => Ok(DbConfig::Parameters { host, user, passw, database, port}),
                 _ => Err(Error::msg("Database is configured incorrectly. You must specify either a `db_url` OR `db_host`, `db_username`, `db_password` and `db_database`"))
             }
         }

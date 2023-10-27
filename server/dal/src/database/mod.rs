@@ -48,6 +48,7 @@ pub enum DbConfig<'a> {
         user: &'a str,
         passw: &'a str,
         database: &'a str,
+        port: u16
     },
 }
 
@@ -59,7 +60,8 @@ impl Database {
                 user,
                 passw,
                 database,
-            } => Self::configure_with_parameters(host, user, passw, database).await?,
+                port
+            } => Self::configure_with_parameters(host, user, passw, database, port).await?,
             DbConfig::Url { url } => Self::configure_with_url(url).await?,
         };
 
@@ -87,9 +89,11 @@ impl Database {
         user: &str,
         passw: &str,
         database: &str,
+        port: u16
     ) -> Result<Pool<Postgres>, sqlx::Error> {
         let pg_connect = PgConnectOptions::new()
             .host(host)
+            .port(port)
             .database(database)
             .username(user)
             .password(passw);
