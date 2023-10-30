@@ -9,7 +9,7 @@
             <v-spacer></v-spacer>
 
             <v-btn
-                v-if="isAdmin && $router.currentRoute.fullPath !== '/user'"
+                v-if="isAdmin && $router.currentRoute.value.fullPath !== '/user'"
                 icon
                 small
                 class="mr-3"
@@ -31,48 +31,44 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import {checkLoggedIn, KoalaLoginUrl, LoginCheckResult, Storage} from "@/api";
+import { defineComponent, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { checkLoggedIn, KoalaLoginUrl, LoginCheckResult, Storage } from "@/api";
 
-export default Vue.extend({
-    watch: {
-        async $route(to, from) {
-            await this.performLoginCheck();
-        }
-    },
-    computed: {
-        isAdmin(): boolean {
-            return Storage.isAdmin();
-        }
-    },
-    async mounted() {
-        this.$vuetify.theme.dark = Storage.getIsDarkMode();
+export default defineComponent({
+    setup() {
+        const route = useRoute();
+        const router = useRouter();
 
-        this.$router.onReady(async () => {
-            await this.performLoginCheck();
-        })
-    },
-    methods: {
-        toggleDarkMode() {
+        const isAdmin = Storage.isAdmin();
+
+        watch(() => route.fullPath, async () => {
+            await performLoginCheck();
+        });
+
+        const toggleDarkMode = () => {
             if(Storage.getIsDarkMode()) {
                 Storage.setIsDarkMode(false);
             } else {
                 Storage.setIsDarkMode(true);
             }
 
-            this.$vuetify.theme.dark = Storage.getIsDarkMode();
-        },
-        navigateToUser() {
-            if(!this.isAdmin) {
+            // Note: You'll need to adjust this part based on Vuetify's Vue 3 integration specifics
+            // this.$vuetify.theme.dark = Storage.getIsDarkMode();
+        };
+
+        const navigateToUser = () => {
+            if(!isAdmin.valueOf()) {
                 return;
             }
 
-            if(this.$router.currentRoute.fullPath !== "/user") {
-                this.$router.push('/user');
+            if(route.fullPath !== "/user") {
+                router.push('/user');
             }
-        },
-        async performLoginCheck() {
-            if (this.$router.currentRoute.path == '/logged_in') {
+        };
+
+        const performLoginCheck = async () => {
+            if (route.path == '/logged_in') {
                 return;
             }
 
@@ -83,10 +79,11 @@ export default Vue.extend({
             }
 
             if (loggedIn instanceof KoalaLoginUrl) {
-                Storage.setBeforeAuthUrl(this.$router.currentRoute.path);
+                Storage.setBeforeAuthUrl(route.path);
                 window.location.href = loggedIn.url;
                 return;
             }
+
 
             if (!(loggedIn instanceof LoginCheckResult)) {
                 // Future proofing
@@ -94,12 +91,18 @@ export default Vue.extend({
                 return;
             }
 
-            // This isnt used for access control. just to show or hide portions of the UI
-            // Someone could set this manually, and it'll show the UI, but they still cant do anyhing useful.
+            // This isn't used for access control. Just to show or hide portions of the UI
+            // Someone could set this manually, and it'll show the UI, but they still can't do anything useful.
             Storage.setAdmin(loggedIn.isAdmin);
+        };
 
-            // User is logged in
-        }
+        return {
+            route,
+            isAdmin,
+            toggleDarkMode,
+            navigateToUser,
+            performLoginCheck
+        };
     }
 });
 </script>

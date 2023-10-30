@@ -34,78 +34,73 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import {InputValidationRules} from "vuetify";
-import {checkScope, errorText, Storage} from "@/api";
-import {createAlbum} from "@/views/album/album";
+import { defineComponent, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { checkScope, errorText, Storage } from "@/api";
+import { createAlbum } from "@/views/album/album";
 import ReturnButton from "@/components/ReturnButton.vue";
 
-interface Data {
-    snackbar: string | null,
-    loading: boolean,
-    album: {
-        name: string | null,
-        isDraft: boolean,
-    },
-    valid: boolean,
-    rules: {
-        name: InputValidationRules
-    },
-    forceDraft: boolean,
-}
+export default defineComponent({
+    name: 'CreateAlbumComponent',
+    components: { ReturnButton },
+    setup() {
+        const router = useRouter();
+        const snackbar = ref<string | null>(null);
+        const loading = ref<boolean>(false);
+        const album = ref({
+            name: null as string | null,
+            isDraft: false
+        });
+        const valid = ref<boolean>(true);
+        const rules = ref({
+            name: [
+                (v: string) => !!v || "Name is required",
+            ]
+        });
+        const forceDraft = ref<boolean>(true);
 
-export default Vue.extend({
-    components: {ReturnButton},
-    data(): Data {
-        return {
-            snackbar: null,
-            loading: false,
-            album: {
-                name: null,
-                isDraft: false,
-            },
-            valid: true,
-            rules: {
-                name: [
-                    v => !!v || "Name is required",
-                ]
-            },
-            forceDraft: true,
-        }
-    },
-    mounted() {
-        this.$router.onReady(async () => {
-            if(!Storage.isAdmin()) {
-                const hasScope = await checkScope("nl.svsticky.chroma.album.create");
-                if(!hasScope) {
-                    this.$router.back();
-                    return;
-                }
+        const loadForceDraft = async () => {
+            forceDraft.value = !Storage.isAdmin();
+            if(forceDraft.value) {
+                album.value.isDraft = true;
             }
+        };
 
-            await this.loadForceDraft();
-        })
-    },
-    methods: {
-        async loadForceDraft() {
-            this.forceDraft = !Storage.isAdmin();
-            if(this.forceDraft) {
-                this.album.isDraft = true;
-            }
-        },
-        async create() {
-            this.loading = true;
-            const result = await createAlbum(this.album.name!, this.album.isDraft!);
-            this.loading = false;
+        const create = async () => {
+            loading.value = true;
+            const result = await createAlbum(album.value.name!, album.value.isDraft!);
+            loading.value = false;
 
             if(result == undefined) {
-                this.snackbar = errorText;
+                snackbar.value = errorText;
                 return;
             }
 
-            this.snackbar = 'Album created';
-            await this.$router.push(`/album/edit?id=${result}`);
+            snackbar.value = 'Album created';
+            await router.push(`/album/edit?id=${result}`);
+        };
+        if(!Storage.isAdmin()) {
+            checkScope("nl.svsticky.chroma.album.create").then(hasScope => {
+                if(!hasScope) {
+                    router.back();
+                    return;
+                }
+            });
         }
+
+        loadForceDraft();
+
+
+        return {
+            snackbar,
+            loading,
+            album,
+            valid,
+            rules,
+            forceDraft,
+            loadForceDraft,
+            create
+        };
     }
-})
+});
 </script>

@@ -39,61 +39,67 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import {createPhoto} from "@/views/photo/photo";
+import { defineComponent, ref } from 'vue';
+import { createPhoto } from "@/views/photo/photo";
 
-interface Data {
-    snackbar: string | null,
-    loading: boolean,
-    photos: File[],
-    uploadProgress: number,
-    uploadTotal: number,
-}
-
-export default Vue.extend({
+export default defineComponent({
+    name: 'UploadPhotoComponent',
     props: {
         enabled: Boolean,
         albumId: String,
     },
-    data(): Data {
-        return {
-            snackbar: null,
-            loading: false,
-            photos: [],
-            uploadProgress: 0,
-            uploadTotal: 0,
-        }
-    },
-    methods: {
-        async upload() {
-            this.loading = true;
+    setup(props, { emit }) {
+        const snackbar = ref<string | null>(null);
+        const loading = ref<boolean>(false);
+        const photos = ref<File[]>([]);
+        const uploadProgress = ref<number>(0);
+        const uploadTotal = ref<number>(0);
 
-            this.uploadProgress = 0;
-            this.uploadTotal = this.photos.length;
+        const upload = async () => {
+            loading.value = true;
 
-            const results = await Promise.all(this.photos.map(async photoFile => {
-                const photoBytes = new Uint8Array(await photoFile.arrayBuffer());
-                const result = await createPhoto(this.albumId, photoBytes);
-
-                this.uploadProgress++;
-
-                return result != undefined;
-            }));
-            this.loading = false;
-
-            const failures = results.filter(result => !result);
-            if(failures.length == 0) {
-                // Success
-                this.close(true);
+            uploadProgress.value = 0;
+            uploadTotal.value = photos.value.length;
+            if (props.albumId == null ){
+                snackbar.value = 'Album ID is null';
                 return;
             }
 
-            this.snackbar = `Failed to upload ${failures.length} photos.`
-        },
-        close(success: boolean) {
-            this.photos = [];
-            this.$emit('close', success);
-        }
+
+            const results = await Promise.all(photos.value.map(async photoFile => {
+                const photoBytes = new Uint8Array(await photoFile.arrayBuffer());
+                const result = await createPhoto(props.albumId!, photoBytes);
+
+                uploadProgress.value++;
+
+                return result !== undefined;
+            }));
+            loading.value = false;
+
+            const failures = results.filter(result => !result);
+            if(failures.length === 0) {
+                // Success
+                close(true);
+                return;
+            }
+
+            snackbar.value = `Failed to upload ${failures.length} photos.`;
+        };
+
+        const close = (success: boolean) => {
+            photos.value = [];
+            emit('close', success);
+        };
+
+        return {
+            snackbar,
+            loading,
+            photos,
+            uploadProgress,
+            uploadTotal,
+            upload,
+            close
+        };
     }
-})
+});
 </script>

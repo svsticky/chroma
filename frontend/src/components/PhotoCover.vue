@@ -32,10 +32,10 @@
 </template>
 
 <script lang="ts">
-import Vue, {PropType} from 'vue';
-import {PhotoDataKind, PhotoModel} from "@/views/photo/photo";
+import { defineComponent, computed, PropType} from 'vue';
+import { PhotoModel } from "@/views/photo/photo";
 
-export default Vue.extend({
+export default defineComponent({
     props: {
         photo: {
             type: Object as PropType<PhotoModel>,
@@ -43,15 +43,14 @@ export default Vue.extend({
         },
         canSetThumbnail: Boolean,
         canDelete: Boolean,
-        isCover: {
-            type: Boolean,
-            required: false,
-        }
+        isCover: Boolean
     },
-    computed: {
-        coverPhotoUrl(): string {
-            return this.photo.getAsSrcUrl();
-        }
+    setup(props) {
+        const coverPhotoUrl = computed(() => props.photo.getAsSrcUrl());
+
+        return {
+            coverPhotoUrl
+        };
     }
 })
 </script>

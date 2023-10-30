@@ -9,7 +9,7 @@
                 color="primary"
                 fab
                 small
-                @click="deleteAlbum">
+                @click="DeleteAlbum">
                 <v-icon>mdi-trash-can-outline</v-icon>
             </v-btn>
             <v-btn
@@ -53,18 +53,13 @@
 </template>
 
 <script lang="ts">
-import Vue, {PropType} from 'vue';
-import {AlbumModel, deleteAlbum} from "@/views/album/album";
-import {errorText} from "@/api";
-import {getPhoto, PhotoModel} from "@/views/photo/photo";
+import { defineComponent, ref, computed, PropType } from 'vue';
+import { AlbumModel, deleteAlbum } from "@/views/album/album";
+import { errorText } from "@/api";
+import { getPhoto, PhotoModel } from "@/views/photo/photo";
+import { useRouter } from 'vue-router';
 
-interface Data {
-    snackbar: string | null,
-    coverPhoto: PhotoModel | null,
-    loading: boolean,
-}
-
-export default Vue.extend({
+export default defineComponent({
     props: {
         album: {
             type: Object as PropType<AlbumModel>,
@@ -73,37 +68,46 @@ export default Vue.extend({
         canEdit: Boolean,
         canDelete: Boolean,
     },
-    data(): Data {
-        return {
-            snackbar: null,
-            coverPhoto: null,
-            loading: true,
-        }
-    },
-    computed: {
-        coverPhotoUrl(): string | null {
-            if(this.loading || this.coverPhoto == null) {
+    setup(props, context) {
+        const snackbar = ref<string | null>(null);
+        const coverPhoto = ref<PhotoModel | null>(null);
+        const loading = ref<boolean>(true);
+        const router = useRouter();
+
+
+        const coverPhotoUrl = computed(() => {
+            if (loading.value || coverPhoto.value == null) {
                 return null;
             }
+            return coverPhoto.value.getAsSrcUrl();
+        });
 
-            return this.coverPhoto.getAsSrcUrl();
-        }
-    },
-    methods: {
-        async deleteAlbum() {
-            const result = await deleteAlbum(this.album.id);
-            if(result) {
-                this.requestUpdate();
+        const DeleteAlbum = async () => {
+            const result = await deleteAlbum(props.album.id);
+            if (result) {
+                requestUpdate();
             } else {
-                this.snackbar = errorText;
+                snackbar.value = errorText;
             }
-        },
-        requestUpdate() {
-            this.$emit('change');
-        },
-        openAlbum() {
-            this.$router.push(`/album/view?id=${this.album.id}`)
-        }
+        };
+
+        const requestUpdate = () => {
+            context.emit("update");
+        };
+
+        const openAlbum = () => {
+            router.push(`/album/view?id=${props.album.id}`);
+        };
+
+        return {
+            snackbar,
+            coverPhoto,
+            loading,
+            coverPhotoUrl,
+            DeleteAlbum,
+            requestUpdate,
+            openAlbum
+        };
     }
 })
 </script>

@@ -44,105 +44,83 @@
 </template>
 
 <script lang="ts">
-import Vue, {PropType} from "vue";
-import {getAvailableScopes, getUserScopes, UserModel} from "@/views/user/user";
-import {updateUserScopes} from "@/views/user/user";
-import {errorText} from "@/api";
+import { defineComponent, ref, watch, onMounted, PropType} from 'vue';
+import { getAvailableScopes, getUserScopes, UserModel, updateUserScopes } from "@/views/user/user";
+import { errorText } from "@/api";
 
-interface Data {
-    snackbar: string | null,
-    loading: {
-        availableScopes: boolean,
-        updateScopes: boolean,
-    },
-    scopes: string[],
-    availableScopes: string[]
-}
-
-export default Vue.extend({
+export default defineComponent({
     props: {
-        enabled: {
-            type: Boolean,
-            required: true,
-        },
-        user: {
-            type: Object as PropType<UserModel>,
-            required: false,
-        }
+        enabled: Boolean,
+        user: Object as PropType<UserModel | undefined>,
     },
-    watch: {
-        enabled() {
-            this.scopes = [];
-            this.loadAvailableScopes();
-        }
-    },
-    mounted() {
-        this.loadAvailableScopes();
-    },
-    data(): Data {
+    setup(props, context) {
+        const snackbar = ref<string | null>(null);
+        const loading = ref({
+            availableScopes: true,
+            updateScopes: false,
+        });
+        const scopes = ref<string[]>([]);
+        const availableScopes = ref<string[]>([]);
+
+        const loadAvailableScopes = async () => {
+            loading.value.availableScopes = true;
+            const available = await getAvailableScopes();
+            loading.value.availableScopes = false;
+
+            if (!available) {
+                snackbar.value = errorText;
+                return;
+            }
+
+            const grantedScopes = await getUserScopes(props.user!.id);
+            if (!grantedScopes) {
+                snackbar.value = errorText;
+                return;
+            }
+
+            const grantedScopeNames = grantedScopes.map(f => f.scope);
+            const scopesGrantable = available.filter(f => !grantedScopeNames.includes(f));
+            availableScopes.value = scopesGrantable;
+        };
+
+        const grantScope = async () => {
+            if (!props.user) return;
+
+            loading.value.updateScopes = true;
+            const currentScopes = await getUserScopes(props.user.id);
+            if (!currentScopes) {
+                loading.value.updateScopes = false;
+                snackbar.value = errorText;
+                return;
+            }
+
+            const newScopesList = [...currentScopes.map(f => f.scope), ...scopes.value];
+            const result = await updateUserScopes(props.user.id, newScopesList);
+            loading.value.updateScopes = false;
+
+            if (!result) {
+                snackbar.value = errorText;
+                return;
+            }
+
+            context.emit('close', true);
+        };
+
+        watch(() => props.enabled, () => {
+            scopes.value = [];
+            loadAvailableScopes();
+        });
+
+        onMounted(loadAvailableScopes);
+
         return {
-            snackbar: null,
-            loading: {
-                availableScopes: true,
-                updateScopes: false,
-            },
-            scopes: [],
-            availableScopes: [],
-        }
-    },
-    methods: {
-        async loadAvailableScopes() {
-            this.loading.availableScopes = true;
-            const availableScopes = await getAvailableScopes();
-            this.loading.availableScopes = false;
-
-            if(availableScopes == undefined) {
-                this.snackbar = errorText;
-                this.loading.availableScopes = false;
-                return;
-            }
-
-            const grantedScopes = await getUserScopes(this.user!.id);
-            this.loading.availableScopes = false;
-
-            if(grantedScopes == undefined) {
-                this.snackbar = errorText;
-                return;
-            }
-
-            let grantedScopeNames = grantedScopes.map(f => f.scope)
-            let scopesGrantable = availableScopes
-                .filter(f => !grantedScopeNames.includes(f));
-
-            this.availableScopes = scopesGrantable;
-        },
-        async grantScope() {
-            if(this.user == undefined) return;
-
-            this.loading.updateScopes = true;
-
-            const currentScopes = await getUserScopes(this.user!.id);
-            if(currentScopes == undefined) {
-                this.loading.updateScopes = false;
-                this.snackbar = errorText;
-                return;
-            }
-
-            let newScopes = currentScopes.map(f => f.scope);
-            newScopes = newScopes.concat(this.scopes);
-
-            const result = await updateUserScopes(this.user!.id, newScopes);
-            this.loading.updateScopes = false;
-
-            if(result == undefined) {
-                this.snackbar = errorText;
-                return;
-            }
-
-            this.$emit('close', true);
-
-        }
+            snackbar,
+            loading,
+            scopes,
+            availableScopes,
+            loadAvailableScopes,
+            grantScope
+        };
     }
 })
-
 </script>

@@ -1,15 +1,16 @@
-import { createVuetify, ThemeDefinition} from 'vuetify';
-import 'vuetify/dist/vuetify.min.css';
+import 'vuetify/styles'
+import { createVuetify } from 'vuetify'
+import * as components from 'vuetify/components'
+import * as directives from 'vuetify/directives'
 
-
-const lightTheme: ThemeDefinition = {
+const lightTheme = {
     dark: false,
     colors:{
         primary: "#61518F",
         secondary: "#90EE02"
     }
 }
-const darkTheme: ThemeDefinition = {
+const darkTheme = {
     dark: true,
     colors:{
         primary: "#61518F",
@@ -25,6 +26,8 @@ export default createVuetify({
             light: lightTheme,
             dark: darkTheme
         }
-    }
+    },
+    components,
+    directives
 });
 

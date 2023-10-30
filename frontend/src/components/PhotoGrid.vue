@@ -11,7 +11,7 @@
                         :is-cover="albumModel?.coverPhotoId === pair[0].id"
                         :photo="pair[0]"
                         @select-cover="selectCover(pair[0])"
-                        @deleted="deletePhoto(pair[0])"
+                        @deleted="deletePhotoFn(pair[0])"
                     ></PhotoCover>
                 </v-col>
                 <v-col v-if="pair.length === 2">
@@ -21,7 +21,7 @@
                         :is-cover="albumModel?.coverPhotoId === pair[1].id"
                         :photo="pair[1]"
                         @select-cover="selectCover(pair[1])"
-                        @deleted="deletePhoto(pair[1])"
+                        @deleted="deletePhotoFn(pair[1])"
                     ></PhotoCover>
                 </v-col>
             </v-row>
@@ -34,112 +34,115 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import {deletePhoto, listPhotosInAlbum, PhotoModel} from "@/views/photo/photo";
+import { defineComponent, ref, watch, onMounted, computed } from 'vue';
+import { deletePhoto, listPhotosInAlbum, PhotoModel } from "@/views/photo/photo";
 import PhotoCover from "@/components/PhotoCover.vue";
-import {checkScope, errorText, Storage} from "@/api";
-import {AlbumModel, getAlbum, saveEditedAlbum} from "@/views/album/album";
+import { checkScope, errorText, Storage } from "@/api";
+import { AlbumModel, getAlbum, saveEditedAlbum } from "@/views/album/album";
 
-interface Data {
-    snackbar: string | null,
-    photos: PhotoModel[],
-    loading: boolean,
-    albumModel: AlbumModel | null,
-    canEdit: boolean,
-    canDeletePhoto: boolean,
-}
-
-export default Vue.extend({
-    components: {PhotoCover},
+export default defineComponent({
+    components: { PhotoCover },
     props: {
         albumId: String,
-        update: {
-            type: Number,
-            required: false,
-        },
-        edit: {
-            type: Boolean,
-            required: false,
-        }
+        update: Number,
+        edit: Boolean
     },
-    data(): Data {
-        return {
-            snackbar: null,
-            photos: [],
-            loading: true,
-            albumModel: null,
-            canDeletePhoto: false,
-            canEdit: false,
-        }
-    },
-    watch: {
-        update() {
-            this.loadPhotos();
-        }
-    },
-    computed: {
-        chunkedPhotos(): PhotoModel[][] {
-            const result = [];
-            for(let i = 0; i < this.photos.length; i += 2) {
-                result.push(this.photos.slice(i, i + 2))
+    setup(props) {
+        const snackbar = ref<string | null>(null);
+        const photos = ref<PhotoModel[]>([]);
+        const loading = ref<boolean>(true);
+        const albumModel = ref<AlbumModel | null>(null);
+        const canDeletePhoto = ref<boolean>(false);
+        const canEdit = ref<boolean>(false);
+
+        const chunkedPhotos = computed(() => {
+            const result: PhotoModel[][] = [];
+            for(let i = 0; i < photos.value.length; i += 2) {
+                result.push(photos.value.slice(i, i + 2));
             }
+            return result;
+        });
 
-            return result
-        }
-    },
-    async mounted() {
-        await this.loadPhotos();
-        await this.loadCoverData();
+        const loadPhotos = async () => {
+            loading.value = true;
+            if (!props.albumId) {
+                snackbar.value = errorText;
+                return;
+            }
+            const result = await listPhotosInAlbum(props.albumId, true);
+            loading.value = false;
 
-        if(Storage.isAdmin()) {
-            this.canDeletePhoto = true;
-            this.canEdit = true;
-        } else if(this.edit) {
-            this.canDeletePhoto = await checkScope("nl.svsticky.chroma.photo.delete") ?? false;
-            this.canEdit = await checkScope("nl.svsticky.chroma.album.update") ?? false;
-        }
-    },
-    methods: {
-        async loadPhotos() {
-            this.loading = true;
-            const result = await listPhotosInAlbum(this.albumId!, true);
-            this.loading = false;
-
-            if(result == undefined) {
-                this.snackbar = errorText;
+            if(!result) {
+                snackbar.value = errorText;
                 return;
             }
 
-            this.photos = result;
-        },
-        async loadCoverData() {
-            const result = await getAlbum(this.albumId!, true);
+            photos.value = result;
+        };
 
-            if(result == undefined) {
-                this.snackbar = errorText;
+        const loadCoverData = async () => {
+            if (!props.albumId) {
+                snackbar.value = errorText;
+                return;
+            }
+            const result = await getAlbum(props.albumId, true);
+            
+            if(!result) {
+                snackbar.value = errorText;
                 return;
             }
 
-            this.albumModel = result;
-        },
-        async deletePhoto(photo: PhotoModel) {
+            albumModel.value = result;
+        };
+
+        const deletePhotoFn = async (photo: PhotoModel) => {
             const result = await deletePhoto(photo.id);
             if(result) {
-                await this.loadPhotos();
+                await loadPhotos();
             } else {
-                this.snackbar = errorText;
+                snackbar.value = errorText;
             }
-        },
-        async selectCover(photo: PhotoModel) {
-            this.albumModel!.coverPhotoId = photo.id;
-            const result = await saveEditedAlbum(this.albumModel!);
+        };
 
-            if(result) {
-                this.snackbar = "Cover updated";
-            } else {
-                this.snackbar = errorText;
+        const selectCover = async (photo: PhotoModel) => {
+            if (albumModel.value) {
+                albumModel.value.coverPhotoId = photo.id;
+                const result = await saveEditedAlbum(albumModel.value);
+
+                snackbar.value = result ? "Cover updated" : errorText;
             }
-        }
+        };
+
+        watch(() => props.update, async () => {
+            await loadPhotos();
+        });
+
+        onMounted(async () => {
+            await loadPhotos();
+            await loadCoverData();
+
+            if(Storage.isAdmin()) {
+                canDeletePhoto.value = true;
+                canEdit.value = true;
+            } else if(props.edit) {
+                canDeletePhoto.value = await checkScope("nl.svsticky.chroma.photo.delete") ?? false;
+                canEdit.value = await checkScope("nl.svsticky.chroma.album.update") ?? false;
+            }
+        });
+
+        return {
+            snackbar,
+            photos,
+            loading,
+            albumModel,
+            canDeletePhoto,
+            canEdit,
+            chunkedPhotos,
+            loadPhotos,
+            loadCoverData,
+            deletePhotoFn,
+            selectCover
+        };
     }
 })
 </script>

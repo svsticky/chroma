@@ -5,10 +5,12 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
+import { defineComponent, ref, watch, onMounted, computed } from 'vue';
 
-export default Vue.extend({
-
-
-})
+export default defineComponent({
+    setup() {
+        return {
+        };
+    }
+});
 </script>

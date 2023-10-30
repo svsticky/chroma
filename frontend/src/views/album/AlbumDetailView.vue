@@ -8,10 +8,10 @@
         <v-card v-else>
             <v-card-title>
                 <ReturnButton></ReturnButton>
-                Album {{ album.name }}</v-card-title>
+                Album {{ album?.name }}</v-card-title>
             <v-card-text>
                 <PhotoGrid
-                    :album-id="album.id"
+                    :album-id="album?.id"
                 ></PhotoGrid>
             </v-card-text>
         </v-card>
@@ -19,31 +19,22 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import {AlbumModel, getAlbum} from "@/views/album/album";
+import { defineComponent, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { AlbumModel, getAlbum } from "@/views/album/album";
 import PhotoGrid from "@/components/PhotoGrid.vue";
 import ReturnButton from "@/components/ReturnButton.vue";
 
-interface Data {
-    snackbar: string | null,
-    album: AlbumModel | null,
-    loading: boolean
-}
+export default defineComponent({
+    name: 'AlbumComponent',
+    components: { ReturnButton, PhotoGrid },
+    setup() {
+        const router = useRouter();
+        const snackbar = ref<string | null>(null);
+        const album = ref<AlbumModel | null>(null);
+        const loading = ref<boolean>(true);
 
-export default Vue.extend({
-    components: {ReturnButton, PhotoGrid},
-    data(): Data {
-        return {
-            snackbar: null,
-            album: null,
-            loading: true,
-        }
-    },
-    async mounted() {
-        await this.loadAlbum();
-    },
-    methods: {
-        getIdInner(): string | null {
+        const getIdInner = (): string | null => {
             const paramsRaw = window.location.hash.split('?');
             if(paramsRaw.length != 2) {
                 return null;
@@ -51,28 +42,41 @@ export default Vue.extend({
 
             const params = new URLSearchParams(paramsRaw[1]);
             return params.get('id');
-        },
-        async getId(): Promise<string> {
-            const id = this.getIdInner();
+        };
+
+        const getId = async (): Promise<string> => {
+            const id = getIdInner();
             if(id == null) {
-                await this.$router.back();
+                await router.back();
             }
 
             return id!;
-        },
-        async loadAlbum() {
-            this.loading = true;
-            const id = await this.getId();
+        };
+
+        const loadAlbum = async () => {
+            loading.value = true;
+            const id = await getId();
             const result = await getAlbum(id, true);
-            this.loading = false;
+            loading.value = false;
 
             if(result == undefined) {
-                await this.$router.back();
+                await router.back();
                 return;
             }
 
-            this.album = result;
-        },
+            album.value = result;
+        };
+
+        loadAlbum();
+
+        return {
+            snackbar,
+            album,
+            loading,
+            getIdInner,
+            getId,
+            loadAlbum
+        };
     }
-})
+});
 </script>

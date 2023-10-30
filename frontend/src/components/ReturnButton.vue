@@ -1,6 +1,6 @@
 <template>
     <v-btn
-        @click="$router.back()"
+        @click="goBack"
         title="Go back"
         icon
         small
@@ -10,9 +10,23 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
+import { defineComponent } from 'vue';
+import { useRouter } from 'vue-router';
 
-export default Vue.extend({})
+export default defineComponent({
+    name: 'ReturnButtonComponent',
+    setup() {
+        const router = useRouter();
+
+        const goBack = () => {
+            router.back();
+        };
+
+        return {
+            goBack
+        };
+    }
+});
 </script>
 
 <style scoped>
