@@ -21,7 +21,6 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
 mod config;
-mod koala;
 mod routes;
 
 #[tokio::main]
