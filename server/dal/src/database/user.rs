@@ -111,7 +111,7 @@ impl<'a> User<'a> {
 
     pub async fn set_is_admin(&mut self, is_admin: bool) -> DbResult<()> {
         if self.is_admin == is_admin {
-            return Ok(())
+            return Ok(());
         }
 
         sqlx::query("UPDATE users SET is_admin = ? WHERE koala_id = ?")
