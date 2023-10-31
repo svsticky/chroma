@@ -109,6 +109,21 @@ impl<'a> User<'a> {
         })
     }
 
+    pub async fn set_is_admin(&mut self, is_admin: bool) -> DbResult<()> {
+        if self.is_admin == is_admin {
+            return Ok(());
+        }
+
+        sqlx::query("UPDATE users SET is_admin = ? WHERE koala_id = ?")
+            .bind(is_admin)
+            .bind(&self.koala_id)
+            .execute(&**self.db)
+            .await?;
+        self.is_admin = is_admin;
+
+        Ok(())
+    }
+
     pub async fn get_by_id(db: &'a Database, koala_id: i32) -> DbResult<Option<User<'a>>> {
         let user: Option<_User> = sqlx::query_as("SELECT * FROM users WHERE koala_id = $1")
             .bind(koala_id)

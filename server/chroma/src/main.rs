@@ -5,6 +5,7 @@ use crate::routes::appdata::{AppData, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
+use cabbage::KoalaApi;
 use color_eyre::eyre::Error;
 use color_eyre::Result;
 use dal::database::Database;
@@ -63,6 +64,7 @@ async fn main() -> Result<()> {
     };
 
     let appdata = AppData {
+        koala: KoalaApi::new(config.koala_base_redirect_uri().clone())?,
         db,
         storage,
         config,
