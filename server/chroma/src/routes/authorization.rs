@@ -87,7 +87,7 @@ impl FromRequest for Authorization {
                 };
             }
 
-            let user = User::get_by_session_id(&data.db, authorization)
+            let mut user = User::get_by_session_id(&data.db, authorization)
                 .await?
                 .ok_or(AuthorizationError::InvalidSession(
                     oauth.get_login_redirect_uri(),
@@ -96,7 +96,7 @@ impl FromRequest for Authorization {
 
             // Check if the access token is still valid
             // E.g. it could have been revoked by Koala
-            let _user_info =
+            let user_info =
                 oauth
                     .get_userinfo(&user.access_token)
                     .await
@@ -108,6 +108,8 @@ impl FromRequest for Authorization {
                         Some(v) if v.as_u16() == 403 => AuthorizationError::Forbidden,
                         _ => AuthorizationError::KoalaUpstream,
                     })?;
+
+            user.set_is_admin(user_info.is_admin).await?;
 
             Ok(Self {
                 user: AuthorizedUser::Koala {
