@@ -11,6 +11,7 @@ message Album {
   bool isDraft = 5;
   AlbumUser createdBy = 6;
   optional AlbumUser publishedBy = 7;
+  optional int64 publishedAt = 8;
 }
 
 enum UserType {

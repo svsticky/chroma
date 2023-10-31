@@ -121,6 +121,14 @@ export default Vue.extend({
                 return;
             }
 
+            albums.sort((a, b) => {
+                if(a.publishedAt != null && b.publishedAt != null) {
+                    return a.publishedAt - b.publishedAt;
+                } else {
+                    return a.createdAt - b.createdAt;
+                }
+            });
+
             this.albums = albums;
         }
     }
