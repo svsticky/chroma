@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
+use color_eyre::eyre::Error;
+use color_eyre::Result;
+use regex::Regex;
 use std::fs;
 use std::io::Read;
-use color_eyre::eyre::Error;
-use regex::Regex;
-use color_eyre::Result;
+use std::path::{Path, PathBuf};
 use tracing::trace;
 
 pub struct PxlFileTree {
@@ -21,16 +21,15 @@ pub struct PxlPhoto {
 
 impl PxlFileTree {
     pub fn new(base: PathBuf) -> Self {
-        Self {
-            base
-        }
+        Self { base }
     }
 
     pub fn get_albums(&self) -> Result<Vec<PxlAlbum>> {
         let rd = fs::read_dir(&self.base)?;
         let album_title_regex = Regex::new("<title>(.*)</title>")?;
 
-        let albums = rd.into_iter()
+        let albums = rd
+            .into_iter()
             .map(|dir| {
                 let dir = dir?;
                 let path = dir.path();
@@ -55,10 +54,12 @@ impl PxlFileTree {
         let mut contents = String::new();
         f.read_to_string(&mut contents)?;
 
-        let capts = regex.captures(&contents)
+        let capts = regex
+            .captures(&contents)
             .ok_or(Error::msg("Album page has no title"))?;
 
-        let title = capts.get(1)
+        let title = capts
+            .get(1)
             .ok_or(Error::msg("Album page has no title"))?
             .as_str()
             .to_string();
@@ -72,7 +73,8 @@ impl PxlAlbum {
         let rd = fs::read_dir(&self.dir)?;
         let photo_src_regex = Regex::new(r#"<img src="(.*)""#)?;
 
-        let photos = rd.into_iter()
+        let photos = rd
+            .into_iter()
             .map(|dir| Ok(dir?.path()))
             .collect::<Result<Vec<_>>>()?
             .into_iter()
@@ -82,9 +84,7 @@ impl PxlAlbum {
                 trace!("Parsing photo file {photo_index:?} for image src");
 
                 let src = Self::parse_image_src(&photo_index, &photo_src_regex)?;
-                Ok(PxlPhoto {
-                    s3_url: src
-                })
+                Ok(PxlPhoto { s3_url: src })
             })
             .collect::<Result<Vec<_>>>()?;
         Ok(photos)
@@ -95,10 +95,12 @@ impl PxlAlbum {
         let mut contents = String::new();
         f.read_to_string(&mut contents)?;
 
-        let capts = regex.captures(&contents)
+        let capts = regex
+            .captures(&contents)
             .ok_or(Error::msg("Image has no image source"))?;
 
-        let title = capts.get(1)
+        let title = capts
+            .get(1)
             .ok_or(Error::msg("Image has no image source"))?
             .as_str()
             .to_string();
