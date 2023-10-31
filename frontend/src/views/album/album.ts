@@ -38,6 +38,9 @@ export interface AlbumModel {
     publishedBy: string | null,
 
     coverPhoto: PhotoModel | null,
+
+    publishedAt: number | null,
+    createdAt: number,
 }
 
 /**
@@ -53,6 +56,8 @@ function protoAlbumToAlbumModel(album: AlbumWithCoverPhoto): AlbumModel {
         isDraft: album.album.isDraft,
         createdBy: album.album.createdBy.name,
         publishedBy: album.album.hasPublishedBy ? album.album.publishedBy.name : null,
+        publishedAt: album.album.publishedAt,
+        createdAt: album.album.createdAt,
     };
 }
 

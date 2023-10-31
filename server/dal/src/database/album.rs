@@ -130,6 +130,7 @@ impl<'a> Album<'a> {
                 Some(published_by) => Some(Self::user_type_to_proto(self.db, published_by).await?),
                 None => None,
             },
+            published_at: self.published_at,
         })
     }
 

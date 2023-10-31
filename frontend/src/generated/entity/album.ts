@@ -10,7 +10,7 @@ export enum UserType {
     KOALA = 1
 }
 export class Album extends pb_1.Message {
-    #one_of_decls: number[][] = [[4], [7]];
+    #one_of_decls: number[][] = [[4], [7], [8]];
     constructor(data?: any[] | ({
         id?: string;
         name?: string;
@@ -21,6 +21,8 @@ export class Album extends pb_1.Message {
         coverPhotoId?: string;
     }) | ({
         publishedBy?: AlbumUser;
+    }) | ({
+        publishedAt?: number;
     })))) {
         super();
         pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -45,6 +47,9 @@ export class Album extends pb_1.Message {
             }
             if ("publishedBy" in data && data.publishedBy != undefined) {
                 this.publishedBy = data.publishedBy;
+            }
+            if ("publishedAt" in data && data.publishedAt != undefined) {
+                this.publishedAt = data.publishedAt;
             }
         }
     }
@@ -99,6 +104,15 @@ export class Album extends pb_1.Message {
     get hasPublishedBy() {
         return pb_1.Message.getField(this, 7) != null;
     }
+    get publishedAt() {
+        return pb_1.Message.getFieldWithDefault(this, 8, 0) as number;
+    }
+    set publishedAt(value: number) {
+        pb_1.Message.setOneofField(this, 8, this.#one_of_decls[2], value);
+    }
+    get hasPublishedAt() {
+        return pb_1.Message.getField(this, 8) != null;
+    }
     get _coverPhotoId() {
         const cases: {
             [index: number]: "none" | "coverPhotoId";
@@ -117,6 +131,15 @@ export class Album extends pb_1.Message {
         };
         return cases[pb_1.Message.computeOneofCase(this, [7])];
     }
+    get _publishedAt() {
+        const cases: {
+            [index: number]: "none" | "publishedAt";
+        } = {
+            0: "none",
+            8: "publishedAt"
+        };
+        return cases[pb_1.Message.computeOneofCase(this, [8])];
+    }
     static fromObject(data: {
         id?: string;
         name?: string;
@@ -125,6 +148,7 @@ export class Album extends pb_1.Message {
         isDraft?: boolean;
         createdBy?: ReturnType<typeof AlbumUser.prototype.toObject>;
         publishedBy?: ReturnType<typeof AlbumUser.prototype.toObject>;
+        publishedAt?: number;
     }): Album {
         const message = new Album({});
         if (data.id != null) {
@@ -148,6 +172,9 @@ export class Album extends pb_1.Message {
         if (data.publishedBy != null) {
             message.publishedBy = AlbumUser.fromObject(data.publishedBy);
         }
+        if (data.publishedAt != null) {
+            message.publishedAt = data.publishedAt;
+        }
         return message;
     }
     toObject() {
@@ -159,6 +186,7 @@ export class Album extends pb_1.Message {
             isDraft?: boolean;
             createdBy?: ReturnType<typeof AlbumUser.prototype.toObject>;
             publishedBy?: ReturnType<typeof AlbumUser.prototype.toObject>;
+            publishedAt?: number;
         } = {};
         if (this.id != null) {
             data.id = this.id;
@@ -181,6 +209,9 @@ export class Album extends pb_1.Message {
         if (this.publishedBy != null) {
             data.publishedBy = this.publishedBy.toObject();
         }
+        if (this.publishedAt != null) {
+            data.publishedAt = this.publishedAt;
+        }
         return data;
     }
     serialize(): Uint8Array;
@@ -201,6 +232,8 @@ export class Album extends pb_1.Message {
             writer.writeMessage(6, this.createdBy, () => this.createdBy.serialize(writer));
         if (this.hasPublishedBy)
             writer.writeMessage(7, this.publishedBy, () => this.publishedBy.serialize(writer));
+        if (this.hasPublishedAt)
+            writer.writeInt64(8, this.publishedAt);
         if (!w)
             return writer.getResultBuffer();
     }
@@ -230,6 +263,9 @@ export class Album extends pb_1.Message {
                     break;
                 case 7:
                     reader.readMessage(message.publishedBy, () => message.publishedBy = AlbumUser.deserialize(reader));
+                    break;
+                case 8:
+                    message.publishedAt = reader.readInt64();
                     break;
                 default: reader.skipField();
             }
