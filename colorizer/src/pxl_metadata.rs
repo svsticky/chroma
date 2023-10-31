@@ -26,7 +26,10 @@ impl MetadataFile {
 
 impl AlbumMetadata {
     pub fn created(&self) -> color_eyre::Result<i64> {
-        let dt = chrono::DateTime::parse_from_rfc3339(&self.created)?;
+        let mut s = self.created.clone();
+        s.push('Z');
+
+        let dt = chrono::DateTime::parse_from_rfc3339(&s)?;
         Ok(dt.timestamp())
     }
 }
