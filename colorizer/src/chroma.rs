@@ -1,5 +1,8 @@
 use color_eyre::Result;
-use proto::{AccessResponse, CreateAlbumRequest, CreateAlbumResponse, CreatePhotoRequest, CreatePhotoResponse, UpdateAlbumRequest};
+use proto::{
+    AccessResponse, CreateAlbumRequest, CreateAlbumResponse, CreatePhotoRequest,
+    CreatePhotoResponse, UpdateAlbumRequest,
+};
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
 use reqwest_protobuf::{ProtobufRequestExt, ProtobufResponseExt};

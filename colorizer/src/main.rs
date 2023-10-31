@@ -1,8 +1,10 @@
 use crate::args::Args;
 use crate::chroma::Chroma;
-use crate::pxl::PxlFileTree;
+use crate::pxl::{PxlAlbum, PxlFileTree};
+use crate::pxl_metadata::MetadataFile;
 use clap::Parser;
 use color_eyre::eyre::Error;
+use std::path::Path;
 use tracing::info;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -12,6 +14,7 @@ use tracing_subscriber::EnvFilter;
 mod args;
 mod chroma;
 mod pxl;
+mod pxl_metadata;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -19,7 +22,6 @@ async fn main() -> color_eyre::Result<()> {
     install_tracing();
 
     let args = Args::parse();
-
 
     info!("Creating Chroma API client");
     let chroma = Chroma::new(args.chroma_api, args.chroma_service_token)?;
@@ -31,17 +33,15 @@ async fn main() -> color_eyre::Result<()> {
     let file_tree = PxlFileTree::new(args.pxl_dir_base);
     let albums = file_tree.get_albums()?;
 
+    let albums = sort_by_created(&args.metadata_file, albums).await?;
+
     info!("Processing {} albums.", albums.len());
 
     // We could parallelize this, but to keep the server load in check and avoid HTTP 429's, we don't.
     for album in albums {
         let images = album.get_photos()?;
 
-        info!(
-            "Processing album {}. {} Images.",
-            album.name,
-            images.len()
-        );
+        info!("Processing album {}. {} Images.", album.name, images.len());
         let album_id = chroma.create_album(album.name).await?;
         let mut first_photo = None;
 
@@ -66,10 +66,9 @@ async fn main() -> color_eyre::Result<()> {
             Some(photo_id) => {
                 info!("Updating thumbnail");
                 chroma.set_album_thumbnail(&album_id, &photo_id).await?;
-            },
-            None => {},
+            }
+            None => {}
         }
-
 
         info!("Created Chroma album {album_id}");
     }
@@ -77,6 +76,30 @@ async fn main() -> color_eyre::Result<()> {
     info!("Done");
 
     Ok(())
+}
+
+async fn sort_by_created(
+    metadata_file: &Path,
+    input: Vec<PxlAlbum>,
+) -> color_eyre::Result<Vec<PxlAlbum>> {
+    let meta = MetadataFile::open(metadata_file).await?;
+    let mut out = Vec::with_capacity(input.len());
+
+    for i in input {
+        let created_at = meta
+            .albums
+            .iter()
+            .find(|a| a.name_display.eq(&i.name))
+            .map(|e| e.created())
+            .unwrap_or(Ok(0))?;
+
+        out.push((i, created_at));
+    }
+
+    out.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+    let out = out.into_iter().map(|(a, _)| a).collect::<Vec<_>>();
+    Ok(out)
 }
 
 fn install_tracing() {

@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use clap::Parser;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 pub struct Args {
@@ -14,4 +14,8 @@ pub struct Args {
     /// Must be provided via an environmental variable.
     #[clap(env)]
     pub chroma_service_token: String,
+
+    /// Pxl `state.json` file.
+    #[clap(long)]
+    pub metadata_file: PathBuf,
 }
