@@ -154,6 +154,7 @@ impl Config {
     /// Get the User-Agent to use when sending requests to Koala
     ///
     /// See also: `koala_user_agent` fields
+    #[allow(unused)] // TODO
     pub fn koala_user_agent(&self) -> &str {
         self.koala_user_agent
             .as_deref()
