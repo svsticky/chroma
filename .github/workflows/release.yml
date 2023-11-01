@@ -52,40 +52,6 @@ jobs:
         name: server-x86_64-unknown-linux-musl
         path: ./server/target/x86_64-unknown-linux-musl/release/chroma
 
-  build-server-gnu:
-    name: build-server-gnu
-    needs: server-fmt
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - run: sudo apt install gcc cmake clang protobuf-compiler
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-        profile: minimal
-        target: x86_64-unknown-linux-gnu
-    - name: Set up cargo cache
-      uses: actions/cache@v3
-      continue-on-error: false
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ${{ runner.os }}-cargo-
-    - run: cargo build --release --target x86_64-unknown-linux-gnu
-      working-directory: server
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: server-x86_64-unknown-linux-gnu
-        path: ./server/target/x86_64-unknown-linux-gnu/release/chroma
-
-
   build-docs:
     name: build-docs
     needs: server-fmt
@@ -158,7 +124,6 @@ jobs:
     name: create-release
     needs:
     - build-server-musl
-    - build-server-gnu
     - build-docs
     - build-frontend
     runs-on: ubuntu-latest
@@ -177,13 +142,11 @@ jobs:
         draft: false
     
     - run: mv server-x86_64-unknown-linux-musl/chroma server-x86_64-unknown-linux-musl/server-x86_64-unknown-linux-musl
-    - run: mv server-x86_64-unknown-linux-gnu/chroma server-x86_64-unknown-linux-gnu/server-x86_64-unknown-linux-gnu
 
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
           server-x86_64-unknown-linux-musl/server-x86_64-unknown-linux-musl
-          server-x86_64-unknown-linux-gnu/server-x86_64-unknown-linux-gnu
           docs.tar.gz/docs.tar.gz
           frontend.tar.gz/frontend.tar.gz
