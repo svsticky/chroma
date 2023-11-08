@@ -1,6 +1,5 @@
 <template>
     <v-dialog
-        max-width="1200"
         persistent
         v-model="enabled">
         <v-card flat :loading="loading.w1600">
@@ -8,7 +7,7 @@
             <v-card-text>
                 <div v-if="!loading.w1600">
                     <v-img
-                        width="75%"
+                        width="87%"
                         aspect-ratio="1.7778"
                         class="mx-auto"
                         cover
