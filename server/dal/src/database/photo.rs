@@ -131,6 +131,13 @@ impl<'a> Photo<'a> {
         Ok(photo.map(|photo| photo.into_photo(db)))
     }
 
+    pub async fn list_all_ids(db: &'a Database) -> DbResult<Vec<String>> {
+        sqlx::query_scalar("SELECT id FROM photo_metadata")
+            .fetch_all(&**db)
+            .await
+            .map_err(|e| e.into())
+    }
+
     pub async fn delete(self) -> DbResult<()> {
         let mut tx = self.db.begin().await?;
         // Remove the photo from the album cover
