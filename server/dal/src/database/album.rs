@@ -2,10 +2,9 @@ use crate::database::{Database, DatabaseError, DbResult, Photo, User};
 use rand::Rng;
 use sqlx::{FromRow, Type};
 use std::borrow::Cow;
-use std::fmt;
-use std::fmt::Formatter;
 use time::OffsetDateTime;
 
+#[derive(Debug)]
 pub struct Album<'a> {
     db: &'a Database,
     pub id: String,
@@ -18,26 +17,10 @@ pub struct Album<'a> {
     pub published_at: Option<i64>,
 }
 
-// Manually impl debug as to not print the `db` field
-impl fmt::Debug for Album<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Album")
-            .field("id", &self.id)
-            .field("name", &self.name)
-            .field("created_at", &self.created_at)
-            .field("created_by", &self.created_by)
-            .field("published_at", &self.published_at)
-            .field("published_by", &self.published_by)
-            .field("is_draft", &self.is_draft)
-            .field("cover_photo_id", &self.cover_photo_id)
-            .finish()
-    }
-}
-
 #[derive(Clone, Debug)]
 pub enum UserType {
     Koala(i32),
-    ServiceToken(i32),
+    ServiceToken(String),
 }
 
 #[derive(FromRow)]
@@ -47,9 +30,11 @@ struct _Album {
     created_at: i64,
     cover_photo_id: Option<String>,
     is_draft: bool,
-    created_by: i32,
+    created_by_koala_id: Option<i32>,
+    created_by_service_token_id: Option<String>,
     created_by_type: _UserType,
-    published_by: Option<i32>,
+    published_by_koala_id: Option<i32>,
+    published_by_service_token_id: Option<String>,
     published_by_type: Option<_UserType>,
     published_at: Option<i64>,
 }
@@ -70,15 +55,16 @@ impl _Album {
             created_at: self.created_at,
             cover_photo_id: self.cover_photo_id,
             is_draft: self.is_draft,
-            published_by: match (self.published_by_type, self.published_by) {
-                (Some(_UserType::Koala), Some(id)) => Some(UserType::Koala(id)),
-                (Some(_UserType::Service), Some(id)) => Some(UserType::ServiceToken(id)),
+            published_by: match (self.published_by_type, self.published_by_koala_id, self.published_by_service_token_id) {
+                (Some(_UserType::Koala), Some(id), _) => Some(UserType::Koala(id)),
+                (Some(_UserType::Service), _, Some(id)) => Some(UserType::ServiceToken(id)),
                 _ => None,
             },
             published_at: self.published_at,
-            created_by: match self.created_by_type {
-                _UserType::Koala => UserType::Koala(self.created_by),
-                _UserType::Service => UserType::ServiceToken(self.created_by),
+            created_by: match (self.created_by_type, self.created_by_koala_id, self.created_by_service_token_id) {
+                (_UserType::Koala, Some(id), _) => UserType::Koala(id),
+                (_UserType::Service, _, Some(id)) => UserType::ServiceToken(id),
+                _ => None
             },
         }
     }
@@ -105,13 +91,18 @@ impl<'a> Album<'a> {
                     .await?
                     .ok_or(DatabaseError::RowNotFound)?;
                 proto::AlbumUser {
-                    id,
+                    koala_id: Some(id),
+                    service_token_id: None,
                     name: Some(user.name),
                     r#type: proto::UserType::Koala as i32,
                 }
             }
             UserType::ServiceToken(id) => proto::AlbumUser {
-                id,
+
+                // TODO fetch service token name
+
+                koala_id: None,
+                service_token_id: Some(id),
                 name: None,
                 r#type: proto::UserType::Service as i32,
             },
@@ -144,34 +135,42 @@ impl<'a> Album<'a> {
         let id = Self::generate_id();
         let created_at = OffsetDateTime::now_utc().unix_timestamp();
 
-        let (created_by_type, created_by_id) = match &created_by {
-            UserType::Koala(id) => (_UserType::Koala, *id),
-            UserType::ServiceToken(id) => (_UserType::Service, *id),
+        let (created_by_type, created_by_koala_id, created_by_service_token_id) = match &created_by {
+            UserType::Koala(id) => (_UserType::Koala, Some(*id), None),
+            UserType::ServiceToken(id) => (_UserType::Service, None, Some(id.to_owned())),
         };
 
         // If something is a draft, there can be no publisher.
         // If an album at creation is a published one, then the publisher is also the creator.
         let published_at = (!is_draft).then_some(created_at);
         let published_by_type = (!is_draft).then_some(created_by_type.clone());
-        let published_by_id = (!is_draft).then_some(match &created_by {
-            UserType::Koala(id) => *id,
-            UserType::ServiceToken(id) => *id,
-        });
+
+        let published_by_koala_id = (!is_draft).then_some(match &created_by {
+            UserType::Koala(id) => Some(*id),
+            _ => None
+        }).flatten();
+
+        let published_by_service_token_id = (!is_draft).then_some(match &created_by {
+            UserType::ServiceToken(id) => Some(id.to_owned()),
+            _ => None
+        }).flatten();
 
         sqlx::query(
             "INSERT INTO album_metadata \
-                    (id, name, created_at, created_by, is_draft, published_by, published_at, published_by_type, created_by_type) \
+                    (id, name, created_at, created_by_koala_id, is_draft, published_by_koala_id, published_at, published_by_type, created_by_type, created_by_service_token_id, published_by_service_token_id) \
                 VALUES \
-                    ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)")
             .bind(&id)
             .bind(&name)
             .bind(created_at)
-            .bind(created_by_id)
+            .bind(created_by_koala_id)
             .bind(is_draft)
-            .bind(published_by_id)
+            .bind(published_by_koala_id)
             .bind(published_at)
             .bind(published_by_type)
             .bind(created_by_type)
+            .bind(created_by_service_token_id)
+            .bind(published_by_service_token_id)
             .execute(&**db)
             .await?;
 
@@ -225,15 +224,16 @@ impl<'a> Album<'a> {
     pub async fn set_published(&mut self, published_by: UserType) -> DbResult<()> {
         let published_at = OffsetDateTime::now_utc().unix_timestamp();
 
-        let (published_by_type, published_by_id) = match &published_by {
-            UserType::Koala(id) => (_UserType::Koala, *id),
-            UserType::ServiceToken(id) => (_UserType::Service, *id),
+        let (published_by_type, published_by_koala_id, published_by_service_token_id) = match &published_by {
+            UserType::Koala(id) => (_UserType::Koala, Some(*id), None),
+            UserType::ServiceToken(id) => (_UserType::Service, None, Some(id.to_owned())),
         };
 
-        sqlx::query("UPDATE album_metadata SET published_by = $1, published_at = $2, published_by_type = $3, is_draft = false WHERE id = $4")
-            .bind(published_by_id)
+        sqlx::query("UPDATE album_metadata SET published_by_koala_id = $1, published_at = $2, published_by_type = $3, is_draft = false, published_by_service_token_id = $4 WHERE id = $5")
+            .bind(published_by_koala_id)
             .bind(published_at)
             .bind(published_by_type)
+            .bind(published_by_service_token_id)
             .bind(&self.id)
             .execute(&**self.db)
             .await?;

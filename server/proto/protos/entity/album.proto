@@ -22,7 +22,8 @@ enum UserType {
 message AlbumUser {
   UserType type = 1;
   optional string name = 2;
-  int32 id = 3;
+  optional int32 koalaId = 3;
+  optional string serviceTokenId = 4;
 }
 
 message AlbumWithCoverPhoto {

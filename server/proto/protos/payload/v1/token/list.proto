@@ -1,0 +1,16 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+import "entity/user.proto";
+
+message ListTokenResponse {
+  repeated OpaqueToken tokens = 1;
+}
+
+message OpaqueToken {
+  string id = 1;
+  string name = 2;
+  User createdBy = 3;
+  int64 createdAt = 4;
+  repeated string scopes = 5;
+}

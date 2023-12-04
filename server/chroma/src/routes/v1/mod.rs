@@ -11,6 +11,7 @@ mod album;
 mod login;
 mod photo;
 mod user;
+mod token;
 
 #[derive(Debug, Default, Clone, Deserialize)]
 pub enum PhotoQuality {

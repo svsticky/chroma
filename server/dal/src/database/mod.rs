@@ -3,12 +3,10 @@ use std::ops::Deref;
 
 mod album;
 mod photo;
-mod service_token_user;
 mod user;
 
 pub use album::*;
 pub use photo::*;
-pub use service_token_user::*;
 pub use sqlx::error::Error as DatabaseError;
 use sqlx::migrate::Migrator;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};

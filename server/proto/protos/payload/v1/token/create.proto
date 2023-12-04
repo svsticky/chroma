@@ -1,0 +1,13 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+message CreateTokenRequest {
+  string name = 1;
+  repeated string scopes = 2;
+}
+
+message CreateTokenResponse {
+  string id = 1;
+  string name = 2;
+  string token = 3;
+}
