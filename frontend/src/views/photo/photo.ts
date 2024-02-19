@@ -40,20 +40,6 @@ export class PhotoModel {
             }
         }
     }
-
-    downloadOrNewTab() {
-        switch(this.dataKind) {
-            case PhotoDataKind.URL: {
-                window.open(this.photoUrl!, "_blank");
-                break;
-            }
-            case PhotoDataKind.BYTES: {
-                const file = new File([this.photoBytes!], `${this.id}.webp`, { type: "application/webp"}, );
-                const exportUrl = URL.createObjectURL(file);
-                window.location.assign(exportUrl);
-            }
-        }
-    }
 }
 
 /**
@@ -124,7 +110,7 @@ export enum Quality {
     ORIGINAL,
 }
 
-export async function getPhoto(photoId: string, quality: Quality): Promise<PhotoModel | null | undefined> {
+export async function getPhoto(photoId: string, quality: Quality, forceBytes = false): Promise<PhotoModel | null | undefined> {
 
     let qualityString;
     switch(quality) {
@@ -142,7 +128,7 @@ export async function getPhoto(photoId: string, quality: Quality): Promise<Photo
         }
     }
 
-    const query = `id=${photoId}&quality_preference=${qualityString}`;
+    const query = `id=${photoId}&quality_preference=${qualityString}&force_bytes=${forceBytes}`;
     const result = await Http.getBody<GetPhotoResponse>(`/api/v1/photo?${query}`, null, GetPhotoResponse);
     if(result instanceof Response) {
         if(result.status == 404) {

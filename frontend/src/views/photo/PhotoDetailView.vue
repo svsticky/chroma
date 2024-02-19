@@ -80,14 +80,19 @@ export default Vue.extend({
     methods: {
         async downloadOriginal() {
             this.loading.original = true;
-            const result = await getPhoto(this.photo.id, Quality.ORIGINAL);
+            const photo = await getPhoto(this.photo.id, Quality.ORIGINAL, true);
 
-            if(result == undefined) {
+            if(photo == undefined) {
                 this.snackbar = errorText;
                 this.loading.original = false;
+                return;
             }
 
-            result?.downloadOrNewTab();
+            const file = new File([photo.photoBytes!], `${photo.id}.webp`, { type: "application/webp"}, );
+            const exportUrl = URL.createObjectURL(file);
+
+            window.open(exportUrl, "_blank");
+
             this.loading.original = false;
         },
         async loadHighQuality() {

@@ -27,6 +27,11 @@ pub struct Query {
     /// E.g., WebP or PNG
     #[serde(default)]
     format: ImageFormat,
+    /// By the default the server may choose to return the image bytes or return a signed S3 URL.
+    /// By setting this to true the service will return the image bytes.
+    /// Defaults to false.
+    #[serde(default)]
+    force_bytes: bool,
 }
 
 #[derive(Eq, PartialEq, Debug, Default, Deserialize)]
@@ -52,7 +57,7 @@ pub async fn get(
         .await?
         .ok_or(Error::NotFound)?;
 
-    if query.format.eq(&ImageFormat::WebP) {
+    if query.format.eq(&ImageFormat::WebP) && !query.force_bytes {
         match photo
             .clone()
             .photo_to_proto_url(&data.storage, query.quality_preference.clone().into())
