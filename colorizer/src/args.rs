@@ -15,6 +15,10 @@ pub struct Args {
     #[clap(env)]
     pub chroma_service_token: String,
 
+    /// Name of the Pxl album directory to start at, all albums before (chronologically) are ignored.
+    #[clap(long)]
+    pub start_at_dir: Option<String>,
+
     /// Pxl `state.json` file.
     #[clap(long)]
     pub metadata_file: PathBuf,

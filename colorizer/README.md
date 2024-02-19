@@ -27,6 +27,7 @@ The following environmental variables must be set:
   --s3-region <The region of the Pxl bucket> \
   --s3-endpoint-url <The URL of the Pxl bucket> \
   --s3-force-path-style <Optional, if using MinIO, set this to true>
+  --start-at-dir <Optional, start at this directory name and skip all albums before it, chronologically>
 ```
 
 This will run Colorizer, it'll convert albums one at a time.  
@@ -34,6 +35,10 @@ This might take a while, depending on the size of your Pxl instance.
 
 >Warning: If for whatever reason Colorizer fails halfway through a migration, it is recommended to revert back to the backup.
 >Colorizer has **NO** recovery mechanism whatsoever.
+
+## Quitting halfway through
+If you want to quit halfway through, use `Ctrl + \`, this will finish the current album and then exit.
+You can then later continue with the ``--start-at-dir`` flag.
 
 ## License
 MIT or Apache 2.0, at your option.

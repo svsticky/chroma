@@ -69,6 +69,17 @@ impl PxlFileTree {
 }
 
 impl PxlAlbum {
+    pub fn get_dir_name(&self) -> String {
+        self.dir
+            .components()
+            .last()
+            .expect("There is no directory name")
+            .as_os_str()
+            .to_str()
+            .expect("Directory name is not UTF-8")
+            .to_string()
+    }
+
     pub fn get_photos(&self) -> Result<Vec<PxlPhoto>> {
         let rd = fs::read_dir(&self.dir)?;
         let photo_src_regex = Regex::new(r#"<img src="(.*)""#)?;
