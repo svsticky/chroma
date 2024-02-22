@@ -35,6 +35,10 @@ pub async fn update(
         .await?
         .ok_or(Error::NotFound)?;
 
+    if !album.is_draft && !auth.is_admin {
+        return Err(Error::Forbidden);
+    }
+
     if let Some(name) = &payload.name {
         if name.len() > Album::MAX_NAME_LENGTH {
             return Err(Error::BadRequest(format!(
