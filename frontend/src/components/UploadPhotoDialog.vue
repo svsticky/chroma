@@ -30,6 +30,7 @@
                 <v-btn
                     @click="upload"
                     color="primary"
+                    :disabled="loading"
                     :loading="loading">
                     Upload
                 </v-btn>

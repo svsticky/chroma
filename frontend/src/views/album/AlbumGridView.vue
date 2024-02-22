@@ -123,11 +123,7 @@ export default Vue.extend({
 
             // Sort in descending chronological order -- Newest albums first
             albums.sort((a, b) => {
-                if(a.publishedAt != null && b.publishedAt != null) {
-                    return b.publishedAt - a.publishedAt;
-                } else {
-                    return b.createdAt - a.createdAt;
-                }
+                return b.createdAt - a.createdAt;
             });
 
             this.albums = albums;
