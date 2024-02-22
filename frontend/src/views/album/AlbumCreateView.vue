@@ -23,7 +23,7 @@
             <v-card-actions>
                 <v-btn
                     color="primary"
-                    :disabled="!valid"
+                    :disabled="!valid || loading"
                     :loading="loading"
                     @click="create">
                     Create
