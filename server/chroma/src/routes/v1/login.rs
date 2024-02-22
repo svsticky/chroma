@@ -57,7 +57,7 @@ pub async fn login(data: WebData, query: web::Query<Query>) -> WebResult<Redirec
             let user_info = oauth_api
                 .get_userinfo(&oauth_tokens.access_token)
                 .await
-                .map_err(|e| Error::Koala(e))?;
+                .map_err(Error::Koala)?;
 
             trace!("Is signed-in user admin?: {}", user_info.is_admin);
             User::create(
