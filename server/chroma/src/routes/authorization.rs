@@ -38,6 +38,19 @@ impl Authorization {
         Ok(user_type)
     }
 
+    pub async fn list_scopes(&self, db: &Database) -> DbResult<String> {
+        Ok(match self.user {
+            AuthorizedUser::Koala { koala_id } => ChromaScope::list_for_user(db, koala_id)
+                .await?
+                .into_iter()
+                .map(|scope| scope.scope)
+                .collect::<Vec<_>>()
+                .join(" ")
+                .to_string(),
+            AuthorizedUser::Service { .. } => String::new(),
+        })
+    }
+
     pub async fn has_scope<S: AsRef<str>>(&self, db: &Database, scope: S) -> DbResult<bool> {
         Ok(match self.user {
             AuthorizedUser::Koala { koala_id } => ChromaScope::list_for_user(db, koala_id)
