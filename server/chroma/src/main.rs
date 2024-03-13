@@ -76,10 +76,11 @@ async fn main() -> Result<()> {
             .wrap(Cors::permissive())
             .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
             .app_data(WebData::new(appdata.clone()))
-            .app_data(SessionIdCache::builder()
-                .max_capacity(10000)
-                .time_to_live(Duration::from_secs(30))
-                .build()
+            .app_data(
+                SessionIdCache::builder()
+                    .max_capacity(10000)
+                    .time_to_live(Duration::from_secs(30))
+                    .build(),
             )
             .configure(routes::Router::configure)
     })
