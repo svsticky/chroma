@@ -1,4 +1,4 @@
-use crate::routes::appdata::WebData;
+use crate::routes::appdata::{AlbumIdCache, WebData};
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
@@ -29,11 +29,15 @@ pub struct Query {
 pub async fn get(
     _: Authorization,
     data: WebData,
+    album_id_cache: web::Data<AlbumIdCache>,
     query: web::Query<Query>,
 ) -> WebResult<Payload<GetAlbumResponse>> {
-    let album = Album::get_by_id(&data.db, &query.id)
-        .await?
-        .ok_or(Error::NotFound)?;
+    let album = match album_id_cache.get(&query.id).await {
+        Some(v) => v,
+        None => Album::get_by_id(&data.db, &query.id)
+            .await?
+            .ok_or(Error::NotFound)?,
+    };
 
     // If the user requests that photos are not returned, return an empty list.
     let photos = match query.without_photos {
@@ -91,7 +95,7 @@ pub async fn get(
     Ok(Payload(GetAlbumResponse {
         photos,
         album: Some(AlbumWithCoverPhoto {
-            album: Some(album.to_proto().await?),
+            album: Some(album.to_proto(&data.db).await?),
             cover_photo,
         }),
     }))

@@ -1,8 +1,9 @@
-use crate::routes::appdata::WebData;
+use crate::routes::appdata::{AlbumIdCache, WebData};
 use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
+use actix_web::web;
 use dal::database::{Album, Photo};
 use proto::UpdateAlbumRequest;
 
@@ -21,6 +22,7 @@ use proto::UpdateAlbumRequest;
 pub async fn update(
     auth: Authorization,
     data: WebData,
+    album_id_cache: web::Data<AlbumIdCache>,
     payload: Payload<UpdateAlbumRequest>,
 ) -> WebResult<Empty> {
     if !auth.is_admin
@@ -48,7 +50,7 @@ pub async fn update(
             )));
         }
 
-        album.update_name(name).await?;
+        album.update_name(name, &data.db).await?;
     }
 
     if let Some(cover_photo_id) = &payload.cover_photo_id {
@@ -65,7 +67,7 @@ pub async fn update(
             )));
         }
 
-        album.update_cover_photo(&photo).await?;
+        album.update_cover_photo(&photo, &data.db).await?;
     }
 
     if let Some(draft_settings) = &payload.draft_settings {
@@ -76,16 +78,18 @@ pub async fn update(
 
         match draft_settings {
             proto::update_album_request::DraftSettings::SetDraft(v) if *v => {
-                album.set_draft().await?;
+                album.set_draft(&data.db).await?;
             }
             proto::update_album_request::DraftSettings::SetPublished(v) if *v => {
                 album
-                    .set_published(auth.to_dal_user_type(&data.db).await?)
+                    .set_published(auth.to_dal_user_type(&data.db).await?, &data.db)
                     .await?;
             }
             _ => {}
         }
     }
+
+    album_id_cache.insert(album.id.clone(), album).await;
 
     Ok(Empty)
 }

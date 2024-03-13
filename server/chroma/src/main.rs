@@ -1,10 +1,10 @@
 extern crate core;
 
 use crate::config::Config;
-use crate::routes::appdata::{AppData, SessionIdCache, WebData};
+use crate::routes::appdata::{AlbumIdCache, AppData, SessionIdCache, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
-use actix_web::{App, HttpServer};
+use actix_web::{web, App, HttpServer};
 use cabbage::KoalaApi;
 use color_eyre::eyre::Error;
 use color_eyre::Result;
@@ -76,12 +76,15 @@ async fn main() -> Result<()> {
             .wrap(Cors::permissive())
             .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
             .app_data(WebData::new(appdata.clone()))
-            .app_data(
+            .app_data(web::Data::new(
                 SessionIdCache::builder()
                     .max_capacity(10000)
                     .time_to_live(Duration::from_secs(30))
                     .build(),
-            )
+            ))
+            .app_data(web::Data::new(
+                AlbumIdCache::builder().max_capacity(10000).build(),
+            ))
             .configure(routes::Router::configure)
     })
     .bind(&format!(

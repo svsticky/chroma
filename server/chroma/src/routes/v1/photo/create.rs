@@ -46,7 +46,7 @@ pub async fn create(
     }
 
     // TODO Update actix-multiresponse to support moving out the payload, avoids another clone
-    let photo_id = image_pipeline(&data, payload.photo_data.clone(), &album).await?;
+    let photo_id = image_pipeline(&data, payload.photo_data.clone(), &album, &data.db).await?;
 
     Ok(Payload(CreatePhotoResponse { photo_id }))
 }
@@ -57,7 +57,12 @@ pub async fn create(
 ///
 /// If any step in the pipeline fails
 #[instrument(skip(data, image))]
-async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album<'_>) -> WebResult<String> {
+async fn image_pipeline(
+    data: &WebData,
+    image: Vec<u8>,
+    album: &Album,
+    db: &Database,
+) -> WebResult<String> {
     // This pipeline modifies the image. The idea is that each 'step' outputs
     // a variable 'image', which the next step can then use.
 

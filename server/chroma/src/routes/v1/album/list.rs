@@ -1,4 +1,4 @@
-use crate::routes::appdata::WebData;
+use crate::routes::appdata::{AlbumIdCache, WebData};
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
 use crate::routes::v1::PhotoQuality;
@@ -7,7 +7,7 @@ use actix_web::web;
 use dal::database::{Album, Photo};
 use dal::storage_engine::EngineType;
 use dal::DalError;
-use futures::future::join_all;
+use futures::future::{join_all, try_join_all};
 use proto::{AlbumWithCoverPhoto, ListAlbumsResponse};
 use serde::Deserialize;
 
@@ -26,11 +26,54 @@ pub struct Query {
 /// - If something went wrong
 pub async fn list(
     auth: Authorization,
+    album_id_cache: web::Data<AlbumIdCache>,
     data: WebData,
     query: web::Query<Query>,
 ) -> WebResult<Payload<ListAlbumsResponse>> {
-    let mut albums = Album::list(&data.db).await?;
+    // Fetch only IDs, so we can grab the rest from cache
+    let ids = Album::list_ids(&data.db).await?;
 
+    // Fetch cached albums
+    let cached_albums = join_all(ids.into_iter().map(|f| {
+        let cache = &**album_id_cache;
+        async move {
+            let album = cache.get(&f).await;
+            (f, album)
+        }
+    }))
+    .await;
+
+    // Fetch albums from database of which there is nothing cached
+    let fetched_albums = try_join_all(
+        cached_albums
+            .iter()
+            .filter(|(_, cached)| cached.is_none())
+            .map(|(id, _)| Album::get_by_id(&data.db, id)),
+    )
+    .await?
+    .into_iter()
+    .filter_map(|f| f)
+    .collect::<Vec<_>>();
+
+    // Insert the newly fetched into the cache
+    join_all(fetched_albums.iter().map(|album| {
+        let cache = &**album_id_cache;
+        async move { cache.insert(album.id.clone(), album.clone()).await }
+    }))
+    .await;
+
+    // Merge the two sets
+    let mut albums = vec![
+        fetched_albums,
+        cached_albums
+            .into_iter()
+            .map(|(_, v)| v)
+            .filter_map(|v| v)
+            .collect::<Vec<_>>(),
+    ]
+    .concat();
+
+    // Check if we should include draft albums
     let include_draft = auth.is_admin
         || auth
             .has_scope(&data.db, "nl.svsticky.chroma.album.list.draft")
@@ -40,6 +83,7 @@ pub async fn list(
         albums.retain(|f| !f.is_draft);
     }
 
+    // Transform them all to the proto response
     let albums = join_all(albums.into_iter().map(|album| {
         let storage = data.storage.clone();
         let database = data.db.clone();
@@ -47,6 +91,7 @@ pub async fn list(
         let include_cover_photo = query.include_cover_photo;
 
         async move {
+            // Fetch the cover photo if it is requested
             let cover_photo = if include_cover_photo {
                 if let Some(id) = &album.cover_photo_id {
                     let photo = Photo::get_by_id(&database, id).await?.unwrap();
@@ -71,7 +116,7 @@ pub async fn list(
             };
 
             Ok(AlbumWithCoverPhoto {
-                album: Some(album.to_proto().await?),
+                album: Some(album.to_proto(&database).await?),
                 cover_photo,
             })
         }
