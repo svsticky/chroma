@@ -2,7 +2,7 @@ use crate::routes::appdata::{SessionIdCache, WebData};
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::StatusCode;
-use actix_web::{FromRequest, HttpRequest, HttpResponse, ResponseError};
+use actix_web::{FromRequest, HttpRequest, HttpResponse, ResponseError, web};
 use dal::database::{ChromaScope, Database, DbResult, ServiceTokenUser, User, UserType};
 use std::future::Future;
 use std::pin::Pin;
@@ -86,7 +86,7 @@ impl FromRequest for Authorization {
                 })?;
 
             // Check the cache
-            let session_cache: &SessionIdCache = req.app_data().unwrap();
+            let session_cache: &web::Data<SessionIdCache> = req.app_data().unwrap();
             match session_cache.get(authorization_id).await {
                 Some(v) => return Ok(v),
                 None => {}
