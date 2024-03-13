@@ -5,7 +5,9 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::{Album, Photo};
-use dal::storage_engine::EngineType;
+use dal::s3::aws_errors::GetObjectErrorKind;
+use dal::s3::{S3Error, SdkError};
+use dal::storage_engine::{EngineType, StorageEngineError};
 use dal::DalError;
 use futures::future::{join_all, try_join_all};
 use proto::{AlbumWithCoverPhoto, ListAlbumsResponse};
@@ -89,6 +91,7 @@ pub async fn list(
         let database = data.db.clone();
         let qpref: dal::storage_engine::PhotoQuality = query.quality_preference.clone().into();
         let include_cover_photo = query.include_cover_photo;
+        let album_id_cache = &**album_id_cache;
 
         async move {
             // Fetch the cover photo if it is requested
@@ -103,7 +106,31 @@ pub async fn list(
                     };
 
                     let photo = match storage.engine_type() {
-                        EngineType::S3 => photo.photo_to_proto_url(&storage, quality).await?,
+                        EngineType::S3 => match photo.photo_to_proto_url(&storage, quality).await {
+                            Ok(v) => v,
+                            Err(e) => {
+                                return match &e {
+                                    DalError::Storage(s) => match s {
+                                        StorageEngineError::S3(s) => match s {
+                                            S3Error::GetObject(s) => match s {
+                                                SdkError::ServiceError(s) => match s.err().kind {
+                                                    GetObjectErrorKind::NoSuchKey(_) => {
+                                                        album_id_cache.remove(&album.id).await;
+                                                        album.delete(&database).await?;
+                                                        Ok(None)
+                                                    }
+                                                    _ => Err(e),
+                                                },
+                                                _ => Err(e),
+                                            },
+                                            _ => Err(e),
+                                        },
+                                        _ => Err(e),
+                                    },
+                                    _ => Err(e),
+                                }
+                            }
+                        },
                         EngineType::File => photo.photo_to_proto_bytes(&storage, quality).await?,
                     };
 
@@ -115,10 +142,10 @@ pub async fn list(
                 None
             };
 
-            Ok(AlbumWithCoverPhoto {
+            Ok(Some(AlbumWithCoverPhoto {
                 album: Some(album.to_proto(&database).await?),
                 cover_photo,
-            })
+            }))
         }
     }))
     .await
@@ -127,7 +154,10 @@ pub async fn list(
     .map_err(|e| match e {
         DalError::Storage(e) => Error::from(e),
         DalError::Db(e) => Error::from(e),
-    })?;
+    })?
+    .into_iter()
+    .filter_map(|v| v)
+    .collect::<Vec<_>>();
 
     Ok(Payload(ListAlbumsResponse { albums }))
 }

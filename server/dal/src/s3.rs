@@ -1,7 +1,7 @@
 use aws_credential_types::Credentials;
 use aws_sdk_s3::error::{DeleteObjectError, GetObjectError, PutObjectError};
 use aws_sdk_s3::presigning::config::PresigningConfig;
-use aws_sdk_s3::types::{ByteStream, SdkError};
+use aws_sdk_s3::types::ByteStream;
 use aws_sdk_s3::{Client, Config, Region};
 use std::ops::Deref;
 use std::time::Duration;
@@ -10,6 +10,8 @@ use thiserror::Error;
 pub mod aws_errors {
     pub use aws_sdk_s3::error::*;
 }
+
+pub use aws_sdk_s3::types::SdkError;
 
 #[derive(Debug, Error)]
 pub enum S3InitError {
