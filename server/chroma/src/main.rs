@@ -1,7 +1,7 @@
 extern crate core;
 
 use crate::config::Config;
-use crate::routes::appdata::{AppData, WebData};
+use crate::routes::appdata::{AppData, SessionIdCache, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
 use actix_web::{App, HttpServer};
@@ -13,6 +13,7 @@ use dal::s3::S3Config;
 use dal::storage_engine::StorageEngine;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
 use std::path::PathBuf;
+use std::time::Duration;
 use tracing::{info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
@@ -75,6 +76,11 @@ async fn main() -> Result<()> {
             .wrap(Cors::permissive())
             .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
             .app_data(WebData::new(appdata.clone()))
+            .app_data(SessionIdCache::builder()
+                .max_capacity(10000)
+                .time_to_live(Duration::from_secs(30))
+                .build()
+            )
             .configure(routes::Router::configure)
     })
     .bind(&format!(

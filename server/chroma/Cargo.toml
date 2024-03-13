@@ -1,6 +1,6 @@
 [package]
 name = "chroma"
-version = "0.1.19"
+version = "0.1.20"
 edition = "2021"
 
 [dependencies]
@@ -29,6 +29,7 @@ img-parts = "0.3.0"
 time = "0.3.28"
 kamadak-exif = "0.5.5"
 cabbage = "0.1.2"
+moka = { version = "0.12.5", features = ["future"] }
 
 [dev-dependencies]
 serde_json = "1.0.93"

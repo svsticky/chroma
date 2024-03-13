@@ -1,4 +1,4 @@
-use crate::routes::appdata::WebData;
+use crate::routes::appdata::{SessionIdCache, WebData};
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::StatusCode;
@@ -10,11 +10,13 @@ use tap::TapFallible;
 use thiserror::Error;
 use tracing::{info, trace};
 
+#[derive(Clone)]
 pub struct Authorization {
     pub user: AuthorizedUser,
     pub is_admin: bool,
 }
 
+#[derive(Clone)]
 pub enum AuthorizedUser {
     Koala { koala_id: i32 },
     Service { token: String },
@@ -72,7 +74,7 @@ impl FromRequest for Authorization {
             let data: &WebData = req.app_data().unwrap();
             let oauth = data.koala.oauth_api(data.config.oauth_client_config());
 
-            let authorization = req
+            let authorization_id = req
                 .headers()
                 .get("authorization")
                 .ok_or(AuthorizationError::NoHeader(oauth.get_login_redirect_uri()))
@@ -83,9 +85,16 @@ impl FromRequest for Authorization {
                     trace!("Value of authorization header could not be converter to UTF-8 String")
                 })?;
 
+            // Check the cache
+            let session_cache: &SessionIdCache = req.app_data().unwrap();
+            match session_cache.get(authorization_id).await {
+                Some(v) => return Ok(v),
+                None => {}
+            }
+
             // Check if we're dealing with a service token
-            if authorization.starts_with("Service ") {
-                let token = authorization.chars().skip(8).collect::<String>();
+            if authorization_id.starts_with("Service ") {
+                let token = authorization_id.chars().skip(8).collect::<String>();
                 if token.is_empty() {
                     return Err(AuthorizationError::InvalidServiceToken);
                 }
@@ -100,12 +109,12 @@ impl FromRequest for Authorization {
                 };
             }
 
-            let mut user = User::get_by_session_id(&data.db, authorization)
+            let mut user = User::get_by_session_id(&data.db, authorization_id)
                 .await?
                 .ok_or(AuthorizationError::InvalidSession(
                     oauth.get_login_redirect_uri(),
                 ))
-                .tap_err(|_| trace!("Invalid session ID provided ('{authorization}')"))?;
+                .tap_err(|_| trace!("Invalid session ID provided ('{authorization_id}')"))?;
 
             // Check if the access token is still valid
             // E.g. it could have been revoked by Koala
@@ -124,12 +133,18 @@ impl FromRequest for Authorization {
 
             user.set_is_admin(user_info.is_admin).await?;
 
-            Ok(Self {
+            let authorization = Self {
                 user: AuthorizedUser::Koala {
                     koala_id: user.koala_id,
                 },
                 is_admin: user.is_admin,
-            })
+            };
+
+            session_cache
+                .insert(authorization_id.to_string(), authorization.clone())
+                .await;
+
+            Ok(authorization)
         })
     }
 }
