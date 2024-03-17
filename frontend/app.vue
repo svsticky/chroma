@@ -3,7 +3,8 @@
     <NuxtPage :transition="{
         name: 'page',
         mode: 'out-in'
-      }"/>
+      }">
+    </NuxtPage>
   </NuxtLayout>
 </template>
 
@@ -26,3 +27,5 @@ html, body, #__nuxt {
   opacity: 0;
 }
 </style>
+<script setup lang="ts">
+</script>

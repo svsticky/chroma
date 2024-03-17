@@ -1,8 +1,20 @@
 <script lang="ts">
 import {listAlbums} from '~/models/album'
+import {NButton} from 'naive-ui'
+import {AddOutline as AddIcon} from '@vicons/ionicons5'
 
 export default defineComponent({
   setup() {
+    definePageMeta({
+      actionComponents: [
+        () => h(NButton, {
+          'onClick': () => navigateTo(`/album/new`),
+          'quaternary': true,
+          'render-icon': () => h(AddIcon)
+        }, () => 'Add album')
+      ]
+    })
+
     const auth = useAuth()
 
     const {pending: loading, data: albums} = useAsyncData('albums', async () => {
@@ -27,46 +39,47 @@ export default defineComponent({
 <template>
   <div>
     <n-h1>Albums</n-h1>
-    <div class="album-list">
+    <div class="album-grid">
       <n-card v-if="loading" v-for="n in 10" class="album-card" size="small">
         <template #header>
           <n-skeleton text :sharp="false"/>
         </template>
         <template #cover>
-          <n-skeleton class="image-cover"/>
+          <n-skeleton class="album-cover-photo"/>
         </template>
       </n-card>
-      <n-card v-else v-for="{album} in albums" :title="album.name || 'Untitled album'" class="album-card" size="small"
-              @click="navigateTo(`/album/${album.id}`)">
-        <template #cover>
-          <div class="image-cover">
-            <!--            Add cover -->
-          </div>
-        </template>
-      </n-card>
+      <nuxt-link v-else v-for="{album} in albums" :to="`/album/${album.id}`" class="album-link">
+        <n-card :title="album.name || 'Untitled album'" class="album-card" size="small" :bordered="false">
+          <template #cover>
+            <div class="album-cover-photo">
+              <!--            Add cover -->
+            </div>
+          </template>
+        </n-card>
+      </nuxt-link>
     </div>
   </div>
 </template>
 
 <style scoped>
-.album-list {
+.album-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 8px 12px;
 }
 
-.album-card {
-  cursor: pointer;
+.album-link {
+  text-decoration: none;
 }
 
-.image-cover {
+.album-cover-photo {
   width: 100%;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
+  padding-top: 75%; /* 1:1 Aspect Ratio */
   position: relative;
   background-color: #cccccc;
 }
 
-.image-cover > img {
+.album-cover-photo > img {
   position: absolute;
   top: 0;
   bottom: 0;

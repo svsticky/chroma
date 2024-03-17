@@ -2,6 +2,13 @@
 import {createAlbum} from '~/models/album'
 
 export default defineComponent({
+  setup() {
+    definePageMeta({
+      parent: '/',
+      showFavicon: false,
+      showTitle: false
+    })
+  },
   data() {
     return {
       name: '',
@@ -26,12 +33,14 @@ export default defineComponent({
         <n-input v-model:value="name" placeholder="Album name"/>
       </n-form-item>
       <n-space>
-        <n-button secondary @click="this.$router.go(-1)">
-          Cancel
-        </n-button>
         <n-button type="primary" attr-type="submit">
           Create
         </n-button>
+        <nuxt-link to="/">
+          <n-button secondary>
+            Cancel
+          </n-button>
+        </nuxt-link>
       </n-space>
     </n-form>
   </div>

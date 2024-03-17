@@ -1,22 +1,46 @@
 <script lang="ts">
-import {getAlbum} from '~/models/album'
+import {NButton} from 'naive-ui'
+import {CloudUploadOutline as UploadIcon, CreateOutline as EditIcon, ImageOutline as PhotoIcon} from '@vicons/ionicons5'
 
 export default defineComponent({
+  components: {
+    UploadIcon,
+    PhotoIcon
+  },
   setup() {
-    const editing = useEditing()
-    const route = useRoute()
-
-    const albumId = route.params['album'] as string
-
-    const {pending: loading, data: album} = useAsyncData(`album:${albumId}`, async () => {
-      return (await getAlbum(albumId)).toObject()
+    definePageMeta({
+      parent: '/',
+      showFavicon: false,
+      showTitle: false,
+      actionComponents: [
+        () => h(NButton, {
+          'onClick': (e) => {
+            const route = useRoute()
+            const albumId = route.params['album'] as string
+            return navigateTo(`${albumId}/edit`)
+          },
+          'quaternary': true,
+          'render-icon': () => h(EditIcon)
+        }, () => 'Edit album')
+      ]
     })
 
-    return {editing, loading, album}
+    const route = useRoute()
+    const albumId = route.params['album'] as string
+
+    return {albumId}
   },
-  computed: {
-    albumName() {
-      return this.album?.album?.name ? this.album.album.name : 'Untitled album'
+  data() {
+    return {
+      showUpload: false
+    }
+  },
+  methods: {
+    openUpload() {
+      this.showUpload = true
+    },
+    closeUpload() {
+      this.showUpload = false
     }
   }
 })
@@ -24,53 +48,39 @@ export default defineComponent({
 
 <template>
   <div>
-    <n-space>
-      <n-card :bordered="false" style="width: 200px">
-        <template #cover>
-          <div class="image-cover">
+    <album-upload-modal
+        v-model:open="showUpload"
+        @uploadsDone="() => $refs.photoGrid.loadPhotos()"
+        :album-id="albumId"
+    />
 
-          </div>
+    <n-space vertical>
+      <album-header :album-id="albumId">
+        <n-button quaternary @click="openUpload">
+          <template #icon>
+            <upload-icon/>
+          </template>
+          Upload photos
+        </n-button>
+      </album-header>
+      <album-photo-grid ref="photoGrid" :album-id="albumId">
+        <template #empty>
+          <n-empty>
+            <template #icon>
+              <n-icon>
+                <photo-icon/>
+              </n-icon>
+            </template>
+            Album has no photos
+            <template #extra>
+              <n-button @click="openUpload">Upload photos</n-button>
+            </template>
+          </n-empty>
         </template>
-      </n-card>
-      <n-h1 class="title">
-        <n-skeleton v-if="loading" text :sharp="false"/>
-        <div v-else @focus="editing.setEditing(true)" contenteditable>{{ albumName }}</div>
-      </n-h1>
+      </album-photo-grid>
     </n-space>
-    <n-image-group class="photo-list">
-      <n-image v-if="loading" v-for="n in 10" class="album-card" size="small">
-        <template #header>
-          <n-skeleton text :sharp="false"/>
-        </template>
-        <template #cover>
-          <n-skeleton class="image-cover"/>
-        </template>
-      </n-image>
-      <n-image v-else v-for="{album} in []">
-      </n-image>
-    </n-image-group>
   </div>
 </template>
 
 <style scoped>
-.title {
-  flex: 1;
-  cursor: text;
-}
-
-.image-cover {
-  border-radius: 3px;
-  width: 100%;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
-  position: relative;
-  background-color: #cccccc;
-}
-
-.image-cover > img {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-}
 </style>
