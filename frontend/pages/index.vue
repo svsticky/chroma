@@ -1,9 +1,23 @@
 <script lang="ts">
 import {listAlbums} from '~/models/album'
 import {NButton} from 'naive-ui'
-import {AddOutline as AddIcon} from '@vicons/ionicons5'
+import {AddOutline as AddIcon, ImageOutline as ImageIcon, CloseCircleOutline as ErrorIcon} from '@vicons/ionicons5'
+import {DataType, getPhoto, Quality} from '~/models/photo'
+
+type Data = {
+  loadedPhotos: {
+    [key: string]: {
+      url: string,
+      isObjectURL: boolean
+    }
+  }
+}
 
 export default defineComponent({
+  components: {
+    ImageIcon,
+    ErrorIcon
+  },
   setup() {
     definePageMeta({
       actionComponents: [
@@ -18,7 +32,9 @@ export default defineComponent({
     const auth = useAuth()
 
     const {pending: loading, data: albums} = useAsyncData('albums', async () => {
-      const albums = await listAlbums() || []
+      const albums = await listAlbums({
+        includeCoverPhotos: false
+      })
 
       albums.sort(({album: a}, {album: b}) => {
         if (a.publishedAt != null && b.publishedAt != null) {
@@ -32,6 +48,80 @@ export default defineComponent({
     })
 
     return {auth, loading, albums}
+  },
+  data(): Data {
+    return {
+      loadedPhotos: {}
+    }
+  },
+  unmounted() {
+    for (const id in this.loadedPhotos) {
+      this.unloadPhoto(id)
+    }
+  },
+  methods: {
+    unloadPhoto(id: string) {
+      // *** Check if the photo is loaded, otherwise there is nothing to do
+      if (!(id in this.loadedPhotos)) {
+        return
+      }
+
+      // *** Check if it is an object url
+      if (this.loadedPhotos[id].isObjectURL) {
+        // *** Revoke the object url and thus unload it from memory
+        URL.revokeObjectURL(this.loadedPhotos[id].url)
+      }
+
+      // *** Delete the entry from the object
+      delete this.loadedPhotos[id]
+    },
+    async loadPhoto(id: string) {
+      // *** Check if the photo is already loaded
+      if (id in this.loadedPhotos) {
+        return true
+      }
+
+      try {
+        // *** Load the photo
+        const photo = await getPhoto(id, {
+          quality: Quality.Thumbnail
+        })
+
+        // *** Check the data type
+        if (photo.dataType == DataType.Url) {
+          this.loadedPhotos[id] = {
+            url: photo.data.url,
+            isObjectURL: false
+          }
+        } else {
+          // *** Check if bytes have been loaded
+          if (!photo.data.bytes) {
+            return false
+          }
+
+          // *** Create the object url
+          const url = URL.createObjectURL(new Blob([photo.data.bytes]))
+
+          // *** Add the url to the registry
+          this.loadedPhotos[id] = {
+            url,
+            isObjectURL: true
+          }
+        }
+      } catch (e: any) {
+        // *** Load failed
+        return false
+      }
+
+      // *** Load successful
+      return true
+    },
+    async getPhotoUrl(id: string) {
+      // *** Load the photo, will not load if
+      await this.loadPhoto(id)
+
+      return this.loadedPhotos[id].url
+    }
   }
 })
 </script>
@@ -49,13 +139,34 @@ export default defineComponent({
         </template>
       </n-card>
       <nuxt-link v-else v-for="{album} in albums" :to="`/album/${album.id}`" class="album-link">
-        <n-card :title="album.name || 'Untitled album'" class="album-card" size="small" :bordered="false">
-          <template #cover>
-            <div class="album-cover-photo">
-              <!--            Add cover -->
-            </div>
+        <Suspense>
+          <n-card :title="album.name || 'Untitled album'" class="album-card" size="small" :bordered="false">
+            <template #cover>
+              <div class="album-cover-photo">
+                <n-empty v-if="album.coverPhotoId?.length == 0" :show-description="false">
+                  <template #icon>
+                    <n-icon>
+                      <image-icon/>
+                    </n-icon>
+                  </template>
+                </n-empty>
+                <img v-else-if="album.coverPhotoId && loadPhoto(album.coverPhotoId)"
+                     :src="getPhotoUrl(album.coverPhotoId)"/>
+                <n-empty v-else description="Failed to load image">
+                  <template #icon>
+                    <n-icon>
+                      <error-icon/>
+                    </n-icon>
+                  </template>
+                </n-empty>
+              </div>
+            </template>
+          </n-card>
+
+          <template #fallback>
+            Loading...
           </template>
-        </n-card>
+        </Suspense>
       </nuxt-link>
     </div>
   </div>
@@ -77,6 +188,14 @@ export default defineComponent({
   padding-top: 75%; /* 1:1 Aspect Ratio */
   position: relative;
   background-color: #cccccc;
+}
+
+.album-cover-photo > .n-empty {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
 }
 
 .album-cover-photo > img {

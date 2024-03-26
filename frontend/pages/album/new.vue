@@ -17,7 +17,9 @@ export default defineComponent({
   },
   methods: {
     async onAlbumCreate() {
-      const albumId = await createAlbum(this.name, this.isDraft)
+      const albumId = await createAlbum(this.name, {
+        isDraft: this.isDraft
+      })
 
       navigateTo(`/album/${albumId}`)
     }
