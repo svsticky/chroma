@@ -1,14 +1,22 @@
 <script lang="ts">
 import {NButton} from 'naive-ui'
 import {CloudUploadOutline as UploadIcon, CreateOutline as EditIcon, ImageOutline as PhotoIcon} from '@vicons/ionicons5'
+import {AlbumPhotoGrid} from "#components";
 
 export default defineComponent({
+  computed: {
+    AlbumPhotoGrid() {
+      return AlbumPhotoGrid
+    }
+  },
   components: {
     UploadIcon,
     PhotoIcon
   },
   setup() {
     definePageMeta({
+      key: 'album-view',
+      keepalive: true,
       parent: '/',
       showFavicon: false,
       showTitle: false,
@@ -26,9 +34,10 @@ export default defineComponent({
     })
 
     const route = useRoute()
-    const albumId = route.params['album'] as string
+    const albumId = ref(route.params['album'] as string)
+    const photoId = ref(route.params['photo'] as string | undefined)
 
-    return {albumId}
+    return {albumId, photoId}
   },
   data() {
     return {
@@ -42,6 +51,13 @@ export default defineComponent({
     closeUpload() {
       this.showUpload = false
     }
+  },
+  watch: {
+    $route(to, from) {
+      const route = useRoute()
+      this.albumId = route.params['album'] as string
+      this.photoId = route.params['photo'] as string | undefined || undefined
+    }
   }
 })
 </script>
@@ -53,6 +69,12 @@ export default defineComponent({
         @uploadsDone="() => $refs.photoGrid.loadPhotos()"
         :album-id="albumId"
     />
+
+    <transition>
+      <div v-if="photoId">
+        <photo-preview v-if="photoId" :photo-id="photoId"/>
+      </div>
+    </transition>
 
     <n-space vertical>
       <album-header :album-id="albumId">
@@ -83,4 +105,15 @@ export default defineComponent({
 </template>
 
 <style scoped>
+.v-enter-active,
+.v-leave-active {
+  transition: opacity ease-in-out 200ms;
+  position: relative;
+  z-index: 1;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
 </style>

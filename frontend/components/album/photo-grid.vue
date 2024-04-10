@@ -29,8 +29,11 @@ export default defineComponent({
       loadedPhotos: {}
     }
   },
-  async mounted() {
+  async created() {
     await this.loadPhotos()
+  },
+  destroyed() {
+    this.unloadPhotos()
   },
   methods: {
     unloadPhotos() {
@@ -112,7 +115,7 @@ export default defineComponent({
   <div>
     <div v-if="loading || hasPhotos" class="photo-grid">
       <n-skeleton v-if="loading" v-for="_ in 10" class="image-skeleton" :sharp="false"/>
-      <nuxt-link v-else :to="`/album/${albumId}/photo/${id}`" v-for="(photo, id) in loadedPhotos" class="photo-thumbnail">
+      <nuxt-link v-else :to="`/album/${albumId}/${id}`" v-for="(photo, id) in loadedPhotos" class="photo-thumbnail">
         <div class="image-container">
           <img :src="photo['url']"/>
         </div>
@@ -164,5 +167,6 @@ export default defineComponent({
   width: 100%;
   height: 100%;
   object-fit: cover;
+  z-index: 0;
 }
 </style>

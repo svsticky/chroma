@@ -34,84 +34,75 @@ export default defineComponent({
     },
     actionComponents() {
       return this.$route.meta.actionComponents || []
-    },
-    fixed() {
-      return this.$route.meta.fixed == true
-    },
-    dark() {
-      return this.$route.meta.dark == true
     }
   }
 })
 </script>
 
 <template>
-  <n-config-provider :theme="dark ? darkTheme : null">
-    <n-global-style/>
-    <n-space vertical>
-      <n-layout :position="fixed ? 'absolute' : 'static'">
-        <n-layout-header :position="fixed ? 'absolute' : 'static'">
-          <n-grid :cols="3" layout-shift-disabled>
-            <n-gi>
-              <n-space align="center" style="font-size: 0; height: 100%;">
-                <transition name="back">
-                  <nuxt-link v-if="showBackButton" :to="parentRoute">
-                    <n-button text>
-                      <n-icon size="22">
-                        <back-icon/>
-                      </n-icon>
-                    </n-button>
-                  </nuxt-link>
-                </transition>
-                <transition>
-                  <nuxt-link
-                      v-if="showFavicon"
-                      :to="parentRoute">
-                    <n-avatar
-                        color="transparent"
-                        src="/icon.svg"
-                    />
-                  </nuxt-link>
-                </transition>
-                <transition>
-                  <nuxt-link
-                      v-if="showTitle"
-                      :to="parentRoute"
-                      style="text-decoration: none; color: inherit">
-                    <span class="album-title">Chroma</span>
-                  </nuxt-link>
-                </transition>
-              </n-space>
-            </n-gi>
-            <n-gi>
-              <transition>
-                <div v-if="showSearchBar">
-                  <header-search-bar/>
-                </div>
+  <n-space vertical>
+    <n-layout>
+      <n-layout-header>
+        <n-grid :cols="3" layout-shift-disabled>
+          <n-gi>
+            <n-space align="center" style="font-size: 0; height: 100%;">
+              <transition name="back">
+                <nuxt-link v-if="showBackButton" :to="parentRoute">
+                  <n-button text>
+                    <n-icon size="22">
+                      <back-icon/>
+                    </n-icon>
+                  </n-button>
+                </nuxt-link>
               </transition>
-            </n-gi>
-            <n-gi>
-              <n-space align="center" justify="end" style="font-size: 0; height: 100%;">
+              <transition>
+                <nuxt-link
+                    v-if="showFavicon"
+                    :to="parentRoute">
+                  <n-avatar
+                      color="transparent"
+                      src="/icon.svg"
+                  />
+                </nuxt-link>
+              </transition>
+              <transition>
+                <nuxt-link
+                    v-if="showTitle"
+                    :to="parentRoute"
+                    style="text-decoration: none; color: inherit">
+                  <span class="album-title">Chroma</span>
+                </nuxt-link>
+              </transition>
+            </n-space>
+          </n-gi>
+          <n-gi>
+            <transition>
+              <div v-if="showSearchBar">
+                <header-search-bar/>
+              </div>
+            </transition>
+          </n-gi>
+          <n-gi>
+            <n-space align="center" justify="end" style="font-size: 0; height: 100%;">
               <span v-for="component in actionComponents" :key="component">
                 <component :is="component"/>
               </span>
-                <transition>
-                  <div v-if="showUserMenu">
-                    <header-user-menu/>
-                  </div>
-                </transition>
-              </n-space>
-            </n-gi>
-          </n-grid>
-        </n-layout-header>
-        <n-layout-content style="padding: 24px">
-          <keep-alive>
-            <slot/>
-          </keep-alive>
-        </n-layout-content>
-      </n-layout>
-    </n-space>
-  </n-config-provider>
+              <transition>
+                <div v-if="showUserMenu">
+                  <header-user-menu/>
+                </div>
+              </transition>
+            </n-space>
+          </n-gi>
+        </n-grid>
+      </n-layout-header>
+      <n-layout-content style="padding: 24px">
+        <keep-alive>
+          <slot/>
+        </keep-alive>
+      </n-layout-content>
+    </n-layout>
+  </n-space>
 </template>
 
 <style scoped>

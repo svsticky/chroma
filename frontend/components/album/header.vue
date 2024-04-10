@@ -8,7 +8,10 @@ export default defineComponent({
   },
   setup(props) {
     const {pending: loading, data: album} = useAsyncData(`album:${props.albumId}`, async () => {
-      return (await getAlbum(props.albumId as string, true, false)).toObject()
+      return (await getAlbum(props.albumId as string, {
+        includePhotos: false,
+        includeCoverPhoto: false
+      })).toObject()
     })
 
     return {loading, album}

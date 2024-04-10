@@ -27,5 +27,6 @@ html, body, #__nuxt {
   opacity: 0;
 }
 </style>
+
 <script setup lang="ts">
 </script>
