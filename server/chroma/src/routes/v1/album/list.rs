@@ -54,7 +54,7 @@ pub async fn list(
     )
     .await?
     .into_iter()
-    .filter_map(|f| f)
+    .flatten()
     .collect::<Vec<_>>();
 
     // Insert the newly fetched into the cache
@@ -65,14 +65,11 @@ pub async fn list(
     .await;
 
     // Merge the two sets
-    let mut albums = vec![
-        fetched_albums,
+    let mut albums = [fetched_albums,
         cached_albums
             .into_iter()
-            .map(|(_, v)| v)
-            .filter_map(|v| v)
-            .collect::<Vec<_>>(),
-    ]
+            .filter_map(|(_, v)| v)
+            .collect::<Vec<_>>()]
     .concat();
 
     // Check if we should include draft albums
@@ -156,7 +153,7 @@ pub async fn list(
         DalError::Db(e) => Error::from(e),
     })?
     .into_iter()
-    .filter_map(|v| v)
+    .flatten()
     .collect::<Vec<_>>();
 
     Ok(Payload(ListAlbumsResponse { albums }))
