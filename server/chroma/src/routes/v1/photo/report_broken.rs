@@ -47,7 +47,7 @@ pub async fn report_broken(
                     _ => Err(e.into()),
                 },
                 DalError::Db(e) => Err(e.into()),
-            }
+            };
         }
     };
 
