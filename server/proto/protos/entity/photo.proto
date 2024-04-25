@@ -20,3 +20,9 @@ message PhotoRespone {
     bytes bytes = 2;
   }
 }
+
+enum PhotoQuality {
+  ORIGINAL = 0;
+  W400 = 1;
+  W1600 = 2;
+}

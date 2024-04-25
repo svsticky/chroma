@@ -154,7 +154,7 @@ async fn image_pipeline(
 /// Resize an image and save the resulting image.
 /// Spawns a new Tokio task.
 #[instrument(skip(image, engine, db))]
-fn resize_and_save(
+pub fn resize_and_save(
     image: DynamicImage,
     quality: PhotoQuality,
     engine: StorageEngine,
