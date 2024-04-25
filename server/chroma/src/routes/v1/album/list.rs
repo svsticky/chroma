@@ -65,11 +65,13 @@ pub async fn list(
     .await;
 
     // Merge the two sets
-    let mut albums = [fetched_albums,
+    let mut albums = [
+        fetched_albums,
         cached_albums
             .into_iter()
             .filter_map(|(_, v)| v)
-            .collect::<Vec<_>>()]
+            .collect::<Vec<_>>(),
+    ]
     .concat();
 
     // Check if we should include draft albums
