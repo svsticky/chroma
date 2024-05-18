@@ -31,9 +31,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - "POSTGRES_DB=sticky_chroma"
-      - "POSTGRES_USER=sticky_chroma"
-      - "POSTGRES_PASSWORD=sticky_chroma"
+      - "POSTGRES_DB=chroma"
+      - "POSTGRES_USER=chroma"
+      - "POSTGRES_PASSWORD=chroma"
       - "PGDATA=/var/lib/postgresql/data/pgdata"
     networks:
       - chroma
