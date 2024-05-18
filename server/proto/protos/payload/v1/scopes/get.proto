@@ -1,6 +1,6 @@
 syntax = "proto3";
 package nl.svsticky.chroma;
 
-message GetAvailableScopesResponse {
+message GetScopesResponse {
   repeated string scopes = 1;
 }

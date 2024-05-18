@@ -1,0 +1,10 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+import "entity/user.proto";
+
+message UserScope {
+  string name = 1;
+  User grantedBy = 2;
+  int64 grantedAt = 3;
+}

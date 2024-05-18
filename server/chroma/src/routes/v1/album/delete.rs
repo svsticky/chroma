@@ -49,7 +49,7 @@ pub async fn delete(
             .await?;
     }
 
-    album.delete().await?;
+    album.delete(&data.db).await?;
 
     Ok(Empty)
 }

@@ -3,6 +3,6 @@ package nl.svsticky.chroma;
 
 import "entity/user.proto";
 
-message ListUserResponse {
+message GetUsersResponse {
   repeated User users = 1;
 }

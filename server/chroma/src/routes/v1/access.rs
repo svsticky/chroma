@@ -28,15 +28,19 @@ pub async fn access(
     // is done by the `Authorization` middleware.
     // We only need to return the information here.
 
-    let scope_query = if let Some(check_scope) = &query.scope {
-        let has_scope = auth.has_scope(&data.db, check_scope).await?;
-        Some(has_scope)
+    let response = if let Some(check_scope) = &query.scope {
+        AccessResponse {
+            admin: auth.is_admin,
+            has_requested_scope: Some(auth.has_scope(&data.db, check_scope).await?),
+            all_scopes: None,
+        }
     } else {
-        None
+        AccessResponse {
+            admin: auth.is_admin,
+            has_requested_scope: None,
+            all_scopes: Some(auth.list_scopes(&data.db).await?),
+        }
     };
 
-    Ok(Payload(AccessResponse {
-        admin: auth.is_admin,
-        has_requested_scope: scope_query,
-    }))
+    Ok(Payload(response))
 }

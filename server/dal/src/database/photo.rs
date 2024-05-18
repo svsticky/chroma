@@ -1,12 +1,10 @@
-use crate::database::{Album, Database, DbResult};
+use crate::database::{Album, Database, DatabaseResult};
 use crate::storage_engine::{PhotoQuality, StorageEngine};
 use crate::DalError;
-use proto::photo_respone::Response;
-use proto::PhotoRespone;
 use rand::Rng;
 use sqlx::FromRow;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Photo<'a> {
     db: &'a Database,
     pub id: String,
@@ -99,11 +97,15 @@ impl<'a> Photo<'a> {
         format!("{}{random}", Self::ID_PREFIX)
     }
 
+<<<<<<< Updated upstream
+    pub async fn create(db: &'a Database, album: &Album, created_at: i64) -> DbResult<Photo<'a>> {
+=======
     pub async fn create(
         db: &'a Database,
         album: &Album<'_>,
         created_at: i64,
-    ) -> DbResult<Photo<'a>> {
+    ) -> DatabaseResult<Photo<'a>> {
+>>>>>>> Stashed changes
         let id = Self::generate_id();
 
         sqlx::query("INSERT INTO photo_metadata (id, album_id, created_at) VALUES ($1, $2, $3)")
@@ -121,7 +123,10 @@ impl<'a> Photo<'a> {
         })
     }
 
-    pub async fn get_by_id<S: AsRef<str>>(db: &'a Database, id: S) -> DbResult<Option<Photo<'a>>> {
+    pub async fn get_by_id<S: AsRef<str>>(
+        db: &'a Database,
+        id: S,
+    ) -> DatabaseResult<Option<Photo<'a>>> {
         let photo: Option<_Photo> =
             sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata WHERE id = $1")
                 .bind(id.as_ref())
@@ -131,7 +136,7 @@ impl<'a> Photo<'a> {
         Ok(photo.map(|photo| photo.into_photo(db)))
     }
 
-    pub async fn delete(self) -> DbResult<()> {
+    pub async fn delete(self) -> DatabaseResult<()> {
         let mut tx = self.db.begin().await?;
         // Remove the photo from the album cover
         sqlx::query(
@@ -153,27 +158,11 @@ impl<'a> Photo<'a> {
         Ok(())
     }
 
-    pub async fn list(db: &'a Database) -> DbResult<Vec<Photo<'a>>> {
+    pub async fn list(db: &'a Database) -> DatabaseResult<Vec<Photo<'a>>> {
         let selfs: Vec<_Photo> =
             sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata")
                 .fetch_all(&**db)
                 .await?;
-        Ok(selfs
-            .into_iter()
-            .map(|photo| photo.into_photo(db))
-            .collect())
-    }
-
-    pub async fn list_in_album<S: AsRef<str>>(
-        db: &'a Database,
-        album_id: S,
-    ) -> DbResult<Vec<Photo<'a>>> {
-        let selfs: Vec<_Photo> = sqlx::query_as(
-            "SELECT id, album_id, created_at FROM photo_metadata WHERE album_id = $1",
-        )
-        .bind(album_id.as_ref())
-        .fetch_all(&**db)
-        .await?;
         Ok(selfs
             .into_iter()
             .map(|photo| photo.into_photo(db))
@@ -186,7 +175,7 @@ impl<'a> Photo<'a> {
     /// # Errors
     ///
     /// If a database error occurs
-    pub async fn is_quality_created(&self, quality: PhotoQuality) -> DbResult<bool> {
+    pub async fn is_quality_created(&self, quality: PhotoQuality) -> DatabaseResult<bool> {
         match quality {
             PhotoQuality::Original => Ok(true),
             PhotoQuality::W400 => self.is_quality_w400_created().await,
@@ -194,7 +183,7 @@ impl<'a> Photo<'a> {
         }
     }
 
-    async fn is_quality_w400_created(&self) -> DbResult<bool> {
+    async fn is_quality_w400_created(&self) -> DatabaseResult<bool> {
         let value: bool =
             sqlx::query_scalar("SELECT w400_created FROM photo_metadata WHERE id = $1")
                 .bind(&self.id)
@@ -203,7 +192,7 @@ impl<'a> Photo<'a> {
         Ok(value)
     }
 
-    async fn is_quality_w1600_created(&self) -> DbResult<bool> {
+    async fn is_quality_w1600_created(&self) -> DatabaseResult<bool> {
         let value: bool =
             sqlx::query_scalar("SELECT w1600_created FROM photo_metadata WHERE id = $1")
                 .bind(&self.id)
@@ -218,7 +207,11 @@ impl<'a> Photo<'a> {
     /// # Errors
     ///
     /// If a database error occurs
-    pub async fn set_quality_created(&self, quality: PhotoQuality, created: bool) -> DbResult<()> {
+    pub async fn set_quality_created(
+        &self,
+        quality: PhotoQuality,
+        created: bool,
+    ) -> DatabaseResult<()> {
         match quality {
             PhotoQuality::Original => Ok(()),
             PhotoQuality::W400 => self.set_quality_w400_created(created).await,
@@ -226,7 +219,7 @@ impl<'a> Photo<'a> {
         }
     }
 
-    async fn set_quality_w400_created(&self, created: bool) -> DbResult<()> {
+    async fn set_quality_w400_created(&self, created: bool) -> DatabaseResult<()> {
         sqlx::query("UPDATE photo_metadata SET w400_created = $1 WHERE id = $2")
             .bind(created)
             .bind(&self.id)
@@ -235,7 +228,7 @@ impl<'a> Photo<'a> {
         Ok(())
     }
 
-    async fn set_quality_w1600_created(&self, created: bool) -> DbResult<()> {
+    async fn set_quality_w1600_created(&self, created: bool) -> DatabaseResult<()> {
         sqlx::query("UPDATE photo_metadata SET w1600_created = $1 WHERE id = $2")
             .bind(created)
             .bind(&self.id)

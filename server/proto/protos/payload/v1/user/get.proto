@@ -2,6 +2,7 @@ syntax = "proto3";
 package nl.svsticky.chroma;
 
 import "entity/user.proto";
+import "entity/user_scope.proto";
 
 message GetUserResponse {
   User user = 1;

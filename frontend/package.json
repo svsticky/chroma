@@ -1,5 +1,9 @@
 {
   "name": "chroma",
+<<<<<<< HEAD
+=======
+  "version": "0.1.22",
+>>>>>>> upstream/master
   "private": true,
   "type": "module",
   "scripts": {
