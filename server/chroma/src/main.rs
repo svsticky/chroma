@@ -14,6 +14,7 @@ use dal::storage_engine::StorageEngine;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
 use std::path::PathBuf;
 use std::time::Duration;
+use dotenv::dotenv;
 use tracing::{info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
@@ -26,6 +27,8 @@ mod routes;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv().ok();
+
     color_eyre::install()?;
     install_tracing();
 
