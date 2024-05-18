@@ -1,13 +1,13 @@
 syntax = "proto3";
 package nl.svsticky.chroma;
 
-message User {
-  int32 id = 1;
-  string name = 2;
+enum UserType {
+  STANDARD = 0;
+  TOKEN = 1;
 }
 
-message UserScope {
-  string name = 1;
-  int32 grantedBy = 2;
-  int64 grantedAt = 3;
+message User {
+  int32 id = 1;
+  UserType type = 2;
+  optional string name = 3;
 }

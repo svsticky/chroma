@@ -1,31 +1,16 @@
 syntax = "proto3";
 package nl.svsticky.chroma;
 
+import "entity/user.proto";
 import "entity/photo.proto";
 
 message Album {
   string id = 1;
   string name = 2;
-  int64 createdAt = 3;
-  optional string coverPhotoId = 4;
-  bool isDraft = 5;
-  AlbumUser createdBy = 6;
-  optional AlbumUser publishedBy = 7;
-  optional int64 publishedAt = 8;
-}
-
-enum UserType {
-  SERVICE = 0;
-  KOALA = 1;
-}
-
-message AlbumUser {
-  UserType type = 1;
-  optional string name = 2;
-  int32 id = 3;
-}
-
-message AlbumWithCoverPhoto {
-  Album album = 1;
-  optional Photo coverPhoto = 2;
+  bool published = 3;
+  int64 createdAt = 4;
+  User createdBy = 5;
+  optional int64 publishedAt = 6;
+  optional User publishedBy = 7;
+  optional Photo coverPhotoId = 8;
 }

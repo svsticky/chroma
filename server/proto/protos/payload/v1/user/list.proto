@@ -1,8 +1,0 @@
-syntax = "proto3";
-package nl.svsticky.chroma;
-
-import "entity/user.proto";
-
-message ListUserResponse {
-  repeated User users = 1;
-}

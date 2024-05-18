@@ -1,0 +1,1 @@
+ALTER INDEX idx_photo_metaddata_album_id RENAME TO idx_photo_metadata_album_id
