@@ -9,12 +9,10 @@ use cabbage::KoalaApi;
 use color_eyre::eyre::Error;
 use color_eyre::Result;
 use dal::database::Database;
-use dal::s3::S3Config;
-use dal::storage_engine::StorageEngine;
-use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
-use std::path::PathBuf;
-use std::time::Duration;
+use dal::storage_engine::{S3Config, Storage};
 use dotenv::dotenv;
+use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
+use std::time::Duration;
 use tracing::{info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
@@ -29,7 +27,6 @@ mod routes;
 async fn main() -> Result<()> {
     dotenv().ok();
 
-    color_eyre::install()?;
     install_tracing();
 
     info!("Starting");
@@ -48,23 +45,16 @@ async fn main() -> Result<()> {
     info!("Initializing database");
     let db = Database::new(config.database_config()?).await?;
 
-    info!("Initializing storage engine");
-    let storage = match config.storage_engine {
-        config::StorageEngine::S3 => {
-            StorageEngine::new_s3(S3Config {
-                bucket_name: config.s3_bucket_name.clone().unwrap(),
-                endpoint_url: config.s3_endpoint_url.clone().unwrap(),
-                region: config.s3_region.clone().unwrap(),
-                access_key_id: config.s3_access_key_id.clone().unwrap(),
-                secret_access_key: config.s3_secret_access_key.clone().unwrap(),
-                use_path_style: config.s3_force_path_style(),
-            })
-            .await?
-        }
-        config::StorageEngine::File => {
-            StorageEngine::new_file(PathBuf::from(config.file_base.clone().unwrap())).await?
-        }
-    };
+    info!("Initializing S3 storage engine");
+    let storage = Storage::new(S3Config {
+        bucket_name: config.s3_bucket_name.clone().unwrap(),
+        endpoint_url: config.s3_endpoint_url.clone().unwrap(),
+        region: config.s3_region.clone().unwrap(),
+        access_key_id: config.s3_access_key_id.clone().unwrap(),
+        secret_access_key: config.s3_secret_access_key.clone().unwrap(),
+        use_path_style: config.s3_force_path_style(),
+    })
+    .await?;
 
     let appdata = AppData {
         koala: KoalaApi::new(config.koala_base_redirect_uri().clone())?,

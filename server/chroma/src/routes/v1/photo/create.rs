@@ -3,7 +3,7 @@ use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, ImagePipelineError, WebResult};
 use actix_multiresponse::Payload;
 use dal::database::{Album, Database, Photo};
-use dal::storage_engine::{PhotoQuality, StorageEngine};
+use dal::storage_engine::{PhotoQuality, Storage};
 use exif::{In, Tag};
 use image::imageops::FilterType;
 use image::io::Reader;
@@ -120,7 +120,7 @@ async fn image_pipeline(
             PhotoQuality::Original
         );
         match engine
-            .create_photo(&photo_id, image, PhotoQuality::Original)
+            .create_photo(&photo_id, PhotoQuality::Original, image)
             .await
         {
             Ok(_) => {}
@@ -157,7 +157,7 @@ async fn image_pipeline(
 fn resize_and_save(
     image: DynamicImage,
     quality: PhotoQuality,
-    engine: StorageEngine,
+    engine: Storage,
     db: Database,
     photo_id: String,
 ) {
@@ -181,7 +181,7 @@ fn resize_and_save(
 
         trace!("Saving image '{photo_id}' in quality '{quality:?}'");
         match engine
-            .create_photo(&photo_id, converted_image_data, quality.clone())
+            .create_photo(&photo_id, quality.clone(), converted_image_data)
             .await
         {
             Ok(_) => {}

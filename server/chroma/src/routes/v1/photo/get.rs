@@ -5,7 +5,6 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
-use dal::storage_engine::StorageEngineError;
 use dal::DalError;
 use image::{DynamicImage, ImageOutputFormat};
 use proto::photo_respone::Response;
@@ -58,21 +57,19 @@ pub async fn get(
         .ok_or(Error::NotFound)?;
 
     if query.format.eq(&ImageFormat::WebP) && !query.force_bytes {
-        match photo
+        return match photo
             .clone()
             .photo_to_proto_url(&data.storage, query.quality_preference.clone().into())
             .await
         {
             Ok(p) => {
-                return Ok(Payload(GetPhotoResponse { photo: Some(p) }));
+                Ok(Payload(GetPhotoResponse { photo: Some(p) }))
             }
             Err(e) => match e {
                 DalError::Storage(e) => match e {
-                    // URL mode is not supported
-                    StorageEngineError::NotSupported => {}
-                    _ => return Err(e.into()),
+                    _ => Err(e.into()),
                 },
-                DalError::Db(e) => return Err(e.into()),
+                DalError::Db(e) => Err(e.into()),
             },
         }
     }

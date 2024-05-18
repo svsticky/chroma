@@ -5,9 +5,8 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::{Album, Photo};
-use dal::s3::aws_errors::GetObjectErrorKind;
-use dal::s3::{S3Error, SdkError};
-use dal::storage_engine::{EngineType, StorageEngineError};
+use dal::storage_engine::aws_error::GetObjectErrorKind;
+use dal::storage_engine::error::{SdkError, StorageError};
 use dal::DalError;
 use futures::future::{join_all, try_join_all};
 use proto::{AlbumWithCoverPhoto, ListAlbumsResponse};
@@ -105,33 +104,27 @@ pub async fn list(
                         qpref
                     };
 
-                    let photo = match storage.engine_type() {
-                        EngineType::S3 => match photo.photo_to_proto_url(&storage, quality).await {
-                            Ok(v) => v,
-                            Err(e) => {
-                                return match &e {
-                                    DalError::Storage(s) => match s {
-                                        StorageEngineError::S3(s) => match s {
-                                            S3Error::GetObject(s) => match s {
-                                                SdkError::ServiceError(s) => match s.err().kind {
-                                                    GetObjectErrorKind::NoSuchKey(_) => {
-                                                        album_id_cache.remove(&album.id).await;
-                                                        album.delete(&database).await?;
-                                                        Ok(None)
-                                                    }
-                                                    _ => Err(e),
-                                                },
-                                                _ => Err(e),
-                                            },
+                    let photo = match photo.photo_to_proto_url(&storage, quality).await {
+                        Ok(v) => v,
+                        Err(e) => {
+                            return match &e {
+                                DalError::Storage(s) => match s {
+                                    StorageError::GetObject(s) => match s {
+                                        SdkError::ServiceError(s) => match s.err().kind {
+                                            GetObjectErrorKind::NoSuchKey(_) => {
+                                                album_id_cache.remove(&album.id).await;
+                                                album.delete(&database).await?;
+                                                Ok(None)
+                                            }
                                             _ => Err(e),
                                         },
                                         _ => Err(e),
                                     },
                                     _ => Err(e),
-                                }
+                                },
+                                _ => Err(e),
                             }
-                        },
-                        EngineType::File => photo.photo_to_proto_bytes(&storage, quality).await?,
+                        }
                     };
 
                     Some(photo)
