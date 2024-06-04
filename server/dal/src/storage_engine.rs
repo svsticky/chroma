@@ -1,11 +1,15 @@
+use std::ops::Deref;
+use std::time::{Duration, Instant};
+
 use aws_credential_types::Credentials;
+use aws_sdk_s3::error::HeadBucketError;
 use aws_sdk_s3::presigning::config::PresigningConfig;
 use aws_sdk_s3::types::ByteStream;
 use aws_sdk_s3::{Client, Config};
+use aws_smithy_http::result::SdkError;
 use aws_types::region::Region;
-use std::ops::Deref;
-use std::time::Duration;
 use strum_macros::Display;
+use tracing::log::info;
 
 #[derive(Debug, Clone, PartialEq, Display)]
 pub enum PhotoQuality {
@@ -29,7 +33,7 @@ pub mod aws_error {
 }
 
 pub mod error {
-    use aws_sdk_s3::error::{DeleteObjectError, GetObjectError, PutObjectError};
+    use aws_sdk_s3::error::{DeleteObjectError, GetObjectError, HeadBucketError, PutObjectError};
     pub use aws_sdk_s3::types::SdkError;
     use thiserror::Error;
 
@@ -37,6 +41,8 @@ pub mod error {
     pub enum InitError {
         #[error("Invalid App name provided")]
         AppName(#[from] aws_types::app_name::InvalidAppName),
+        #[error("Failed to retrieve information about Bucket: {0}")]
+        HeadBucket(#[from] SdkError<HeadBucketError>),
     }
 
     #[derive(Debug, Error)]
@@ -92,6 +98,8 @@ impl Storage {
                 .build(),
         );
 
+        Self::setup_bucket(&client, &config.bucket_name).await?;
+
         Ok(Storage {
             client,
             bucket_name: config.bucket_name,
@@ -114,9 +122,9 @@ impl Storage {
             .presigned(PresigningConfig::expires_in(Duration::from_secs(6000))?)
             .await?;
 
-        let url = response.uri();
+        let url = String::from(response.uri().to_string().split('?').next().unwrap());
 
-        Ok(url.to_string())
+        Ok(url)
     }
 
     pub async fn get_photo_bytes_by_id<S: AsRef<str>>(
@@ -174,6 +182,75 @@ impl Storage {
             ))
             .send()
             .await?;
+
+        Ok(())
+    }
+
+    async fn setup_bucket(
+        client: &Client,
+        bucket_name: &String,
+    ) -> Result<(), SdkError<HeadBucketError>> {
+        if let Err(err) = client.head_bucket().bucket(bucket_name).send().await {
+            match err {
+                SdkError::ServiceError(ref error) => {
+                    // If the error is not found, a new bucket can be created, otherwise rethrow the error
+                    if error.err().is_not_found() {
+                        // Track how long the bucket creation takes
+                        let start = Instant::now();
+
+                        // Create the bucket
+                        client
+                            .create_bucket()
+                            .bucket(bucket_name)
+                            .send()
+                            .await
+                            .expect("failed to create new bucket");
+
+                        // Update the bucket access policy
+                        client
+                            .put_bucket_policy()
+                            .bucket(bucket_name)
+                            .policy(format!(
+                                r#"{{
+                                    "Version": "2012-10-17",
+                                    "Statement": [
+                                        {{
+                                            "Effect": "Allow",
+                                            "Principal": {{
+                                                "AWS": [
+                                                    "*"
+                                                ]
+                                            }},
+                                            "Action": [
+                                                "s3:GetObject"
+                                            ],
+                                            "Resource": [
+                                                "arn:aws:s3:::{}/*"
+                                            ]
+                                        }}
+                                    ]
+                                }}"#,
+                                bucket_name
+                            ))
+                            .send()
+                            .await
+                            .expect("failed to set bucket policy");
+
+                        // Stop the timer
+                        let duration = start.elapsed();
+
+                        // Log the duration of the bucket creation
+                        info!(
+                            "bucket '{}' did not exist yet; created new bucket (took {:?})",
+                            bucket_name, duration
+                        );
+                    } else {
+                        return Err(err);
+                    }
+                }
+                _ => return Err(err),
+            }
+        }
 
         Ok(())
     }
