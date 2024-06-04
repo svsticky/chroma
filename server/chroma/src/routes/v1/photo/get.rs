@@ -62,16 +62,14 @@ pub async fn get(
             .photo_to_proto_url(&data.storage, query.quality_preference.clone().into())
             .await
         {
-            Ok(p) => {
-                Ok(Payload(GetPhotoResponse { photo: Some(p) }))
-            }
+            Ok(p) => Ok(Payload(GetPhotoResponse { photo: Some(p) })),
             Err(e) => match e {
                 DalError::Storage(e) => match e {
                     _ => Err(e.into()),
                 },
                 DalError::Db(e) => Err(e.into()),
             },
-        }
+        };
     }
 
     let mut proto = photo

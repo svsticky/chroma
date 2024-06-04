@@ -48,9 +48,7 @@ impl<'a> Photo<'a> {
             PhotoQuality::Original
         };
 
-        let url = storage
-            .get_photo_url_by_id( &self.id, quality)
-            .await?;
+        let url = storage.get_photo_url_by_id(&self.id, quality).await?;
 
         Ok(proto::Photo {
             id: self.id,
@@ -80,9 +78,7 @@ impl<'a> Photo<'a> {
             PhotoQuality::Original
         };
 
-        let photo_bytes = storage
-            .get_photo_bytes_by_id(&self.id, quality)
-            .await?;
+        let photo_bytes = storage.get_photo_bytes_by_id(&self.id, quality).await?;
         Ok(proto::Photo {
             id: self.id,
             album_id: self.album_id,
