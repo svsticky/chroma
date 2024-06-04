@@ -163,6 +163,7 @@ impl Storage {
                 photo_quality,
             ))
             .body(byte_stream)
+            .content_type("image/webp")
             .send()
             .await?;
 
