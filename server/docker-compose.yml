@@ -1,33 +1,37 @@
 version: '3.9'
+name: chroma
 
 networks:
-  chroma:
+  default:
     external: false
 
 volumes:
-  postgres_data_chroma:
+  postgres_data:
     driver: local
   minio_data:
     driver: local
 
 services:
   minio:
-    container_name: chroma_minio
+    container_name: minio
     image: minio/minio
     volumes:
       - "minio_data:/data:rw"
     ports:
       - "9000:9000"
       - "9001:9001"
+    environment:
+      - "MINIO_ACCESS_KEY=chroma"
+      - "MINIO_SECRET_KEY=chroma123"
     command: 'server /data --console-address ":9001"'
     networks:
-      - chroma
+      - default
 
   postgres:
-    container_name: chroma_postgres
+    container_name: postgres
     image: postgres
     volumes:
-      - "postgres_data_chroma:/var/lib/postgresql/data/pgdata:rw"
+      - "postgres_data:/var/lib/postgresql/data/pgdata:rw"
     ports:
       - "5432:5432"
     environment:
@@ -36,7 +40,7 @@ services:
       - "POSTGRES_PASSWORD=chroma"
       - "PGDATA=/var/lib/postgresql/data/pgdata"
     networks:
-      - chroma
+      - default
 
 #  chroma:
 #    container_name: chroma
