@@ -97,44 +97,57 @@ pub async fn list(
             // Fetch the cover photo if it is requested
             let cover_photo = if include_cover_photo {
                 if let Some(id) = &album.cover_photo_id {
-                    let photo = Photo::get_by_id(&database, id).await?.unwrap();
+                    match Photo::get_by_id(&database, id).await? {
+                        Some(photo) => {
+                            let quality = if !photo.is_quality_created(qpref.clone()).await? {
+                                dal::storage_engine::PhotoQuality::Original
+                            } else {
+                                qpref
+                            };
 
-                    let quality = if !photo.is_quality_created(qpref.clone()).await? {
-                        dal::storage_engine::PhotoQuality::Original
-                    } else {
-                        qpref
-                    };
-
-                    let photo = match storage.engine_type() {
-                        EngineType::S3 => match photo.photo_to_proto_url(&storage, quality).await {
-                            Ok(v) => v,
-                            Err(e) => {
-                                return match &e {
-                                    DalError::Storage(s) => match s {
-                                        StorageEngineError::S3(s) => match s {
-                                            S3Error::GetObject(s) => match s {
-                                                SdkError::ServiceError(s) => match s.err().kind {
-                                                    GetObjectErrorKind::NoSuchKey(_) => {
-                                                        album_id_cache.remove(&album.id).await;
-                                                        album.delete(&database).await?;
-                                                        Ok(None)
-                                                    }
+                            let photo = match storage.engine_type() {
+                                EngineType::S3 => match photo
+                                    .photo_to_proto_url(&storage, quality)
+                                    .await
+                                {
+                                    Ok(v) => v,
+                                    Err(e) => {
+                                        return match &e {
+                                            DalError::Storage(s) => match s {
+                                                StorageEngineError::S3(s) => match s {
+                                                    S3Error::GetObject(s) => match s {
+                                                        SdkError::ServiceError(s) => match s
+                                                            .err()
+                                                            .kind
+                                                        {
+                                                            GetObjectErrorKind::NoSuchKey(_) => {
+                                                                album_id_cache
+                                                                    .remove(&album.id)
+                                                                    .await;
+                                                                album.delete(&database).await?;
+                                                                Ok(None)
+                                                            }
+                                                            _ => Err(e),
+                                                        },
+                                                        _ => Err(e),
+                                                    },
                                                     _ => Err(e),
                                                 },
                                                 _ => Err(e),
                                             },
                                             _ => Err(e),
-                                        },
-                                        _ => Err(e),
-                                    },
-                                    _ => Err(e),
+                                        }
+                                    }
+                                },
+                                EngineType::File => {
+                                    photo.photo_to_proto_bytes(&storage, quality).await?
                                 }
-                            }
-                        },
-                        EngineType::File => photo.photo_to_proto_bytes(&storage, quality).await?,
-                    };
+                            };
 
-                    Some(photo)
+                            Some(photo)
+                        }
+                        None => None,
+                    }
                 } else {
                     None
                 }
