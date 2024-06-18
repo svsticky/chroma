@@ -5,7 +5,6 @@ use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::Photo;
-use dal::storage_engine::EngineType;
 use dal::DalError;
 use futures::future::join_all;
 use proto::ListPhotoResponse;
@@ -43,13 +42,7 @@ pub async fn list(
         let storage = data.storage.clone();
         let qpref: dal::storage_engine::PhotoQuality = query.quality_preference.clone().into();
 
-        async move {
-            match storage.engine_type() {
-                EngineType::S3 => p.photo_to_proto_url(&storage, qpref).await,
-                // File engine doesn't support URL mode
-                EngineType::File => p.photo_to_proto_bytes(&storage, qpref).await,
-            }
-        }
+        async move { p.photo_to_proto_url(&storage, qpref).await }
     }))
     .await
     .into_iter()

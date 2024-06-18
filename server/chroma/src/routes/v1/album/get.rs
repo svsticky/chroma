@@ -4,7 +4,7 @@ use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use actix_web::web;
 use dal::database::{Album, Photo};
-use dal::storage_engine::{EngineType, PhotoQuality};
+use dal::storage_engine::PhotoQuality;
 use dal::DalError;
 use futures::future::join_all;
 use proto::{AlbumWithCoverPhoto, GetAlbumResponse};
@@ -67,22 +67,13 @@ pub async fn get(
                 .await?
                 .ok_or(Error::NotFound)?;
 
-            let photo = match data.storage.engine_type() {
-                EngineType::S3 => {
-                    photo
-                        .photo_to_proto_url(&data.storage, PhotoQuality::W400)
-                        .await
-                }
-                EngineType::File => {
-                    photo
-                        .photo_to_proto_bytes(&data.storage, PhotoQuality::W400)
-                        .await
-                }
-            }
-            .map_err(|e| match e {
-                DalError::Storage(e) => Error::from(e),
-                DalError::Db(e) => Error::from(e),
-            })?;
+            let photo = photo
+                .photo_to_proto_url(&data.storage, PhotoQuality::W400)
+                .await
+                .map_err(|e| match e {
+                    DalError::Storage(e) => Error::from(e),
+                    DalError::Db(e) => Error::from(e),
+                })?;
 
             Some(photo)
         } else {

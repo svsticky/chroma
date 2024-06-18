@@ -18,10 +18,6 @@ pub struct Config {
     /// Database connection url
     pub db_url: Option<String>,
 
-    /// The storage engine to be used
-    #[serde(default = "default_storage_engine")]
-    pub storage_engine: StorageEngine,
-
     /// The name of the S3 bucket that should be used
     /// Required if `storage_engine` is set to [StorageEngine::S3].
     pub s3_bucket_name: Option<String>,
@@ -42,10 +38,6 @@ pub struct Config {
     /// but should be `false` or left unspecified when targeting
     /// Amazon S3.
     pub s3_force_path_style: Option<bool>,
-
-    /// The base path for storage.
-    /// Required if `storage_engine` is set to [StorageEngine::File].
-    pub file_base: Option<String>,
 
     /// OAuth2 client ID created in Koala
     pub koala_client_id: String,
@@ -75,7 +67,7 @@ pub struct Config {
     /// If not provided, the default [Config::DEFAULT_KOALA_USER_AGENT] will be used.
     koala_user_agent: Option<String>,
     /// The URI to which Chroma should redirect after the user
-    /// has logged in. Refer to the UI's documentation
+    /// has logged in. Refer to the UIs documentation
     /// for what this value should be.
     /// The query parameters `session_id` and `is_admin` will be appended.
     /// No existing query parameters should be in the URI.
@@ -93,16 +85,6 @@ pub struct Config {
     /// Service tokens can access all APIs, even admin ones!
     pub service_tokens: String,
     // ANCHOR_END: config
-}
-
-const fn default_storage_engine() -> StorageEngine {
-    StorageEngine::S3
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub enum StorageEngine {
-    S3,
-    File,
 }
 
 impl Config {
@@ -185,35 +167,24 @@ impl Config {
     /// Check if the configuration is valid.
     /// Returns `true` if it is, `false` if it is not.
     pub fn validate(&self) -> bool {
-        // Validate storage engine options
-        match self.storage_engine {
-            StorageEngine::File => {
-                if self.file_base.is_none() {
-                    warn!("Config validation failed on File fields");
-                    return false;
-                }
+        let check_field = |field_name: &'static str, field_value: &Option<_>| {
+            if field_value.is_none() {
+                warn!("Config validation failed on S3_{field_name}");
+                false
+            } else {
+                true
             }
-            StorageEngine::S3 => {
-                let check_field = |fname: &'static str, f: &Option<_>| {
-                    if f.is_none() {
-                        warn!("Config validation failed on S3_{fname}");
-                        false
-                    } else {
-                        true
-                    }
-                };
+        };
 
-                let config_ok = check_field("ACCESS_KEY_ID", &self.s3_access_key_id)
-                    && check_field("SECRET_ACCESS_KEY", &self.s3_secret_access_key)
-                    && check_field("BUCKET_NAME", &self.s3_bucket_name)
-                    && check_field("ENDPOINT_URL", &self.s3_endpoint_url)
-                    && check_field("REGION", &self.s3_region);
+        let config_ok = check_field("ACCESS_KEY_ID", &self.s3_access_key_id)
+            && check_field("SECRET_ACCESS_KEY", &self.s3_secret_access_key)
+            && check_field("BUCKET_NAME", &self.s3_bucket_name)
+            && check_field("ENDPOINT_URL", &self.s3_endpoint_url)
+            && check_field("REGION", &self.s3_region);
 
-                if !config_ok {
-                    warn!("Config validation failed.");
-                    return false;
-                }
-            }
+        if !config_ok {
+            warn!("Config validation failed.");
+            return false;
         }
 
         true

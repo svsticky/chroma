@@ -1,5 +1,5 @@
 use crate::database::{Album, Database, DbResult};
-use crate::storage_engine::{PhotoQuality, StorageEngine};
+use crate::storage_engine::{PhotoQuality, Storage};
 use crate::DalError;
 use proto::photo_respone::Response;
 use proto::PhotoRespone;
@@ -38,7 +38,7 @@ impl<'a> Photo<'a> {
 
     pub async fn photo_to_proto_url(
         self,
-        storage: &StorageEngine,
+        storage: &Storage,
         quality_preference: PhotoQuality,
     ) -> Result<proto::Photo, DalError> {
         let has_pref = self.is_quality_created(quality_preference.clone()).await?;
@@ -48,7 +48,7 @@ impl<'a> Photo<'a> {
             PhotoQuality::Original
         };
 
-        let url = storage.get_photo_by_id_as_url(&self.id, quality).await?;
+        let url = storage.get_photo_url_by_id(&self.id, quality).await?;
 
         Ok(proto::Photo {
             id: self.id,
@@ -68,7 +68,7 @@ impl<'a> Photo<'a> {
     ///
     pub async fn photo_to_proto_bytes(
         self,
-        storage: &StorageEngine,
+        storage: &Storage,
         quality_preference: PhotoQuality,
     ) -> Result<proto::Photo, DalError> {
         let has_pref = self.is_quality_created(quality_preference.clone()).await?;
@@ -78,7 +78,7 @@ impl<'a> Photo<'a> {
             PhotoQuality::Original
         };
 
-        let photo_bytes = storage.get_photo_by_id(&self.id, quality).await?;
+        let photo_bytes = storage.get_photo_bytes_by_id(&self.id, quality).await?;
         Ok(proto::Photo {
             id: self.id,
             album_id: self.album_id,

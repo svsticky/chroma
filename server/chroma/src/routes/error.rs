@@ -13,7 +13,7 @@ pub enum Error {
     #[error("Bad request: {0}")]
     BadRequest(String),
     #[error("Internal server error")]
-    StorageEngine(#[from] dal::storage_engine::StorageEngineError),
+    StorageEngine(#[from] dal::storage_engine::error::StorageError),
     #[error("Something went wrong on Koala's end")]
     Koala(reqwest::Error),
     #[error("The requested resource may not be accessed by the authorized user.")]
