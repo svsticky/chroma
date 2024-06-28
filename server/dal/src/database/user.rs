@@ -116,7 +116,7 @@ impl<'a> User<'a> {
 
         sqlx::query("UPDATE users SET is_admin = $1 WHERE koala_id = $2")
             .bind(is_admin)
-            .bind(&self.koala_id)
+            .bind(self.koala_id)
             .execute(&**self.db)
             .await?;
         self.is_admin = is_admin;

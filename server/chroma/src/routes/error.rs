@@ -28,6 +28,8 @@ pub enum Error {
     ImageEncoding(#[from] image::ImageError),
     #[error("Failed to decode WebP image")]
     WebpDecode,
+    #[error("Slow down. Too many requests")]
+    Ratelimit,
 }
 
 impl ResponseError for Error {
@@ -44,6 +46,7 @@ impl ResponseError for Error {
             Self::ImageEncoding(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::WebpDecode => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Other(s) => *s,
+            Self::Ratelimit => StatusCode::TOO_MANY_REQUESTS,
         }
     }
 }

@@ -1,7 +1,7 @@
 extern crate core;
 
 use crate::config::Config;
-use crate::routes::appdata::{AlbumIdCache, AppData, SessionIdCache, WebData};
+use crate::routes::appdata::{AlbumIdCache, AppData, Ratelimits, SessionIdCache, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
@@ -61,6 +61,7 @@ async fn main() -> Result<()> {
         db,
         storage,
         config,
+        ratelimits: Ratelimits::new(),
     };
 
     info!("Starting web server");

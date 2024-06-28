@@ -287,9 +287,9 @@ impl Album {
     }
 
     pub async fn list_ids(db: &Database) -> DbResult<Vec<String>> {
-        Ok(sqlx::query_scalar("SELECT id FROM album_metadata")
+        sqlx::query_scalar("SELECT id FROM album_metadata")
             .fetch_all(&**db)
-            .await?)
+            .await
     }
 
     pub async fn list(db: &Database) -> DbResult<Vec<Album>> {

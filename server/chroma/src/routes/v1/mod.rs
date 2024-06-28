@@ -20,7 +20,7 @@ pub enum PhotoQuality {
     W1600,
 }
 
-impl From<PhotoQuality> for dal::storage_engine::PhotoQuality {
+impl From<PhotoQuality> for dal::database::PhotoQuality {
     fn from(value: PhotoQuality) -> Self {
         match value {
             PhotoQuality::Original => Self::Original,

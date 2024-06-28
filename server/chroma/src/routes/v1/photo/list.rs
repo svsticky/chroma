@@ -40,9 +40,9 @@ pub async fn list(
 
     let photos = join_all(photos.into_iter().map(|p| {
         let storage = data.storage.clone();
-        let qpref: dal::storage_engine::PhotoQuality = query.quality_preference.clone().into();
+        let qpref: dal::database::PhotoQuality = query.quality_preference.clone().into();
 
-        async move { p.photo_to_proto_url(&storage, qpref).await }
+        async move { p.photo_to_proto_url(&storage, &qpref).await }
     }))
     .await
     .into_iter()

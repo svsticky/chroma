@@ -4,6 +4,7 @@ use crate::routes::error::{Error, WebResult};
 use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
+
 use dal::database::{Album, Photo};
 use dal::storage_engine::aws_error::GetObjectErrorKind;
 use dal::storage_engine::error::{SdkError, StorageError};
@@ -53,7 +54,7 @@ pub async fn list(
     )
     .await?
     .into_iter()
-    .filter_map(|f| f)
+    .flatten()
     .collect::<Vec<_>>();
 
     // Insert the newly fetched into the cache
@@ -64,12 +65,11 @@ pub async fn list(
     .await;
 
     // Merge the two sets
-    let mut albums = vec![
+    let mut albums = [
         fetched_albums,
         cached_albums
             .into_iter()
-            .map(|(_, v)| v)
-            .filter_map(|v| v)
+            .filter_map(|(_, v)| v)
             .collect::<Vec<_>>(),
     ]
     .concat();
@@ -88,7 +88,7 @@ pub async fn list(
     let albums = join_all(albums.into_iter().map(|album| {
         let storage = data.storage.clone();
         let database = data.db.clone();
-        let qpref: dal::storage_engine::PhotoQuality = query.quality_preference.clone().into();
+        let qpref: dal::database::PhotoQuality = query.quality_preference.clone().into();
         let include_cover_photo = query.include_cover_photo;
         let album_id_cache = &**album_id_cache;
 
@@ -98,28 +98,24 @@ pub async fn list(
                 if let Some(id) = &album.cover_photo_id {
                     match Photo::get_by_id(&database, id).await? {
                         Some(photo) => {
-                            let quality = if !photo.is_quality_created(qpref.clone()).await? {
-                                dal::storage_engine::PhotoQuality::Original
+                            let quality = if !photo.is_quality_created(&qpref).await? {
+                                dal::database::PhotoQuality::Original
                             } else {
                                 qpref
                             };
 
-                            let photo = match photo.photo_to_proto_url(&storage, quality).await {
+                            let photo = match photo.photo_to_proto_url(&storage, &quality).await {
                                 Ok(v) => v,
                                 Err(e) => {
                                     return match &e {
-                                        DalError::Storage(s) => match s {
-                                            StorageError::GetObject(s) => match s {
-                                                SdkError::ServiceError(s) => match s.err().kind {
-                                                    GetObjectErrorKind::NoSuchKey(_) => {
-                                                        album_id_cache.remove(&album.id).await;
-                                                        album.delete(&database).await?;
-                                                        Ok(None)
-                                                    }
-                                                    _ => Err(e),
-                                                },
-                                                _ => Err(e),
-                                            },
+                                        DalError::Storage(StorageError::GetObject(
+                                            SdkError::ServiceError(s),
+                                        )) => match s.err().kind {
+                                            GetObjectErrorKind::NoSuchKey(_) => {
+                                                album_id_cache.remove(&album.id).await;
+                                                album.delete(&database).await?;
+                                                Ok(None)
+                                            }
                                             _ => Err(e),
                                         },
                                         _ => Err(e),
@@ -152,7 +148,7 @@ pub async fn list(
         DalError::Db(e) => Error::from(e),
     })?
     .into_iter()
-    .filter_map(|v| v)
+    .flatten()
     .collect::<Vec<_>>();
 
     Ok(Payload(ListAlbumsResponse { albums }))
