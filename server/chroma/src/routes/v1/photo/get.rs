@@ -64,9 +64,7 @@ pub async fn get(
         {
             Ok(p) => Ok(Payload(GetPhotoResponse { photo: Some(p) })),
             Err(e) => match e {
-                DalError::Storage(e) => match e {
-                    _ => Err(e.into()),
-                },
+                DalError::Storage(e) => Err(e.into()),
                 DalError::Db(e) => Err(e.into()),
             },
         };

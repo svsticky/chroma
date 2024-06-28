@@ -67,7 +67,7 @@ impl<'a> Photo<'a> {
         storage: &Storage,
         quality_preference: &PhotoQuality,
     ) -> Result<proto::Photo, DalError> {
-        let has_pref = self.is_quality_created(&quality_preference).await?;
+        let has_pref = self.is_quality_created(quality_preference).await?;
         let quality = if has_pref {
             quality_preference.clone()
         } else {
@@ -76,7 +76,7 @@ impl<'a> Photo<'a> {
 
         // Check if we already have a URL for the picture
         let url =
-            if let Some(s3_url) = PhotoS3Url::get_for_photo(&self.db, &self.id, &quality).await? {
+            if let Some(s3_url) = PhotoS3Url::get_for_photo(self.db, &self.id, &quality).await? {
                 s3_url.s3_url
             } else {
                 let url = storage.get_photo_url_by_id(&self.id, &quality).await?;
@@ -301,12 +301,10 @@ impl PhotoS3Url {
         photo_id: &str,
         quality: &PhotoQuality,
     ) -> DbResult<Option<Self>> {
-        Ok(
-            sqlx::query_as("SELECT * FROM photo_s3_urls WHERE photo_id = $1 AND quality = $2")
-                .bind(photo_id)
-                .bind(quality)
-                .fetch_optional(&**driver)
-                .await?,
-        )
+        sqlx::query_as("SELECT * FROM photo_s3_urls WHERE photo_id = $1 AND quality = $2")
+            .bind(photo_id)
+            .bind(quality)
+            .fetch_optional(&**driver)
+            .await
     }
 }
