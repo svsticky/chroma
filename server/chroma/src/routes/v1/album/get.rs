@@ -3,8 +3,8 @@ use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
 use actix_web::web;
+use dal::database::PhotoQuality;
 use dal::database::{Album, Photo};
-use dal::storage_engine::PhotoQuality;
 use dal::DalError;
 use futures::future::join_all;
 use proto::{AlbumWithCoverPhoto, GetAlbumResponse};
@@ -68,7 +68,7 @@ pub async fn get(
                 .ok_or(Error::NotFound)?;
 
             let photo = photo
-                .photo_to_proto_url(&data.storage, PhotoQuality::W400)
+                .photo_to_proto_url(&data.storage, &PhotoQuality::W400)
                 .await
                 .map_err(|e| match e {
                     DalError::Storage(e) => Error::from(e),

@@ -88,7 +88,7 @@ pub async fn list(
     let albums = join_all(albums.into_iter().map(|album| {
         let storage = data.storage.clone();
         let database = data.db.clone();
-        let qpref: dal::storage_engine::PhotoQuality = query.quality_preference.clone().into();
+        let qpref: dal::database::PhotoQuality = query.quality_preference.clone().into();
         let include_cover_photo = query.include_cover_photo;
         let album_id_cache = &**album_id_cache;
 
@@ -98,13 +98,13 @@ pub async fn list(
                 if let Some(id) = &album.cover_photo_id {
                     match Photo::get_by_id(&database, id).await? {
                         Some(photo) => {
-                            let quality = if !photo.is_quality_created(qpref.clone()).await? {
-                                dal::storage_engine::PhotoQuality::Original
+                            let quality = if !photo.is_quality_created(&qpref).await? {
+                                dal::database::PhotoQuality::Original
                             } else {
                                 qpref
                             };
 
-                            let photo = match photo.photo_to_proto_url(&storage, quality).await {
+                            let photo = match photo.photo_to_proto_url(&storage, &quality).await {
                                 Ok(v) => v,
                                 Err(e) => {
                                     return match &e {
