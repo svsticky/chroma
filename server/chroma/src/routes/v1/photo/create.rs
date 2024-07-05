@@ -233,13 +233,6 @@ fn resize_and_save(
             );
             return;
         }
-
-        match photo.set_quality_created(quality, true).await {
-            Ok(_) => {}
-            Err(e) => {
-                warn!("Failed to set quality created flag for photo: {e}");
-            }
-        }
     });
 }
 

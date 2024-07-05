@@ -3,8 +3,9 @@ use std::ops::Deref;
 use aws_credential_types::Credentials;
 use aws_sdk_s3::types::ByteStream;
 use aws_sdk_s3::{Client, Config};
+use aws_smithy_http::result::SdkError;
 use aws_types::region::Region;
-use tracing::instrument;
+use tracing::{info, instrument};
 
 use crate::database::PhotoQuality;
 use crate::storage_engine::error::StorageError;
@@ -57,12 +58,15 @@ pub struct S3Config {
     pub access_key_id: String,
     pub secret_access_key: String,
     pub use_path_style: bool,
+    pub create_bucket: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct Storage {
     client: Client,
     bucket_name: String,
+    use_path_style: bool,
+    endpoint_url: String,
 }
 
 impl Deref for Storage {
@@ -78,7 +82,7 @@ impl Storage {
         let client = Client::from_conf(
             Config::builder()
                 .force_path_style(config.use_path_style)
-                .endpoint_url(config.endpoint_url)
+                .endpoint_url(config.endpoint_url.clone())
                 .region(Some(Region::new(config.region)))
                 .credentials_provider(Credentials::from_keys(
                     config.access_key_id,
@@ -88,11 +92,17 @@ impl Storage {
                 .build(),
         );
 
-        Self::setup_bucket(&client, &config.bucket_name).await?;
+        if config.create_bucket && !Self::bucket_exists(&client, &config.bucket_name).await? {
+            Self::create_bucket(&client, &config.bucket_name).await?;
+        }
+
+        Self::set_bucket_policy(&client, &config.bucket_name).await?;
 
         Ok(Storage {
             client,
             bucket_name: config.bucket_name,
+            endpoint_url: config.endpoint_url,
+            use_path_style: config.use_path_style,
         })
     }
 
@@ -101,25 +111,12 @@ impl Storage {
         photo_id: S,
         photo_quality: &PhotoQuality,
     ) -> Result<String, error::StorageError> {
-        let url = format!(
-            "https://{}.s3.amazonaws.com/{}_{}",
-            self.bucket_name,
-            photo_id.as_ref(),
-            photo_quality
-        );
-        //
-        // let response = self
-        //     .client
-        //     .get_object()
-        //     .bucket(&self.bucket_name)
-        //     .key(Self::format_id_with_quality(
-        //         photo_id.as_ref(),
-        //         photo_quality,
-        //     ))
-        //     .send(PresigningConfig::builder().build()?)
-        //     .await?;
-        //
-        // let url = String::from(response.uri().to_string().split('?').next().unwrap());
+        let qstring = Self::format_id_with_quality(photo_id.as_ref(), photo_quality);
+        let url = if self.use_path_style {
+            format!("{}/{}/{}", self.endpoint_url, self.bucket_name, qstring)
+        } else {
+            format!("{}/{}", self.endpoint_url, qstring)
+        };
 
         Ok(url)
     }
@@ -184,8 +181,23 @@ impl Storage {
         Ok(())
     }
 
+    async fn create_bucket(client: &Client, bucket_name: &String) -> Result<(), StorageError> {
+        client.create_bucket().bucket(bucket_name).send().await?;
+        Ok(())
+    }
+
+    async fn bucket_exists(client: &Client, bucket_name: &String) -> Result<bool, StorageError> {
+        match client.head_bucket().bucket(bucket_name).send().await {
+            Ok(_) => Ok(true),
+            Err(SdkError::ServiceError(e)) if e.err().is_not_found() => Ok(false),
+            Err(e) => Err(e.into()),
+        }
+    }
+
     #[instrument(skip_all)]
-    async fn setup_bucket(client: &Client, bucket_name: &String) -> Result<(), StorageError> {
+    async fn set_bucket_policy(client: &Client, bucket_name: &String) -> Result<(), StorageError> {
+        info!("Setting bucket policy");
+
         client
             .put_bucket_policy()
             .bucket(bucket_name)
