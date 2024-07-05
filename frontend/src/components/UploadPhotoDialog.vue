@@ -76,16 +76,21 @@ export default Vue.extend({
             for(const photoFile of this.photos) {
                 while(true) {
                     const photoBytes = new Uint8Array(await photoFile.arrayBuffer());
-                    const result: boolean | TooManyRequests | undefined = await createPhoto(this.albumId, photoBytes);
+                    let result: boolean | undefined;
+                    try {
+                        result = await createPhoto(this.albumId, photoBytes);
+                    } catch (e: any) {
+                        if(e instanceof TooManyRequests) {
+                            console.log(`Got HTTP 429. Waiting ${e.retryAfter} seconds`);
+                            await new Promise(resolve => setTimeout(resolve, e.retryAfter));
+                            continue;
+                        } else {
+                            continue;
+                        }
+                    }
 
                     if(result === true) {
                         break;
-                    }
-
-                    if(result instanceof TooManyRequests) {
-                        console.log("Got HTTP 429. Waiting 1s");
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        continue;
                     }
 
                     console.error("Got unknown error. Bailing");

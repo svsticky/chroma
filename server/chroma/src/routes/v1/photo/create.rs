@@ -67,7 +67,7 @@ async fn image_pipeline(
     // Make sure we don't run into AWS ratelimits here
     if let Err(e) = data.ratelimits.photo_create.check() {
         return Err(Error::Ratelimit {
-            retry_after: e.wait_time_from(e.earliest_possible()).as_secs()
+            retry_after: e.wait_time_from(e.earliest_possible()).as_secs(),
         });
     }
 
