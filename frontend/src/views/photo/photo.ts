@@ -81,15 +81,23 @@ export async function listPhotosInAlbum(albumId: string, low_res: boolean = fals
     return result.photos.map(protoPhotoToPhotoModel);
 }
 
-export class TooManyRequests {}
+export class TooManyRequests extends Error {
+    retryAfter: number;
+
+    constructor(retryAfter: number) {
+        super();
+        this.retryAfter = retryAfter;
+    }
+}
 
 /**
  * Create a photo
  * @param albumId The ID of the album
  * @param photoData The bytes of the photo. May be `PNG` or `JPEG` format.
+ * @throws TooManyRequests If too many requests are issued
  * @return `true` on success. `undefined` on failure.
  */
-export async function createPhoto(albumId: string, photoData: Uint8Array): Promise<boolean | TooManyRequests | undefined> {
+export async function createPhoto(albumId: string, photoData: Uint8Array): Promise<boolean | undefined> {
     const result = await Http.post('/api/v1/photo', new CreatePhotoRequest({
         albumId,
         photoData
@@ -100,7 +108,9 @@ export async function createPhoto(albumId: string, photoData: Uint8Array): Promi
     }
 
     if(result.status == 429) {
-        return new TooManyRequests();
+        throw new TooManyRequests(
+            Number.parseInt(result.headers.get('retry-after') ?? "1")
+        );
     }
 
     return undefined;

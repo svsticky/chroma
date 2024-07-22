@@ -1,5 +1,6 @@
+use actix_web::body::BoxBody;
 use actix_web::http::StatusCode;
-use actix_web::ResponseError;
+use actix_web::{HttpResponse, ResponseError};
 use thiserror::Error;
 
 pub type WebResult<T> = Result<T, Error>;
@@ -29,7 +30,7 @@ pub enum Error {
     #[error("Failed to decode WebP image")]
     WebpDecode,
     #[error("Slow down. Too many requests")]
-    Ratelimit,
+    Ratelimit { retry_after: u64 },
 }
 
 impl ResponseError for Error {
@@ -46,7 +47,16 @@ impl ResponseError for Error {
             Self::ImageEncoding(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::WebpDecode => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Other(s) => *s,
-            Self::Ratelimit => StatusCode::TOO_MANY_REQUESTS,
+            Self::Ratelimit { .. } => StatusCode::TOO_MANY_REQUESTS,
+        }
+    }
+
+    fn error_response(&self) -> HttpResponse<BoxBody> {
+        match self {
+            Self::Ratelimit { retry_after } => HttpResponse::build(self.status_code())
+                .insert_header(("Retry-After".to_string(), format!("{retry_after}")))
+                .body("Too many requests"),
+            _ => ResponseError::error_response(self),
         }
     }
 }

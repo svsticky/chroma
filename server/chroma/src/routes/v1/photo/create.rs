@@ -65,8 +65,10 @@ async fn image_pipeline(
     db: &Database,
 ) -> WebResult<String> {
     // Make sure we don't run into AWS ratelimits here
-    if data.ratelimits.photo_create.check().is_err() {
-        return Err(Error::Ratelimit);
+    if let Err(e) = data.ratelimits.photo_create.check() {
+        return Err(Error::Ratelimit {
+            retry_after: e.wait_time_from(e.earliest_possible()).as_secs(),
+        });
     }
 
     // This pipeline modifies the image. The idea is that each 'step' outputs
@@ -236,13 +238,6 @@ fn resize_and_save(
                 photo_id, quality
             );
             return;
-        }
-
-        match photo.set_quality_created(quality, true).await {
-            Ok(_) => {}
-            Err(e) => {
-                warn!("Failed to set quality created flag for photo: {e}");
-            }
         }
     });
 }
