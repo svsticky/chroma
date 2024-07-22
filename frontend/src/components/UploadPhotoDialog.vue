@@ -83,10 +83,9 @@ export default Vue.extend({
                         if(e instanceof TooManyRequests) {
                             console.log(`Got HTTP 429. Waiting ${e.retryAfter} seconds`);
                             await new Promise(resolve => setTimeout(resolve, e.retryAfter));
-                            continue;
-                        } else {
-                            continue;
                         }
+
+                        continue;
                     }
 
                     if(result === true) {

@@ -5,6 +5,7 @@ use actix_multiresponse::Payload;
 use dal::database::{Album, Database, Photo, PhotoQuality};
 use dal::storage_engine::Storage;
 use exif::{In, Tag};
+use governor::clock::Clock;
 use image::imageops::FilterType;
 use image::io::Reader;
 use image::{DynamicImage, GenericImageView};
@@ -47,7 +48,7 @@ pub async fn create(
     }
 
     // TODO Update actix-multiresponse to support moving out the payload, avoids another clone
-    let photo_id = image_pipeline(&data, payload.photo_data.clone(), &album, &data.db).await?;
+    let photo_id = image_pipeline(&data, payload.photo_data.clone(), &album).await?;
 
     Ok(Payload(CreatePhotoResponse { photo_id }))
 }
@@ -58,16 +59,13 @@ pub async fn create(
 ///
 /// If any step in the pipeline fails
 #[instrument(skip(data, image))]
-async fn image_pipeline(
-    data: &WebData,
-    image: Vec<u8>,
-    album: &Album,
-    db: &Database,
-) -> WebResult<String> {
+async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album) -> WebResult<String> {
     // Make sure we don't run into AWS ratelimits here
     if let Err(e) = data.ratelimits.photo_create.check() {
         return Err(Error::Ratelimit {
-            retry_after: e.wait_time_from(e.earliest_possible()).as_secs(),
+            retry_after: e
+                .wait_time_from(governor::clock::DefaultClock::default().now())
+                .as_secs(),
         });
     }
 
@@ -226,7 +224,8 @@ fn resize_and_save(
         };
 
         // Fetch the photo
-        let ok = reqwest::Client::new().get(url)
+        let ok = reqwest::Client::new()
+            .get(url)
             .send()
             .await
             .map(|resp| resp.error_for_status().is_ok())
