@@ -224,7 +224,11 @@ fn resize_and_save(
         };
 
         // Fetch the photo
-        let ok = reqwest::Client::new().get(url).send().await.is_ok();
+        let ok = reqwest::Client::new().get(url)
+            .send()
+            .await
+            .map(|resp| resp.error_for_status().is_ok())
+            .unwrap_or(false);
 
         if !ok {
             warn!(
