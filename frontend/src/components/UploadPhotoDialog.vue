@@ -41,7 +41,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import {createPhoto} from "@/views/photo/photo";
+import {createPhoto, TooManyRequests} from "@/views/photo/photo";
 
 interface Data {
     snackbar: string | null,
@@ -72,14 +72,35 @@ export default Vue.extend({
             this.uploadProgress = 0;
             this.uploadTotal = this.photos.length;
 
-            const results = await Promise.all(this.photos.map(async photoFile => {
-                const photoBytes = new Uint8Array(await photoFile.arrayBuffer());
-                const result = await createPhoto(this.albumId, photoBytes);
+            let results = [];
+            for(const photoFile of this.photos) {
+                while(true) {
+                    const photoBytes = new Uint8Array(await photoFile.arrayBuffer());
+                    let result: boolean | undefined;
+                    try {
+                        result = await createPhoto(this.albumId, photoBytes);
+                    } catch (e: any) {
+                        if(e instanceof TooManyRequests) {
+                            console.log(`Got HTTP 429. Waiting ${e.retryAfter} seconds`);
+                            await new Promise(resolve => setTimeout(resolve, e.retryAfter));
+                        }
+
+                        continue;
+                    }
+
+                    if(result === true) {
+                        break;
+                    }
+
+                    console.error("Got unknown error. Bailing");
+                    return false;
+                }
 
                 this.uploadProgress++;
 
-                return result != undefined;
-            }));
+                results.push(photoFile);
+            }
+
             this.loading = false;
 
             const failures = results.filter(result => !result);

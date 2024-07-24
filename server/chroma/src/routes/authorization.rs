@@ -87,9 +87,8 @@ impl FromRequest for Authorization {
 
             // Check the cache
             let session_cache: &web::Data<SessionIdCache> = req.app_data().unwrap();
-            match session_cache.get(authorization_id).await {
-                Some(v) => return Ok(v),
-                None => {}
+            if let Some(v) = session_cache.get(authorization_id).await {
+                return Ok(v);
             }
 
             // Check if we're dealing with a service token

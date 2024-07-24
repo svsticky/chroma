@@ -1,7 +1,7 @@
 extern crate core;
 
 use crate::config::Config;
-use crate::routes::appdata::{AlbumIdCache, AppData, SessionIdCache, WebData};
+use crate::routes::appdata::{AlbumIdCache, AppData, Ratelimits, SessionIdCache, WebData};
 use crate::routes::routable::Routable;
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
@@ -53,6 +53,7 @@ async fn main() -> Result<()> {
         access_key_id: config.s3_access_key_id.clone().unwrap(),
         secret_access_key: config.s3_secret_access_key.clone().unwrap(),
         use_path_style: config.s3_force_path_style(),
+        create_bucket: config.s3_create_bucket_on_startup(),
     })
     .await?;
 
@@ -61,6 +62,7 @@ async fn main() -> Result<()> {
         db,
         storage,
         config,
+        ratelimits: Ratelimits::new(),
     };
 
     info!("Starting web server");

@@ -38,6 +38,10 @@ pub struct Config {
     /// but should be `false` or left unspecified when targeting
     /// Amazon S3.
     pub s3_force_path_style: Option<bool>,
+    /// Create a bucket on startup. This should only
+    /// be used when working with MinIO.
+    /// The provided access key should have bucket creation privileges.
+    pub s3_create_bucket_on_startup: Option<bool>,
 
     /// OAuth2 client ID created in Koala
     pub koala_client_id: String,
@@ -152,11 +156,18 @@ impl Config {
             .unwrap_or(&self.koala_base_uri)
     }
 
-    /// Force S3 path styles instead of virtual hosts
+    /// Force S3 path styles instead of virtual hosts.
     ///
-    /// See also: `s3_force_path_style` field
+    /// See also: `s3_force_path_style` field.
     pub fn s3_force_path_style(&self) -> bool {
         self.s3_force_path_style.unwrap_or(false)
+    }
+
+    /// Create an S3 bucket on application startup.
+    ///
+    /// See also: `s3_create_bucket_on_startup` field.
+    pub fn s3_create_bucket_on_startup(&self) -> bool {
+        self.s3_create_bucket_on_startup.unwrap_or(false)
     }
 
     /// Get configured service tokens

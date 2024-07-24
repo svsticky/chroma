@@ -2,13 +2,15 @@ use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, ImagePipelineError, WebResult};
 use actix_multiresponse::Payload;
-use dal::database::{Album, Database, Photo};
-use dal::storage_engine::{PhotoQuality, Storage};
+use dal::database::{Album, Database, Photo, PhotoQuality};
+use dal::storage_engine::Storage;
 use exif::{In, Tag};
+use governor::clock::Clock;
 use image::imageops::FilterType;
 use image::io::Reader;
 use image::{DynamicImage, GenericImageView};
 use img_parts::{Bytes, DynImage, ImageEXIF};
+use proto::photo_respone::Response;
 use proto::{CreatePhotoRequest, CreatePhotoResponse};
 use std::io::Cursor;
 use tap::TapFallible;
@@ -46,7 +48,7 @@ pub async fn create(
     }
 
     // TODO Update actix-multiresponse to support moving out the payload, avoids another clone
-    let photo_id = image_pipeline(&data, payload.photo_data.clone(), &album, &data.db).await?;
+    let photo_id = image_pipeline(&data, payload.photo_data.clone(), &album).await?;
 
     Ok(Payload(CreatePhotoResponse { photo_id }))
 }
@@ -57,12 +59,16 @@ pub async fn create(
 ///
 /// If any step in the pipeline fails
 #[instrument(skip(data, image))]
-async fn image_pipeline(
-    data: &WebData,
-    image: Vec<u8>,
-    album: &Album,
-    db: &Database,
-) -> WebResult<String> {
+async fn image_pipeline(data: &WebData, image: Vec<u8>, album: &Album) -> WebResult<String> {
+    // Make sure we don't run into AWS ratelimits here
+    if let Err(e) = data.ratelimits.photo_create.check() {
+        return Err(Error::Ratelimit {
+            retry_after: e
+                .wait_time_from(governor::clock::DefaultClock::default().now())
+                .as_secs(),
+        });
+    }
+
     // This pipeline modifies the image. The idea is that each 'step' outputs
     // a variable 'image', which the next step can then use.
 
@@ -120,7 +126,7 @@ async fn image_pipeline(
             PhotoQuality::Original
         );
         match engine
-            .create_photo(&photo_id, PhotoQuality::Original, image)
+            .create_photo(&photo_id, &PhotoQuality::Original, image)
             .await
         {
             Ok(_) => {}
@@ -181,7 +187,7 @@ fn resize_and_save(
 
         trace!("Saving image '{photo_id}' in quality '{quality:?}'");
         match engine
-            .create_photo(&photo_id, quality.clone(), converted_image_data)
+            .create_photo(&photo_id, &quality, converted_image_data)
             .await
         {
             Ok(_) => {}
@@ -203,11 +209,34 @@ fn resize_and_save(
             }
         };
 
-        match photo.set_quality_created(quality, true).await {
-            Ok(_) => {}
+        // Verify, this also puts it in the cache, nice speedup for later
+        trace!("Checking if uploaded image actually works on AWS");
+
+        let url = match photo.photo_to_proto_url(&engine, &quality).await {
+            Ok(p) => match p.data.unwrap().response.unwrap() {
+                Response::Url(v) => v,
+                _ => panic!("Invalid response type for the 'URL' method"),
+            },
             Err(e) => {
-                warn!("Failed to set quality created flag for photo: {e}");
+                warn!("Photo {} with quality {} was not created successfully, or another error occurred: {e}", photo_id, quality);
+                return;
             }
+        };
+
+        // Fetch the photo
+        let ok = reqwest::Client::new()
+            .get(url)
+            .send()
+            .await
+            .map(|resp| resp.error_for_status().is_ok())
+            .unwrap_or(false);
+
+        if !ok {
+            warn!(
+                "Photo {} with quality {} was not created successfully (AWS returned an error)",
+                photo_id, quality
+            );
+            return;
         }
     });
 }

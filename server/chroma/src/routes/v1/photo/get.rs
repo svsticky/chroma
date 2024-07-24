@@ -59,14 +59,12 @@ pub async fn get(
     if query.format.eq(&ImageFormat::WebP) && !query.force_bytes {
         return match photo
             .clone()
-            .photo_to_proto_url(&data.storage, query.quality_preference.clone().into())
+            .photo_to_proto_url(&data.storage, &query.quality_preference.clone().into())
             .await
         {
             Ok(p) => Ok(Payload(GetPhotoResponse { photo: Some(p) })),
             Err(e) => match e {
-                DalError::Storage(e) => match e {
-                    _ => Err(e.into()),
-                },
+                DalError::Storage(e) => Err(e.into()),
                 DalError::Db(e) => Err(e.into()),
             },
         };

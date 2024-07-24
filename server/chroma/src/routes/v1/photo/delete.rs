@@ -3,8 +3,8 @@ use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
 use actix_multiresponse::Payload;
+use dal::database::PhotoQuality;
 use dal::database::{Album, Photo};
-use dal::storage_engine::PhotoQuality;
 use proto::DeletePhotoRequest;
 use reqwest::StatusCode;
 
@@ -48,10 +48,10 @@ pub async fn delete(
     photo.delete().await?;
 
     data.storage
-        .delete_photo(&id, PhotoQuality::Original)
+        .delete_photo(&id, &PhotoQuality::Original)
         .await?;
-    data.storage.delete_photo(&id, PhotoQuality::W1600).await?;
-    data.storage.delete_photo(&id, PhotoQuality::W400).await?;
+    data.storage.delete_photo(&id, &PhotoQuality::W1600).await?;
+    data.storage.delete_photo(&id, &PhotoQuality::W400).await?;
 
     Ok(Empty)
 }
