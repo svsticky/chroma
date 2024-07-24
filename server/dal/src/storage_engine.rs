@@ -23,31 +23,23 @@ pub mod error {
     use thiserror::Error;
 
     #[derive(Debug, Error)]
-    pub enum InitError {
-        #[error("Invalid App name provided")]
-        AppName(#[from] aws_types::app_name::InvalidAppName),
-        #[error("Failed to retrieve information about Bucket: {0}")]
-        HeadBucket(#[from] SdkError<HeadBucketError>),
-    }
-
-    #[derive(Debug, Error)]
     pub enum StorageError {
-        #[error("Failed to retrieve Object: {0}")]
-        GetObject(#[from] SdkError<GetObjectError>),
-        #[error("Failed to upload Object: {0}")]
-        PutObject(#[from] SdkError<PutObjectError>),
-        #[error("Failed to delete Object: {0}")]
-        DeleteObject(#[from] SdkError<DeleteObjectError>),
-        #[error("Failed to convert ByteStream: {0}")]
-        ByteStream(#[from] aws_smithy_http::byte_stream::error::Error),
-        #[error("Failed to create presigning config: {0}")]
-        Presigning(#[from] aws_sdk_s3::presigning::config::Error),
-        #[error("{0}")]
-        CreateBucket(#[from] SdkError<CreateBucketError>),
-        #[error("{0}")]
-        PutBucketPolicy(#[from] SdkError<PutBucketPolicyError>),
-        #[error("{0}")]
+        #[error("couldn't retrieve bucket information ({0})")]
         HeadBucket(#[from] SdkError<HeadBucketError>),
+        #[error("couldn't create bucket ({0})")]
+        CreateBucket(#[from] SdkError<CreateBucketError>),
+        #[error("couldn't set bucket policy ({0})")]
+        PutBucketPolicy(#[from] SdkError<PutBucketPolicyError>),
+        #[error("couldn't retrieve object ({0})")]
+        GetObject(#[from] SdkError<GetObjectError>),
+        #[error("couldn't upload object ({0})")]
+        PutObject(#[from] SdkError<PutObjectError>),
+        #[error("couldn't delete object ({0})")]
+        DeleteObject(#[from] SdkError<DeleteObjectError>),
+        #[error("couldn't to convert ByteStream ({0})")]
+        ByteStream(#[from] aws_smithy_http::byte_stream::error::Error),
+        #[error("couldn't create presigning config ({0})")]
+        Presigning(#[from] aws_sdk_s3::presigning::config::Error),
     }
 }
 
@@ -110,7 +102,7 @@ impl Storage {
         &self,
         photo_id: S,
         photo_quality: &PhotoQuality,
-    ) -> Result<String, error::StorageError> {
+    ) -> Result<String, StorageError> {
         let qstring = Self::format_id_with_quality(photo_id.as_ref(), photo_quality);
         let url = if self.use_path_style {
             format!("{}/{}/{}", self.endpoint_url, self.bucket_name, qstring)

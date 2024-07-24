@@ -1,28 +1,29 @@
-use sqlx::{Pool, Postgres};
 use std::ops::Deref;
+
+pub use sqlx::error::Error as DatabaseError;
+use sqlx::migrate::Migrator;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use sqlx::sqlx_macros::migrate;
+use sqlx::{Pool, Postgres};
+use thiserror::Error;
+
+pub use album::*;
+pub use photo::*;
+pub use service_token_user::*;
+pub use user::*;
 
 mod album;
 mod photo;
 mod service_token_user;
 mod user;
 
-pub use album::*;
-pub use photo::*;
-pub use service_token_user::*;
-pub use sqlx::error::Error as DatabaseError;
-use sqlx::migrate::Migrator;
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::sqlx_macros::migrate;
-use thiserror::Error;
-pub use user::*;
-
 pub type DbResult<T> = Result<T, DatabaseError>;
 
 #[derive(Debug, Error)]
 pub enum DatabaseInitError {
-    #[error("Failed to connect to database: {0}")]
+    #[error("couldn't connect to database ({0})")]
     Connect(#[from] sqlx::Error),
-    #[error("Failed to apply migrations: {0}")]
+    #[error("couldn't apply migrations ({0})")]
     Migrate(#[from] sqlx::migrate::MigrateError),
 }
 
