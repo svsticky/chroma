@@ -1,52 +1,98 @@
 extern crate core;
 
-use crate::config::Config;
-use crate::routes::appdata::{AlbumIdCache, AppData, Ratelimits, SessionIdCache, WebData};
-use crate::routes::routable::Routable;
+use std::process;
+use std::time::Duration;
+
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use cabbage::KoalaApi;
-use color_eyre::eyre::Error;
 use color_eyre::Result;
-use dal::database::Database;
-use dal::storage_engine::{S3Config, Storage};
 use dotenv::dotenv;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
-use std::time::Duration;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
+use dal::database::Database;
+use dal::storage_engine::{S3Config, Storage};
+
+use crate::config::Config;
+use crate::routes::appdata::{AlbumIdCache, AppData, Ratelimits, SessionIdCache, WebData};
+use crate::routes::routable::Routable;
+
 mod config;
 mod routes;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    dotenv().ok();
+    // Try to load the environment variables from the .env file
+    if let Err(err) = dotenv() {
+        panic!("failed to load .env file: {:#}", err);
+    }
 
-    install_tracing();
+    // Initialize the tracing logger
+    init_tracing();
 
-    info!("Starting");
+    // Initialize chroma's core components
+    let config = init_config();
+    let db = init_database(&config).await;
+    let storage = init_storage(&config).await;
 
-    info!("Parsing config");
-    let config = Config::parse()?;
+    // Package the core components up into the AppData struct
+    let app_data = AppData {
+        koala: KoalaApi::new(config.koala_base_redirect_uri().clone())?,
+        db,
+        storage,
+        config,
+        ratelimits: Ratelimits::new(),
+    };
+
+    // Run the webserver using the AppData until stopped or crash
+    start_webserver(app_data).await
+}
+
+fn init_tracing() {
+    tracing_subscriber::registry()
+        .with(layer().compact())
+        .with(EnvFilter::from_default_env())
+        .init();
+}
+
+fn init_config() -> Config {
+    info!("parsing config");
+    let config = Config::parse().unwrap_or_else(|err| {
+        error!("failed to parse config: {:#}", err);
+        process::exit(1);
+    });
 
     if !config.validate() {
-        return Err(Error::msg("Config is not valid."));
+        error!("config is not valid");
+        process::exit(1);
     }
 
     if !config.service_tokens.is_empty() {
-        warn!("There are service tokens configured, Make sure these are, and stay, confidential!");
+        warn!("there are service tokens configured, Make sure these are, and stay, confidential!");
     }
 
-    info!("Initializing database");
-    let db = Database::new(config.database_config()?).await?;
+    config
+}
 
-    info!("Initializing S3 storage engine");
-    let storage = Storage::new(S3Config {
+async fn init_database(config: &Config) -> Database {
+    info!("initializing database connection");
+    Database::new(config.database_config().unwrap())
+        .await
+        .unwrap_or_else(|err| {
+            error!("failed to initialize database connection: {:#}", err);
+            process::exit(1);
+        })
+}
+
+async fn init_storage(config: &Config) -> Storage {
+    info!("initializing S3 storage engine");
+    Storage::new(S3Config {
         bucket_name: config.s3_bucket_name.clone().unwrap(),
         endpoint_url: config.s3_endpoint_url.clone().unwrap(),
         region: config.s3_region.clone().unwrap(),
@@ -55,22 +101,20 @@ async fn main() -> Result<()> {
         use_path_style: config.s3_force_path_style(),
         create_bucket: config.s3_create_bucket_on_startup(),
     })
-    .await?;
+    .await
+    .unwrap_or_else(|err| {
+        error!("failed to initialize S3 storage engine: {:#}", err);
+        process::exit(1);
+    })
+}
 
-    let appdata = AppData {
-        koala: KoalaApi::new(config.koala_base_redirect_uri().clone())?,
-        db,
-        storage,
-        config,
-        ratelimits: Ratelimits::new(),
-    };
-
-    info!("Starting web server");
+async fn start_webserver(app_data: AppData) -> Result<()> {
+    info!("starting web server");
     HttpServer::new(move || {
         App::new()
             .wrap(Cors::permissive())
             .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
-            .app_data(WebData::new(appdata.clone()))
+            .app_data(WebData::new(app_data.clone()))
             .app_data(web::Data::new(
                 SessionIdCache::builder()
                     .max_capacity(10000)
@@ -85,16 +129,13 @@ async fn main() -> Result<()> {
     .bind(&format!(
         "0.0.0.0:{}",
         std::env::var("HTTP_PORT").unwrap_or("8000".into())
-    ))?
+    ))
+    .unwrap_or_else(|err| {
+        error!("failed to bind web server to port 8000: {:#}", err);
+        process::exit(1);
+    })
     .run()
     .await?;
 
     Ok(())
-}
-
-fn install_tracing() {
-    tracing_subscriber::registry()
-        .with(layer().compact())
-        .with(EnvFilter::from_default_env())
-        .init();
 }
