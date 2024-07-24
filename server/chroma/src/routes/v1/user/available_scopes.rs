@@ -1,7 +1,9 @@
+use actix_multiresponse::Payload;
+
+use proto::GetAvailableScopesResponse;
+
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
-use actix_multiresponse::Payload;
-use proto::GetAvailableScopesResponse;
 
 pub async fn available_scopes(
     auth: Authorization,

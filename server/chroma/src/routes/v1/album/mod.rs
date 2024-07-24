@@ -1,6 +1,7 @@
-use crate::routes::routable::Routable;
 use actix_web::web;
 use actix_web::web::ServiceConfig;
+
+use crate::routes::routable::Routable;
 
 mod create;
 mod delete;

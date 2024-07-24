@@ -1,5 +1,6 @@
 use actix_web::web;
 use actix_web::web::ServiceConfig;
+
 use routable::Routable;
 
 pub mod appdata;

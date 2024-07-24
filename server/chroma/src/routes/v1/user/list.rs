@@ -1,9 +1,11 @@
+use actix_multiresponse::Payload;
+
+use dal::database::User;
+use proto::ListUserResponse;
+
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
-use actix_multiresponse::Payload;
-use dal::database::User;
-use proto::ListUserResponse;
 
 pub async fn list(data: WebData, auth: Authorization) -> WebResult<Payload<ListUserResponse>> {
     if !auth.is_admin {

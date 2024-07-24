@@ -1,17 +1,18 @@
-use crate::routes::appdata::{AlbumIdCache, WebData};
-use crate::routes::authorization::Authorization;
-use crate::routes::error::{Error, WebResult};
-use crate::routes::v1::PhotoQuality;
 use actix_multiresponse::Payload;
 use actix_web::web;
+use futures::future::{join_all, try_join_all};
+use serde::Deserialize;
 
 use dal::database::{Album, Photo};
 use dal::storage_engine::aws_error::GetObjectErrorKind;
 use dal::storage_engine::error::{SdkError, StorageError};
 use dal::DalError;
-use futures::future::{join_all, try_join_all};
 use proto::{AlbumWithCoverPhoto, ListAlbumsResponse};
-use serde::Deserialize;
+
+use crate::routes::appdata::{AlbumIdCache, WebData};
+use crate::routes::authorization::Authorization;
+use crate::routes::error::{Error, WebResult};
+use crate::routes::v1::PhotoQuality;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {

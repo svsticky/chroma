@@ -1,23 +1,26 @@
-use crate::routes::appdata::WebData;
-use crate::routes::authorization::Authorization;
-use crate::routes::error::{Error, ImagePipelineError, WebResult};
+use std::io::Cursor;
+
 use actix_multiresponse::Payload;
-use dal::database::{Album, Database, Photo, PhotoQuality};
-use dal::storage_engine::Storage;
 use exif::{In, Tag};
 use governor::clock::Clock;
 use image::imageops::FilterType;
 use image::io::Reader;
 use image::{DynamicImage, GenericImageView};
 use img_parts::{Bytes, DynImage, ImageEXIF};
-use proto::photo_respone::Response;
-use proto::{CreatePhotoRequest, CreatePhotoResponse};
-use std::io::Cursor;
 use tap::TapFallible;
 use time::OffsetDateTime;
 use tokio::time::Instant;
 use tracing::{debug, instrument, trace, warn};
 use webp::Encoder;
+
+use dal::database::{Album, Database, Photo, PhotoQuality};
+use dal::storage_engine::Storage;
+use proto::photo_respone::Response;
+use proto::{CreatePhotoRequest, CreatePhotoResponse};
+
+use crate::routes::appdata::WebData;
+use crate::routes::authorization::Authorization;
+use crate::routes::error::{Error, ImagePipelineError, WebResult};
 
 /// Create a new photo in an existing album.
 ///
@@ -236,7 +239,6 @@ fn resize_and_save(
                 "Photo {} with quality {} was not created successfully (AWS returned an error)",
                 photo_id, quality
             );
-            return;
         }
     });
 }

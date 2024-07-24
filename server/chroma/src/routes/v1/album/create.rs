@@ -1,10 +1,12 @@
+use actix_multiresponse::Payload;
+use tracing::trace;
+
+use dal::database::Album;
+use proto::{CreateAlbumRequest, CreateAlbumResponse};
+
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
-use actix_multiresponse::Payload;
-use dal::database::Album;
-use proto::{CreateAlbumRequest, CreateAlbumResponse};
-use tracing::trace;
 
 /// Create a new empty album.
 /// The album will not contain any photos yet.

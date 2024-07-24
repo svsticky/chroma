@@ -1,11 +1,14 @@
+use std::collections::HashSet;
+
+use actix_multiresponse::Payload;
+
+use dal::database::User;
+use proto::UpdateUserRequest;
+
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::{Authorization, AuthorizedUser};
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
-use actix_multiresponse::Payload;
-use dal::database::User;
-use proto::UpdateUserRequest;
-use std::collections::HashSet;
 
 pub async fn update(
     data: WebData,

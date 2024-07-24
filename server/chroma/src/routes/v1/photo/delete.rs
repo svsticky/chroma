@@ -1,12 +1,14 @@
+use actix_multiresponse::Payload;
+use reqwest::StatusCode;
+
+use dal::database::PhotoQuality;
+use dal::database::{Album, Photo};
+use proto::DeletePhotoRequest;
+
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
-use actix_multiresponse::Payload;
-use dal::database::PhotoQuality;
-use dal::database::{Album, Photo};
-use proto::DeletePhotoRequest;
-use reqwest::StatusCode;
 
 /// Delete a photo.
 /// If this photo is the cover of it's album, the album will no longer have a defined cover image.

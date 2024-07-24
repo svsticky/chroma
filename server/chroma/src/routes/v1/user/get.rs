@@ -1,11 +1,13 @@
+use actix_multiresponse::Payload;
+use actix_web::web;
+use serde::Deserialize;
+
+use dal::database::User;
+use proto::GetUserResponse;
+
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
-use actix_multiresponse::Payload;
-use actix_web::web;
-use dal::database::User;
-use proto::GetUserResponse;
-use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {

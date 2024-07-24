@@ -1,11 +1,13 @@
+use actix_multiresponse::Payload;
+use actix_web::web;
+
+use dal::database::{Album, Photo};
+use proto::UpdateAlbumRequest;
+
 use crate::routes::appdata::{AlbumIdCache, WebData};
 use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
-use actix_multiresponse::Payload;
-use actix_web::web;
-use dal::database::{Album, Photo};
-use proto::UpdateAlbumRequest;
 
 /// Update the metadata of an existing album.
 /// Currently, only the following properties can be updated:

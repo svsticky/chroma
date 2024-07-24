@@ -1,10 +1,12 @@
+use actix_web::web;
+use serde::Deserialize;
+use tracing::trace;
+
+use dal::database::{OAuthAccess, User};
+
 use crate::routes::appdata::WebData;
 use crate::routes::error::{Error, WebResult};
 use crate::routes::redirect::Redirect;
-use actix_web::web;
-use dal::database::{OAuthAccess, User};
-use serde::Deserialize;
-use tracing::trace;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {
