@@ -1,18 +1,21 @@
+use std::io::Cursor;
+
+use actix_multiresponse::Payload;
+use actix_web::web;
+use image::{DynamicImage, ImageOutputFormat};
+use serde::Deserialize;
+use tap::TapFallible;
+use tracing::warn;
+
+use dal::database::Photo;
+use dal::DalError;
+use proto::photo_respone::Response;
+use proto::{GetPhotoResponse, PhotoRespone};
+
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::error::{Error, WebResult};
 use crate::routes::v1::PhotoQuality;
-use actix_multiresponse::Payload;
-use actix_web::web;
-use dal::database::Photo;
-use dal::DalError;
-use image::{DynamicImage, ImageOutputFormat};
-use proto::photo_respone::Response;
-use proto::{GetPhotoResponse, PhotoRespone};
-use serde::Deserialize;
-use std::io::Cursor;
-use tap::TapFallible;
-use tracing::warn;
 
 #[derive(Debug, Deserialize)]
 pub struct Query {

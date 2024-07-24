@@ -1,11 +1,13 @@
+use actix_multiresponse::Payload;
+
+use dal::database::PhotoQuality;
+use dal::database::{Album, Photo};
+use proto::DeleteAlbumRequest;
+
 use crate::routes::appdata::WebData;
 use crate::routes::authorization::Authorization;
 use crate::routes::empty::Empty;
 use crate::routes::error::{Error, WebResult};
-use actix_multiresponse::Payload;
-use dal::database::PhotoQuality;
-use dal::database::{Album, Photo};
-use proto::DeleteAlbumRequest;
 
 /// Delete an existing album.
 /// All photos in this album will consequently also be deleted.

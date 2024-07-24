@@ -1,11 +1,13 @@
-use crate::database::{Album, Database, DbResult};
-use crate::storage_engine::Storage;
-use crate::DalError;
-use proto::photo_respone::Response;
-use proto::PhotoRespone;
 use rand::Rng;
 use sqlx::{FromRow, Type};
 use strum_macros::Display;
+
+use proto::photo_respone::Response;
+use proto::PhotoRespone;
+
+use crate::database::{Album, Database, DbResult};
+use crate::storage_engine::Storage;
+use crate::DalError;
 
 #[derive(Clone)]
 pub struct Photo<'a> {
@@ -216,7 +218,7 @@ impl<'a> Photo<'a> {
     ///
     /// If a database error occurs
     pub async fn is_quality_created(&self, quality: &PhotoQuality) -> DbResult<bool> {
-        PhotoS3Url::get_for_photo(&self.db, &self.id, quality)
+        PhotoS3Url::get_for_photo(self.db, &self.id, quality)
             .await
             .map(|maybe_url| maybe_url.is_some())
     }

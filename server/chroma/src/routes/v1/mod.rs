@@ -1,10 +1,12 @@
-use crate::routes::routable::Routable;
+use std::time::Duration;
+
 use actix_governor::governor::middleware::StateInformationMiddleware;
 use actix_governor::{Governor, GovernorConfig, GovernorConfigBuilder, PeerIpKeyExtractor};
 use actix_web::web;
 use actix_web::web::ServiceConfig;
 use serde::Deserialize;
-use std::time::Duration;
+
+use crate::routes::routable::Routable;
 
 mod access;
 mod album;

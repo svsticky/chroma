@@ -1,14 +1,17 @@
-use crate::routes::appdata::{SessionIdCache, WebData};
+use std::future::Future;
+use std::pin::Pin;
+
 use actix_web::body::BoxBody;
 use actix_web::dev::Payload;
 use actix_web::http::StatusCode;
 use actix_web::{web, FromRequest, HttpRequest, HttpResponse, ResponseError};
-use dal::database::{ChromaScope, Database, DbResult, ServiceTokenUser, User, UserType};
-use std::future::Future;
-use std::pin::Pin;
 use tap::TapFallible;
 use thiserror::Error;
 use tracing::{info, trace};
+
+use dal::database::{ChromaScope, Database, DbResult, ServiceTokenUser, User, UserType};
+
+use crate::routes::appdata::{SessionIdCache, WebData};
 
 #[derive(Clone)]
 pub struct Authorization {

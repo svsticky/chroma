@@ -1,7 +1,8 @@
 use color_eyre::eyre::Error;
-use dal::database::DbConfig;
 use serde::Deserialize;
 use tracing::{info, warn};
+
+use dal::database::DbConfig;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
