@@ -1,4 +1,4 @@
-use color_eyre::eyre::Error;
+use anyhow::{Error, Result};
 use serde::Deserialize;
 use tracing::{info, warn};
 
@@ -105,7 +105,7 @@ impl Config {
     }
 
     /// Get the database configuration specified by the configuration
-    pub fn database_config(&self) -> color_eyre::Result<DbConfig> {
+    pub fn database_config(&self) -> Result<DbConfig> {
         if let Some(url) = &self.db_url {
             Ok(DbConfig::Url { url })
         } else {

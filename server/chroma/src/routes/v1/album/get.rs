@@ -3,9 +3,9 @@ use actix_web::web;
 use futures::future::join_all;
 use serde::Deserialize;
 
-use dal::database::PhotoQuality;
-use dal::database::{Album, Photo};
 use dal::DalError;
+use dal::database::{Album, Photo};
+use dal::database::PhotoQuality;
 use proto::{AlbumWithCoverPhoto, GetAlbumResponse};
 
 use crate::routes::appdata::{AlbumIdCache, WebData};
