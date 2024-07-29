@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use actix_cors::Cors;
-use actix_web::{App, HttpServer, web};
+use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, bail, Result};
 use cabbage::KoalaApi;
 use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;

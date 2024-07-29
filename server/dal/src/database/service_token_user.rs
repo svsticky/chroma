@@ -1,5 +1,6 @@
-use crate::database::{Database, DbResult};
 use sqlx::FromRow;
+
+use crate::database::{Database, DbResult};
 
 pub struct ServiceTokenUser<'a> {
     #[allow(unused)]

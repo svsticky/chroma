@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use actix_web::web;
 use cabbage::KoalaApi;
-use governor::{Quota, RateLimiter};
 use governor::clock::DefaultClock;
 use governor::state::{InMemoryState, NotKeyed};
+use governor::{Quota, RateLimiter};
 use moka::future::Cache;
 
 use dal::database::{Album, Database};

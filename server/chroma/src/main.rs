@@ -1,12 +1,12 @@
 extern crate core;
 
 use dotenv::dotenv;
-use tracing::{error, warn};
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::EnvFilter;
+use tracing::{error, warn};
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
 
 mod config;
 mod routes;

@@ -1,10 +1,12 @@
-use crate::database::{Database, DatabaseError, DbResult, Photo, User};
-use rand::Rng;
-use sqlx::{FromRow, Type};
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Formatter;
+
+use rand::Rng;
+use sqlx::{FromRow, Type};
 use time::OffsetDateTime;
+
+use crate::database::{Database, DatabaseError, DbResult, Photo, User};
 
 #[derive(Clone)]
 pub struct Album {

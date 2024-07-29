@@ -1,7 +1,8 @@
-use crate::database::{Database, DbResult};
 use rand::Rng;
 use sqlx::FromRow;
 use time::{Duration, OffsetDateTime};
+
+use crate::database::{Database, DbResult};
 
 pub struct User<'a> {
     db: &'a Database,
