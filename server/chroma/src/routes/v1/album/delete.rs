@@ -1,7 +1,7 @@
 use actix_multiresponse::Payload;
 
-use dal::database::PhotoQuality;
 use dal::database::{Album, Photo};
+use dal::database::PhotoQuality;
 use proto::DeleteAlbumRequest;
 
 use crate::routes::appdata::WebData;

@@ -1,141 +1,47 @@
 extern crate core;
 
-use std::process;
-use std::time::Duration;
-
-use actix_cors::Cors;
-use actix_web::{web, App, HttpServer};
-use cabbage::KoalaApi;
-use color_eyre::Result;
 use dotenv::dotenv;
-use noiseless_tracing_actix_web::NoiselessRootSpanBuilder;
-use tracing::{error, info, warn};
-use tracing_actix_web::TracingLogger;
+use tracing::{error, warn};
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
-
-use dal::database::Database;
-use dal::storage_engine::{S3Config, Storage};
-
-use crate::config::Config;
-use crate::routes::appdata::{AlbumIdCache, AppData, Ratelimits, SessionIdCache, WebData};
-use crate::routes::routable::Routable;
 
 mod config;
 mod routes;
+mod server;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
     // Try to load the environment variables from the .env file
-    if let Err(err) = dotenv() {
-        panic!("failed to load .env file: {:#}", err);
-    }
+    let dotenv_err = dotenv().err();
 
     // Initialize the tracing logger
     init_tracing();
 
-    // Initialize chroma's core components
-    let config = init_config();
-    let db = init_database(&config).await;
-    let storage = init_storage(&config).await;
+    // Check if the dot env was loaded correctly, otherwise send a warning
+    if let Some(err) = dotenv_err {
+        warn!("failed to load .env file: {:#}", err);
+    }
 
-    // Package the core components up into the AppData struct
-    let app_data = AppData {
-        koala: KoalaApi::new(config.koala_base_redirect_uri().clone())?,
-        db,
-        storage,
-        config,
-        ratelimits: Ratelimits::new(),
-    };
-
-    // Run the webserver using the AppData until stopped or crash
-    start_webserver(app_data).await
+    // Run the server
+    if let Err(err) = server::run().await {
+        error!("{}", err);
+        err.chain()
+            .skip(1)
+            .for_each(|cause| error!("because: {}", cause));
+        std::process::exit(1);
+    }
 }
 
 fn init_tracing() {
     tracing_subscriber::registry()
         .with(layer().compact())
-        .with(EnvFilter::from_default_env())
+        .with(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
         .init();
-}
-
-fn init_config() -> Config {
-    info!("parsing config");
-    let config = Config::parse().unwrap_or_else(|err| {
-        error!("failed to parse config: {:#}", err);
-        process::exit(1);
-    });
-
-    if !config.validate() {
-        error!("config is not valid");
-        process::exit(1);
-    }
-
-    if !config.service_tokens.is_empty() {
-        warn!("there are service tokens configured, Make sure these are, and stay, confidential!");
-    }
-
-    config
-}
-
-async fn init_database(config: &Config) -> Database {
-    info!("initializing database connection");
-    Database::new(config.database_config().unwrap())
-        .await
-        .unwrap_or_else(|err| {
-            error!("failed to initialize database connection: {:#}", err);
-            process::exit(1);
-        })
-}
-
-async fn init_storage(config: &Config) -> Storage {
-    info!("initializing S3 storage engine");
-    Storage::new(S3Config {
-        bucket_name: config.s3_bucket_name.clone().unwrap(),
-        endpoint_url: config.s3_endpoint_url.clone().unwrap(),
-        region: config.s3_region.clone().unwrap(),
-        access_key_id: config.s3_access_key_id.clone().unwrap(),
-        secret_access_key: config.s3_secret_access_key.clone().unwrap(),
-        use_path_style: config.s3_force_path_style(),
-        create_bucket: config.s3_create_bucket_on_startup(),
-    })
-    .await
-    .unwrap_or_else(|err| {
-        error!("failed to initialize S3 storage engine: {:#}", err);
-        process::exit(1);
-    })
-}
-
-async fn start_webserver(app_data: AppData) -> Result<()> {
-    info!("starting web server");
-    HttpServer::new(move || {
-        App::new()
-            .wrap(Cors::permissive())
-            .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
-            .app_data(WebData::new(app_data.clone()))
-            .app_data(web::Data::new(
-                SessionIdCache::builder()
-                    .max_capacity(10000)
-                    .time_to_live(Duration::from_secs(30))
-                    .build(),
-            ))
-            .app_data(web::Data::new(
-                AlbumIdCache::builder().max_capacity(10000).build(),
-            ))
-            .configure(routes::Router::configure)
-    })
-    .bind(&format!(
-        "0.0.0.0:{}",
-        std::env::var("HTTP_PORT").unwrap_or("8000".into())
-    ))
-    .unwrap_or_else(|err| {
-        error!("failed to bind web server to port 8000: {:#}", err);
-        process::exit(1);
-    })
-    .run()
-    .await?;
-
-    Ok(())
 }
