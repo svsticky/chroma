@@ -1,6 +1,7 @@
-use color_eyre::Result;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
+
+use color_eyre::Result;
 
 fn main() -> Result<()> {
     let mut config = prost_build::Config::new();

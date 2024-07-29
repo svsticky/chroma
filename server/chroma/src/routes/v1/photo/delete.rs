@@ -1,8 +1,8 @@
 use actix_multiresponse::Payload;
 use reqwest::StatusCode;
 
-use dal::database::{Album, Photo};
 use dal::database::PhotoQuality;
+use dal::database::{Album, Photo};
 use proto::DeletePhotoRequest;
 
 use crate::routes::appdata::WebData;
