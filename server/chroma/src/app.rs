@@ -20,11 +20,11 @@ use crate::routes::routable::Routable;
 ///
 /// # Errors
 ///
-/// If the configuration is invalid
-/// If the database connection cannot be completed
-/// If the S3 configuration is invalid
-/// If the port for the server is already in use
-/// If a problem occurs in one of the server routes
+/// - If the configuration is invalid
+/// - If the database connection cannot be completed
+/// - If the S3 configuration is invalid
+/// - If the port for the server is already in use
+/// - If a problem occurs in one of the server routes
 pub async fn run() -> Result<()> {
     // Initialize chroma's core components
     let config = init_config()?;
