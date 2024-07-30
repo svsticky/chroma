@@ -1,5 +1,7 @@
 extern crate core;
 
+use std::process::ExitCode;
+
 use dotenv::dotenv;
 use tracing::level_filters::LevelFilter;
 use tracing::{error, warn};
@@ -13,7 +15,7 @@ mod routes;
 mod server;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
     // Try to load the environment variables from the .env file
     let dotenv_err = dotenv().err();
 
@@ -31,7 +33,9 @@ async fn main() {
         err.chain()
             .skip(1)
             .for_each(|cause| error!("because: {}", cause));
-        std::process::exit(1);
+        ExitCode::from(1)
+    } else {
+        ExitCode::from(0)
     }
 }
 
