@@ -10,9 +10,9 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
+mod app;
 mod config;
 mod routes;
-mod server;
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -28,7 +28,7 @@ async fn main() -> ExitCode {
     }
 
     // Run the server
-    if let Err(err) = server::run().await {
+    if let Err(err) = app::run().await {
         error!("{}", err);
         err.chain()
             .skip(1)
