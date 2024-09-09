@@ -4,34 +4,36 @@ version = "0.1.23"
 edition = "2021"
 
 [dependencies]
-actix-cors = "0.6.4"
+actix-cors = "0.7.0"
+actix-governor = "0.5.0"
 actix-multiresponse = { version = "0.4.2", features = ["xml"] }
-actix-web = "4.3.0"
-actix-governor = "0.4.0"
+actix-web = "4.8.0"
+anyhow = "1.0.86"
+cabbage = "0.1.2"
+chrono = "0.4.23"
+dal = { version = "0.1.0", path = "../dal" }
+dotenv = "0.15.0"
+envy = "0.4.2"
+futures = "0.3.26"
+governor = "0.6.3"
+image = "0.24.5"
+imagesize = "0.13.0"
+img-parts = "0.3.0"
+kamadak-exif = "0.5.5"
+md5 = "0.7.0"
+moka = { version = "0.12.5", features = ["future"] }
+noiseless-tracing-actix-web = "0.1.0"
 proto = { version = "0.1.0", path = "../proto" }
+reqwest = { version = "0.11.14", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1.0.152", features = ["derive"] }
+tap = "1.0.1"
 thiserror = "1.0.38"
-tracing = "0.1.37"
+time = "0.3.28"
 tokio = { version = "1.29.1", features = ["full"] }
+tracing = "0.1.37"
 tracing-actix-web = "0.7.2"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-dal = { version = "0.1.0", path = "../dal" }
-envy = "0.4.2"
-noiseless-tracing-actix-web = "0.1.0"
-futures = "0.3.26"
-reqwest = { version = "0.11.14", default-features = false, features = ["json", "rustls-tls"] }
-chrono = "0.4.23"
-image = "0.24.5"
-tap = "1.0.1"
 webp = "0.2.5"
-img-parts = "0.3.0"
-time = "0.3.28"
-kamadak-exif = "0.5.5"
-cabbage = "0.1.2"
-moka = { version = "0.12.5", features = ["future"] }
-dotenv = "0.15.0"
-governor = "0.6.3"
-anyhow = "1.0.86"
 
 [dev-dependencies]
 serde_json = "1.0.93"

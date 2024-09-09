@@ -9,12 +9,12 @@ mod empty;
 mod error;
 mod redirect;
 pub mod routable;
-mod v1;
+mod v2;
 
 pub struct Router;
 
 impl Routable for Router {
     fn configure(config: &mut ServiceConfig) {
-        config.service(web::scope("/api").configure(v1::Router::configure));
+        config.service(web::scope("/api").configure(v2::Router::configure));
     }
 }

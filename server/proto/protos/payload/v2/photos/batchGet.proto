@@ -1,0 +1,12 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+import "entity/photo.proto";
+
+message BatchGetPhotosRequest {
+  repeated string ids = 1;
+}
+
+message BatchGetPhotosResponse {
+  repeated Photo photos = 1;
+}

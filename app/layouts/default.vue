@@ -1,0 +1,118 @@
+<script lang="ts">
+import "~/assets/css/style.css";
+
+export default defineComponent({
+  data() {
+    return {
+      email: "dev@svsticky.nl",
+    };
+  },
+});
+</script>
+
+<template>
+  <header>
+    <section id="nav-banner">
+      <nuxt-link to="/">
+        <div class="favicon">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <g clip-path="url(#clip0_1_2)">
+              <circle
+                cx="32"
+                cy="32"
+                r="30.5"
+                fill="#61518F"
+                stroke="white"
+                stroke-width="3"
+              />
+              <path
+                d="M18.2628 21.0147C17.4157 21.5515 16.7181 22.294 16.2351 23.1729C15.752 24.0519 15.4991 25.0387 15.5 26.0417V37.9583C15.5 43.275 19.8083 47.5833 25.125 47.5833H37.0417C38.0453 47.5839 39.0327 47.3308 39.9123 46.8474C40.7918 46.3641 41.5348 45.6662 42.0723 44.8187L41.8487 44.8297L41.625 44.8333H25.125C23.3016 44.8333 21.553 44.109 20.2636 42.8197C18.9743 41.5304 18.25 39.7817 18.25 37.9583V21.4583C18.25 21.3098 18.2537 21.1613 18.2628 21.0147ZM26.0417 15.5C24.4614 15.5 22.9459 16.1278 21.8285 17.2452C20.7111 18.3626 20.0833 19.8781 20.0833 21.4583V37.0417C20.0833 38.6219 20.7111 40.1374 21.8285 41.2548C22.9459 42.3722 24.4614 43 26.0417 43H41.625C43.2052 43 44.7208 42.3722 45.8382 41.2548C46.9556 40.1374 47.5833 38.6219 47.5833 37.0417V21.4583C47.5833 19.8781 46.9556 18.3626 45.8382 17.2452C44.7208 16.1278 43.2052 15.5 41.625 15.5H26.0417ZM34.6217 32.2512L34.7922 32.3923L42.6865 40.0703C42.3453 40.1897 41.9864 40.2504 41.625 40.25H26.0417C25.6695 40.25 25.312 40.1858 24.9783 40.0703L32.8745 32.3923C33.1039 32.1687 33.4042 32.0323 33.7236 32.0065C34.0429 31.9807 34.3593 32.0673 34.6217 32.2512ZM26.0417 18.25H41.625C43.396 18.25 44.8333 19.6873 44.8333 21.4583V37.0417C44.8333 37.4248 44.7655 37.7915 44.6427 38.1325L36.7098 30.4197C35.9807 29.7108 35.0153 29.2963 33.9992 29.2557C32.9831 29.2151 31.9877 29.5512 31.2043 30.1997L30.9587 30.4197L23.024 38.1343C22.8974 37.784 22.8329 37.4142 22.8333 37.0417V21.4583C22.8333 19.6873 24.2707 18.25 26.0417 18.25ZM29.25 22.3768C28.9437 22.3682 28.6388 22.421 28.3533 22.5322C28.0678 22.6435 27.8075 22.8108 27.5878 23.0244C27.3681 23.2379 27.1935 23.4934 27.0742 23.7757C26.955 24.0579 26.8935 24.3612 26.8935 24.6676C26.8935 24.974 26.955 25.2773 27.0742 25.5595C27.1935 25.8418 27.3681 26.0972 27.5878 26.3108C27.8075 26.5244 28.0678 26.6917 28.3533 26.8029C28.6388 26.9142 28.9437 26.967 29.25 26.9583C29.8463 26.9415 30.4126 26.6927 30.8284 26.265C31.2442 25.8372 31.4769 25.2641 31.4769 24.6676C31.4769 24.071 31.2442 23.498 30.8284 23.0702C30.4126 22.6424 29.8463 22.3937 29.25 22.3768Z"
+                fill="white"
+              />
+            </g>
+            <defs>
+              <clipPath id="clip0_1_2">
+                <rect width="64" height="64" fill="white" />
+              </clipPath>
+            </defs>
+          </svg>
+        </div>
+        <div class="title">Chroma</div>
+      </nuxt-link>
+    </section>
+    <section id="nav-center"></section>
+    <section id="nav-controls">
+      <nuxt-link id="current-user" class="highlight">
+        <font-awesome icon="circle-user" class="icon fa-lg" />
+        {{ email }}
+      </nuxt-link>
+      <nuxt-link id="sign-out" class="highlight">
+        Sign out
+        <font-awesome icon="right-from-bracket" class="icon" />
+      </nuxt-link>
+    </section>
+  </header>
+  <main>
+    <slot />
+  </main>
+</template>
+
+<style scoped lang="postcss">
+header {
+  @apply sticky top-0 z-50 w-full;
+  @apply grid grid-cols-3;
+  @apply font-medium;
+  @apply bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700;
+
+  section {
+    a {
+      @apply p-3;
+      @apply flex gap-x-2 items-center;
+      @apply text-gray-900 dark:text-white;
+
+      .icon {
+        @apply text-gray-500 dark:text-gray-400;
+      }
+
+      &.highlight:hover {
+        @apply bg-gray-200 dark:bg-gray-700;
+
+        .icon {
+          @apply text-gray-900 dark:text-white;
+        }
+      }
+
+      &.highlight#sign-out:hover {
+        @apply bg-red-500;
+
+        &,
+        .icon {
+          @apply text-white;
+        }
+      }
+
+      &:focus,
+      &focus-visible {
+        @apply outline-none;
+      }
+    }
+
+    &#nav-banner {
+      @apply flex items-stretch justify-start;
+
+      .favicon {
+        @apply w-8 h-8;
+      }
+    }
+
+    &#nav-controls {
+      @apply flex items-stretch justify-end;
+    }
+  }
+}
+
+main {
+  @apply p-5;
+  @apply flex flex-col flex-1;
+}
+</style>

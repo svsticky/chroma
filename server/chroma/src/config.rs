@@ -65,7 +65,7 @@ pub struct Config {
     pub koala_base_uri: String,
     /// The URI to which Koala should redirect back after login.
     /// This should consist of the base url, i.e. where Chroma is accessed via the browser,
-    /// with the path `/api/v1/login` appended to it.
+    /// with the path `/api/v2/login` appended to it.
     /// E.g. `https://chroma.example.com/api/v1/login` would be a correct value.
     pub koala_oauth_redirect_uri: String,
     /// The user agent to be sent when making requests to Koala.
@@ -110,7 +110,7 @@ impl Config {
             Ok(DbConfig::Url { url })
         } else {
             match (&self.db_host, &self.db_username, &self.db_password, &self.db_database) {
-                (Some(host), Some(user), Some(passw), Some(database)) => Ok(DbConfig::Parameters { host, user, passw, database }),
+                (Some(host), Some(user), Some(passw), Some(database)) => Ok(DbConfig::Parameters { host, user, password: passw, database }),
                 _ => Err(Error::msg("Database is configured incorrectly. You must specify either a `db_url` OR `db_host`, `db_username`, `db_password` and `db_database`"))
             }
         }

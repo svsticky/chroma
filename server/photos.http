@@ -1,0 +1,36 @@
+### Create photo
+POST http://localhost:8000/api/v1/photos/
+Authorization: UnhZ6Frvssx1OIvBsWO7SOZfeFsnZXtL
+Content-Type: application/json
+
+{
+  "data": []
+}
+
+#### Get all photos
+POST http://localhost:8000/api/v1/photos/search
+Authorization: bOvYMqfZ5jCmQlTuOF9jTACXBNxaXwUj
+Content-Type: application/json
+
+{}
+
+> {%
+    client.global.set("photo_id", response.body.photos.at(-1).id);
+%}
+
+#### Get photos for specific album
+POST http://localhost:8000/api/v1/photos/search
+Authorization: bOvYMqfZ5jCmQlTuOF9jTACXBNxaXwUj
+Content-Type: application/json
+
+{
+  "albumId": "ALB_mslqEiiLQoeBskit0Sn2yiJ3P4N6"
+}
+
+> {%
+    client.global.set("photo_id", response.body.photos.at(-1).id);
+%}
+
+### Get a specific photo
+GET http://localhost:8000/api/v1/photos/{{photo_id}}
+Authorization: bOvYMqfZ5jCmQlTuOF9jTACXBNxaXwUj

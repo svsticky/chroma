@@ -7,7 +7,6 @@ use aws_smithy_http::result::SdkError;
 use aws_types::region::Region;
 use tracing::{info, instrument};
 
-use crate::database::PhotoQuality;
 use crate::storage_engine::error::StorageError;
 
 pub mod aws_error {
@@ -98,12 +97,12 @@ impl Storage {
         })
     }
 
-    pub async fn get_photo_url_by_id<S: AsRef<str>>(
+    pub fn get_photo_url_by_id<S1: AsRef<str>, S2: AsRef<str>>(
         &self,
-        photo_id: S,
-        photo_quality: &PhotoQuality,
+        photo_id: S1,
+        photo_quality: S2,
     ) -> Result<String, StorageError> {
-        let qstring = Self::format_id_with_quality(photo_id.as_ref(), photo_quality);
+        let qstring = Self::format_id_with_quality(photo_id.as_ref(), photo_quality.as_ref());
         let url = if self.use_path_style {
             format!("{}/{}/{}", self.endpoint_url, self.bucket_name, qstring)
         } else {
@@ -113,32 +112,12 @@ impl Storage {
         Ok(url)
     }
 
-    pub async fn get_photo_bytes_by_id<S: AsRef<str>>(
+    pub async fn create_photo<S1: AsRef<str>, S2: AsRef<str>, S3: AsRef<str>>(
         &self,
-        photo_id: S,
-        photo_quality: &PhotoQuality,
-    ) -> Result<Vec<u8>, StorageError> {
-        let photo = self
-            .get_object()
-            .bucket(&self.bucket_name)
-            .key(Self::format_id_with_quality(
-                photo_id.as_ref(),
-                photo_quality,
-            ))
-            .send()
-            .await?;
-
-        let bytes = photo.body.collect().await?;
-        let bytes = bytes.to_vec();
-
-        Ok(bytes)
-    }
-
-    pub async fn create_photo<S: AsRef<str>>(
-        &self,
-        photo_id: S,
-        photo_quality: &PhotoQuality,
+        photo_id: S1,
+        photo_quality: S2,
         bytes: Vec<u8>,
+        content_type: S3,
     ) -> Result<(), StorageError> {
         let byte_stream = ByteStream::from(bytes);
 
@@ -146,10 +125,10 @@ impl Storage {
             .bucket(&self.bucket_name)
             .key(Self::format_id_with_quality(
                 photo_id.as_ref(),
-                photo_quality,
+                photo_quality.as_ref(),
             ))
             .body(byte_stream)
-            .content_type("image/webp")
+            .content_type(content_type.as_ref())
             .send()
             .await?;
 
@@ -159,13 +138,13 @@ impl Storage {
     pub async fn delete_photo<S: AsRef<str>>(
         &self,
         photo_id: S,
-        photo_quality: &PhotoQuality,
+        photo_quality: S,
     ) -> Result<(), StorageError> {
         self.delete_object()
             .bucket(&self.bucket_name)
             .key(Self::format_id_with_quality(
                 photo_id.as_ref(),
-                photo_quality,
+                photo_quality.as_ref(),
             ))
             .send()
             .await?;
@@ -221,7 +200,7 @@ impl Storage {
         Ok(())
     }
 
-    fn format_id_with_quality(photo_id: &str, photo_quality: &PhotoQuality) -> String {
+    fn format_id_with_quality(photo_id: &str, photo_quality: &str) -> String {
         format!("{}_{}", photo_id, photo_quality)
     }
 }

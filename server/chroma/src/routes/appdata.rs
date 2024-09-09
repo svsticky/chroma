@@ -18,21 +18,23 @@ pub type WebData = web::Data<AppData>;
 pub type SessionIdCache = Cache<String, Authorization>;
 pub type AlbumIdCache = Cache<String, Album>;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct AppData {
     pub db: Database,
     pub storage: Storage,
     pub config: Config,
     pub koala: KoalaApi,
-    pub ratelimits: Ratelimits,
+    pub rate_limits: RateLimits,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct Ratelimits {
+pub struct RateLimits {
     pub photo_create: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
 }
 
-impl Ratelimits {
+impl RateLimits {
     pub fn new() -> Self {
         Self {
             photo_create: Arc::new(RateLimiter::direct(Quota::per_second(

@@ -1,39 +1,22 @@
 use std::borrow::Cow;
-use std::fmt;
-use std::fmt::Formatter;
 
+use futures::future::{join_all, OptionFuture};
 use rand::Rng;
-use sqlx::{FromRow, Type};
+use sqlx::{FromRow, Postgres, Type};
 use time::OffsetDateTime;
 
-use crate::database::{Database, DatabaseError, DbResult, Photo, User};
+use crate::database::{Database, DbResult, Photo};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Album {
     pub id: String,
     pub name: String,
+    pub cover_photo: Option<Photo>,
     pub created_at: i64,
-    pub cover_photo_id: Option<String>,
-    pub is_draft: bool,
     pub created_by: UserType,
-    pub published_by: Option<UserType>,
+    pub published: bool,
     pub published_at: Option<i64>,
-}
-
-// Manually impl debug as to not print the `db` field
-impl fmt::Debug for Album {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Album")
-            .field("id", &self.id)
-            .field("name", &self.name)
-            .field("created_at", &self.created_at)
-            .field("created_by", &self.created_by)
-            .field("published_at", &self.published_at)
-            .field("published_by", &self.published_by)
-            .field("is_draft", &self.is_draft)
-            .field("cover_photo_id", &self.cover_photo_id)
-            .finish()
-    }
+    pub published_by: Option<UserType>,
 }
 
 #[derive(Clone, Debug)]
@@ -43,17 +26,15 @@ pub enum UserType {
 }
 
 #[derive(FromRow)]
-struct _Album {
+struct AlbumRow {
     id: String,
     name: String,
-    created_at: i64,
     cover_photo_id: Option<String>,
-    is_draft: bool,
+    created_at: i64,
     created_by: i32,
-    created_by_type: _UserType,
-    published_by: Option<i32>,
-    published_by_type: Option<_UserType>,
+    published: bool,
     published_at: Option<i64>,
+    published_by: Option<i32>,
 }
 
 #[derive(Clone, Type)]
@@ -63,32 +44,23 @@ enum _UserType {
     Service,
 }
 
-impl _Album {
-    fn into_album(self) -> Album {
-        Album {
-            id: self.id,
-            name: self.name,
-            created_at: self.created_at,
-            cover_photo_id: self.cover_photo_id,
-            is_draft: self.is_draft,
-            published_by: match (self.published_by_type, self.published_by) {
-                (Some(_UserType::Koala), Some(id)) => Some(UserType::Koala(id)),
-                (Some(_UserType::Service), Some(id)) => Some(UserType::ServiceToken(id)),
-                _ => None,
-            },
-            published_at: self.published_at,
-            created_by: match self.created_by_type {
-                _UserType::Koala => UserType::Koala(self.created_by),
-                _UserType::Service => UserType::ServiceToken(self.created_by),
-            },
-        }
-    }
-}
-
 impl Album {
     pub const MAX_NAME_LENGTH: usize = 64;
     pub const ID_PREFIX: &'static str = "ALB_";
     pub const MAX_ID_LEN: usize = 32;
+
+    fn new(album_row: AlbumRow, cover_photo: Option<Photo>) -> Album {
+        Album {
+            id: album_row.id,
+            name: album_row.name,
+            cover_photo,
+            created_at: album_row.created_at,
+            created_by: UserType::Koala(album_row.created_by),
+            published: album_row.published,
+            published_by: album_row.published_by.map(UserType::Koala),
+            published_at: album_row.published_at,
+        }
+    }
 
     fn generate_id() -> String {
         let random: String = rand::thread_rng()
@@ -99,151 +71,138 @@ impl Album {
         format!("{}{random}", Self::ID_PREFIX)
     }
 
-    async fn user_type_to_proto(db: &Database, user: UserType) -> DbResult<proto::AlbumUser> {
-        Ok(match user {
-            UserType::Koala(id) => {
-                let user = User::get_by_id(db, id)
-                    .await?
-                    .ok_or(DatabaseError::RowNotFound)?;
-                proto::AlbumUser {
-                    id,
-                    name: Some(user.name),
-                    r#type: proto::UserType::Koala as i32,
-                }
-            }
-            UserType::ServiceToken(id) => proto::AlbumUser {
-                id,
-                name: None,
-                r#type: proto::UserType::Service as i32,
-            },
-        })
-    }
-
-    pub async fn to_proto(self, db: &Database) -> DbResult<proto::Album> {
-        Ok(proto::Album {
-            id: self.id,
-            name: self.name,
-            created_at: self.created_at,
-            cover_photo_id: self.cover_photo_id,
-            is_draft: self.is_draft,
-            created_by: Some(Self::user_type_to_proto(db, self.created_by).await?),
-            published_by: match self.published_by {
-                Some(published_by) => Some(Self::user_type_to_proto(db, published_by).await?),
-                None => None,
-            },
-            published_at: self.published_at,
-        })
-    }
-
     pub async fn create(
         db: &Database,
         name: impl Into<Cow<'_, str>>,
-        is_draft: bool,
+        published: bool,
         created_by: UserType,
     ) -> DbResult<Album> {
         let name = name.into();
         let id = Self::generate_id();
-        let created_at = OffsetDateTime::now_utc().unix_timestamp();
 
-        let (created_by_type, created_by_id) = match &created_by {
+        let (_created_by_type, created_by_id) = match &created_by {
             UserType::Koala(id) => (_UserType::Koala, *id),
             UserType::ServiceToken(id) => (_UserType::Service, *id),
         };
 
         // If something is a draft, there can be no publisher.
         // If an album at creation is a published one, then the publisher is also the creator.
-        let published_at = (!is_draft).then_some(created_at);
-        let published_by_type = (!is_draft).then_some(created_by_type.clone());
-        let published_by_id = (!is_draft).then_some(match &created_by {
+        let published_at = (!published).then_some(OffsetDateTime::now_utc().unix_timestamp());
+        let published_by_id = (!published).then_some(match &created_by {
             UserType::Koala(id) => *id,
             UserType::ServiceToken(id) => *id,
         });
 
-        sqlx::query(
-            "INSERT INTO album_metadata \
-                    (id, name, created_at, created_by, is_draft, published_by, published_at, published_by_type, created_by_type) \
+        Ok(Self::new(
+            sqlx::query_as::<Postgres, AlbumRow>(
+                "INSERT INTO albums \
+                    (id, name, created_by, published, published_by, published_at) \
                 VALUES \
-                    ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
+                    ($1, $2, $3, $4, $5, $6) \
+                RETURNING \
+                    *",
+            )
             .bind(&id)
             .bind(&name)
-            .bind(created_at)
             .bind(created_by_id)
-            .bind(is_draft)
+            .bind(published)
             .bind(published_by_id)
             .bind(published_at)
-            .bind(published_by_type)
-            .bind(created_by_type)
-            .execute(&**db)
-            .await?;
-
-        Ok(Self {
-            id,
-            name: name.to_string(),
-            created_at,
-            cover_photo_id: None,
-            is_draft,
-            published_by: (!is_draft).then(|| created_by.clone()),
-            created_by,
-            published_at,
-        })
+            .fetch_one(&**db)
+            .await?,
+            None,
+        ))
     }
 
-    pub async fn get_by_id<S: AsRef<str> + Sync>(db: &Database, id: S) -> DbResult<Option<Album>> {
-        let album: Option<_Album> = sqlx::query_as("SELECT * FROM album_metadata WHERE id = $1")
-            .bind(id.as_ref())
-            .fetch_optional(&**db)
-            .await?;
+    pub async fn get_by_id(db: &Database, id: &str) -> DbResult<Option<Album>> {
+        OptionFuture::from(
+            sqlx::query_as::<Postgres, AlbumRow>("SELECT * FROM albums WHERE id = $1")
+                .bind(id)
+                .fetch_optional(&**db)
+                .await?
+                .map(|album_row| async {
+                    let cover_photo = match &album_row.cover_photo_id {
+                        Some(id) => Photo::get(db, id).await?,
+                        None => None,
+                    };
 
-        Ok(album.map(|x| x.into_album()))
+                    Ok(Self::new(album_row, cover_photo))
+                }),
+        )
+        .await
+        .map_or(Ok(None), |v| v.map(Some))
+    }
+
+    pub async fn list(db: &Database, published_only: bool) -> DbResult<Vec<Album>> {
+        join_all(
+            sqlx::query_as::<Postgres, AlbumRow>(if published_only {
+                "SELECT * FROM albums WHERE published"
+            } else {
+                "SELECT * FROM albums"
+            })
+            .fetch_all(&**db)
+            .await?
+            .into_iter()
+            .map(|album| async {
+                let photo = match &album.cover_photo_id {
+                    Some(id) => Photo::get(db, id).await?,
+                    None => None,
+                };
+
+                Ok(Self::new(album, photo))
+            }),
+        )
+        .await
+        .into_iter()
+        .collect::<DbResult<Vec<_>>>()
     }
 
     pub async fn update_cover_photo(
         &mut self,
-        cover_photo: &Photo<'_>,
+        cover_photo: Option<Photo>,
         db: &Database,
     ) -> DbResult<()> {
-        sqlx::query("UPDATE album_metadata SET cover_photo_id = $1 WHERE id = $2")
-            .bind(&cover_photo.id)
+        sqlx::query("UPDATE albums SET cover_photo_id = $1 WHERE id = $2")
+            .bind(cover_photo.as_ref().map(|photo| &photo.id))
             .bind(&self.id)
             .execute(&**db)
             .await?;
 
-        self.cover_photo_id = Some(cover_photo.id.clone());
+        self.cover_photo = cover_photo;
+
         Ok(())
     }
 
-    pub async fn update_name(
-        &mut self,
-        new_name: impl Into<Cow<'_, str>>,
-        db: &Database,
-    ) -> DbResult<()> {
-        let new_name = new_name.into();
-        sqlx::query("UPDATE album_metadata SET name = $1 WHERE id = $2")
-            .bind(&new_name)
+    pub async fn update_name(&mut self, name: String, db: &Database) -> DbResult<()> {
+        sqlx::query("UPDATE albums SET name = $1 WHERE id = $2")
+            .bind(&name)
             .bind(&self.id)
             .execute(&**db)
             .await?;
-        self.name = new_name.to_string();
+
+        self.name = name;
+
         Ok(())
     }
 
     pub async fn set_published(&mut self, published_by: UserType, db: &Database) -> DbResult<()> {
         let published_at = OffsetDateTime::now_utc().unix_timestamp();
 
-        let (published_by_type, published_by_id) = match &published_by {
+        let (_published_by_type, published_by_id) = match &published_by {
             UserType::Koala(id) => (_UserType::Koala, *id),
             UserType::ServiceToken(id) => (_UserType::Service, *id),
         };
 
-        sqlx::query("UPDATE album_metadata SET published_by = $1, published_at = $2, published_by_type = $3, is_draft = false WHERE id = $4")
+        sqlx::query(
+            "UPDATE albums SET published_by = $1, published_at = $2, published = true WHERE id = $3",
+        )
             .bind(published_by_id)
             .bind(published_at)
-            .bind(published_by_type)
             .bind(&self.id)
             .execute(&**db)
             .await?;
 
-        self.is_draft = false;
+        self.published = true;
         self.published_by = Some(published_by);
         self.published_at = Some(published_at);
 
@@ -251,12 +210,12 @@ impl Album {
     }
 
     pub async fn set_draft(&mut self, db: &Database) -> DbResult<()> {
-        sqlx::query("UPDATE album_metadata SET published_by = NULL, published_by_type = NULL, published_at = NULL, is_draft = true WHERE id = $1")
+        sqlx::query("UPDATE albums SET published_by = NULL, published_at = NULL, published = false WHERE id = $1")
             .bind(&self.id)
             .execute(&**db)
             .await?;
 
-        self.is_draft = true;
+        self.published = false;
         self.published_by = None;
         self.published_at = None;
 
@@ -264,41 +223,26 @@ impl Album {
     }
 
     pub async fn delete(self, db: &Database) -> DbResult<()> {
-        let mut tx = db.begin().await?;
-
-        // Must satisfy the foreign key constraint
-        // So unset the cover photo before removing all photoss
-        sqlx::query("UPDATE album_metadata SET cover_photo_id = NULL WHERE id = $1")
+        sqlx::query("DELETE FROM albums WHERE id = $1")
             .bind(&self.id)
-            .execute(&mut tx)
+            .execute(&**db)
             .await?;
-
-        sqlx::query("DELETE FROM photo_metadata WHERE album_id = $1")
-            .bind(&self.id)
-            .execute(&mut tx)
-            .await?;
-
-        sqlx::query("DELETE FROM album_metadata WHERE id = $1")
-            .bind(&self.id)
-            .execute(&mut tx)
-            .await?;
-
-        tx.commit().await?;
 
         Ok(())
     }
+}
 
-    pub async fn list_ids(db: &Database) -> DbResult<Vec<String>> {
-        sqlx::query_scalar("SELECT id FROM album_metadata")
-            .fetch_all(&**db)
-            .await
-    }
-
-    pub async fn list(db: &Database) -> DbResult<Vec<Album>> {
-        let selfs: Vec<_Album> = sqlx::query_as("SELECT * FROM album_metadata")
-            .fetch_all(&**db)
-            .await?;
-
-        Ok(selfs.into_iter().map(|x| x.into_album()).collect())
+impl From<Album> for proto::Album {
+    fn from(album: Album) -> proto::Album {
+        proto::Album {
+            id: Some(album.id),
+            name: Some(album.name),
+            cover_photo: album.cover_photo.map(|photo| photo.into()),
+            created_at: Some(album.created_at),
+            created_by: None, // Todo: Obtain users
+            published: Some(album.published),
+            published_at: album.published_at,
+            published_by: None,
+        }
     }
 }

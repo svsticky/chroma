@@ -1,0 +1,12 @@
+syntax = "proto3";
+package nl.svsticky.chroma;
+
+import "entity/photo.proto";
+
+message SearchPhotosRequest {
+  optional string albumId = 1;
+}
+
+message SearchPhotosResponse {
+  repeated Photo photos = 1;
+}

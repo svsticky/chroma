@@ -5,6 +5,7 @@ use thiserror::Error;
 
 pub type WebResult<T> = Result<T, Error>;
 
+#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Internal server error")]
@@ -23,12 +24,12 @@ pub enum Error {
     ChronoParse(#[from] chrono::ParseError),
     #[error("Other: {0}")]
     Other(StatusCode),
+    #[error{"{0}"}]
+    ImageSize(#[from] imagesize::ImageError),
     #[error("{0}")]
     ImagePipeline(#[from] ImagePipelineError),
     #[error("{0}")]
     ImageEncoding(#[from] image::ImageError),
-    #[error("Failed to decode WebP image")]
-    WebpDecode,
     #[error("Slow down. Too many requests")]
     Ratelimit { retry_after: u64 },
 }
@@ -43,9 +44,9 @@ impl ResponseError for Error {
             Self::Koala(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::ChronoParse(_) => StatusCode::BAD_GATEWAY,
+            Self::ImageSize(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::ImagePipeline(e) => e.status_code(),
             Self::ImageEncoding(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::WebpDecode => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Other(s) => *s,
             Self::Ratelimit { .. } => StatusCode::TOO_MANY_REQUESTS,
         }
@@ -56,7 +57,7 @@ impl ResponseError for Error {
             Self::Ratelimit { retry_after } => HttpResponse::build(self.status_code())
                 .insert_header(("Retry-After".to_string(), format!("{retry_after}")))
                 .body("Too many requests"),
-            _ => ResponseError::error_response(self),
+            _ => HttpResponse::build(self.status_code()).finish(),
         }
     }
 }
@@ -66,15 +67,7 @@ pub enum ImagePipelineError {
     #[error("{0}")]
     StringFromUtf8(#[from] std::string::FromUtf8Error),
     #[error("{0}")]
-    DateTimeParse(#[from] chrono::format::ParseError),
-    #[error("EXIF metadata field '{0}' is of an invalid datatype")]
-    InvalidExifFieldType(&'static str),
-    #[error("Field '{0}' missing from EXIF metadata")]
-    MissingExifField(&'static str),
-    #[error("{0}")]
     ExifParsing(#[from] exif::Error),
-    #[error("{0}")]
-    WebpEncoding(String),
     #[error("{0}")]
     Io(#[from] std::io::Error),
     #[error("{0}")]
@@ -85,11 +78,7 @@ impl ImagePipelineError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::StringFromUtf8(_) => StatusCode::BAD_REQUEST,
-            Self::DateTimeParse(_) => StatusCode::BAD_REQUEST,
-            Self::InvalidExifFieldType(_) => StatusCode::BAD_REQUEST,
-            Self::MissingExifField(_) => StatusCode::BAD_REQUEST,
             Self::ExifParsing(_) => StatusCode::BAD_REQUEST,
-            Self::WebpEncoding(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::ImgPartsDecode(_) => StatusCode::BAD_REQUEST,
         }

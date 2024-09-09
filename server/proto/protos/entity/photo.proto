@@ -1,22 +1,52 @@
 syntax = "proto3";
 package nl.svsticky.chroma;
 
+import "entity/user.proto";
+
 message Photo {
+  optional string id = 1;
+  optional int64 uploadedAt = 2;
+  optional User uploadedBy = 3;
+  optional int64 capturedAt = 4;
+  optional PhotoLinks linked = 5;
+  optional PhotoMedia media = 6;
+  optional PhotoMetadata metadata = 7;
+}
+
+// ------
+
+message PhotoLinks {
+  repeated PhotoAlbum albums = 1;
+}
+
+message PhotoAlbum {
   string id = 1;
-  string albumId = 2;
-  int64 createdAt = 3;
-  PhotoResponseType dataType = 4;
-  PhotoRespone data = 5;
 }
 
-enum PhotoResponseType {
-  URL = 0;
-  InResponse = 1;
+// ------
+
+message PhotoMedia {
+  repeated PhotoUrl urls = 1;
 }
 
-message PhotoRespone {
-  oneof response {
-    string url = 1;
-    bytes bytes = 2;
-  }
+message PhotoUrl {
+  string url = 1;
+  string size = 2;
+  PhotoDimensions dimensions = 3;
+}
+
+message PhotoDimensions {
+  int64 width = 1;
+  int64 height = 2;
+}
+
+// ------
+
+message PhotoMetadata {
+  repeated PhotoExif exif = 1;
+}
+
+message PhotoExif {
+  string key = 1;
+  string value = 2;
 }

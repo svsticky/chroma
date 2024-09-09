@@ -9,11 +9,17 @@ use thiserror::Error;
 
 pub use album::*;
 pub use photo::*;
+pub use photo_album::*;
+pub use photo_exif::*;
+pub use photo_url::*;
 pub use service_token_user::*;
 pub use user::*;
 
 mod album;
 mod photo;
+mod photo_album;
+mod photo_exif;
+mod photo_url;
 mod service_token_user;
 mod user;
 
@@ -47,7 +53,7 @@ pub enum DbConfig<'a> {
     Parameters {
         host: &'a str,
         user: &'a str,
-        passw: &'a str,
+        password: &'a str,
         database: &'a str,
     },
 }
@@ -58,9 +64,9 @@ impl Database {
             DbConfig::Parameters {
                 host,
                 user,
-                passw,
+                password,
                 database,
-            } => Self::configure_with_parameters(host, user, passw, database).await?,
+            } => Self::configure_with_parameters(host, user, password, database).await?,
             DbConfig::Url { url } => Self::configure_with_url(url).await?,
         };
 
@@ -71,9 +77,7 @@ impl Database {
 
     async fn apply_migrations(pool: &Pool<Postgres>) -> Result<(), sqlx::Error> {
         let mut connection = pool.acquire().await?;
-        MIGRATOR.run(&mut connection).await?;
-
-        Ok(())
+        Ok(MIGRATOR.run(&mut connection).await?)
     }
 
     async fn configure_with_url(url: &str) -> Result<Pool<Postgres>, sqlx::Error> {

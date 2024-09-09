@@ -1,0 +1,134 @@
+/* Change the focus style of every element to a blue border */
+:focus,
+:focus-visible {
+    @apply outline outline-4 outline-blue-300 dark:outline-blue-900;
+}
+
+/* Button styles */
+.button {
+    @apply px-5 py-2.5;
+    @apply inline-flex items-center justify-center  gap-x-2;
+    @apply rounded-lg;
+    @apply font-medium text-sm text-gray-900 dark:text-white;
+    @apply bg-gray-200 dark:bg-gray-800;
+
+    &-sm {
+        @apply py-2;
+        @apply rounded;
+    }
+
+    &:not(:disabled):hover {
+        @apply bg-gray-300 dark:bg-gray-700;
+    }
+
+    &:disabled {
+        @apply text-gray-400 dark:text-gray-500;
+    }
+
+    &-primary {
+        @apply text-white bg-blue-700 dark:bg-blue-600;
+
+        &:not(:disabled):hover,
+        &:focus,
+        &:focus-visible {
+            @apply bg-blue-800 dark:bg-blue-700;
+        }
+
+        &:disabled {
+            @apply bg-blue-200 dark:bg-blue-900;
+            @apply text-gray-50 dark:text-gray-500;
+        }
+    }
+
+    &-secondary {
+        @apply border border-gray-300 dark:border-gray-600;
+        @apply bg-white dark:bg-gray-900;
+        @apply dark:text-gray-300;
+
+        &:not(:disabled):hover {
+            @apply bg-gray-200 dark:bg-gray-800;
+            @apply dark:text-white;
+        }
+
+        &:focus,
+        &:focus-visible {
+            @apply border-blue-300 dark:border-blue-700;
+        }
+    }
+
+    &-error {
+        @apply text-white bg-red-500 dark:bg-red-700;
+
+        &:not(:disabled):hover,
+        &:focus,
+        &:focus-visible {
+            @apply bg-red-800 dark:bg-red-600;
+        }
+
+        &:disabled {
+            @apply bg-red-200 dark:bg-red-900;
+            @apply text-gray-50 dark:text-gray-400;
+        }
+    }
+}
+
+/* Form styles */
+.form-group {
+    @apply block mb-3;
+}
+
+.form-label {
+    @apply block w-full mb-2;
+}
+
+/* Input styles */
+.form-input {
+    .form-group & {
+        @apply mb-2;
+    }
+
+    @apply block w-full p-2;
+    @apply bg-white dark:bg-gray-700;
+    @apply rounded;
+    @apply border border-gray-300 dark:border-gray-600;
+    @apply text-sm text-gray-900 dark:text-white dark:placeholder-gray-400;
+
+    &:not(:disabled):hover {
+        @apply border-gray-400 dark:border-gray-500;
+    }
+
+    &:focus,
+    &:focus-visible {
+        @apply border-blue-300 dark:border-blue-700;
+    }
+
+    &:disabled {
+        @apply text-gray-400 dark:text-gray-500;
+        @apply bg-gray-50 dark:bg-gray-800;
+        @apply border-gray-200 dark:border-gray-800;
+    }
+}
+
+/* Loading skeleton styles */
+.skeleton {
+    @apply animate-pulse;
+
+    & .skeleton-block,
+    & .skeleton-text::before {
+        @apply block;
+        @apply rounded;
+        @apply !bg-gray-200 dark:!bg-gray-700;
+    }
+
+    & .skeleton-text {
+        @apply !select-none !text-transparent;
+        @apply relative;
+        @apply inline-block;
+
+        &::before {
+            @apply content-[''];
+            @apply absolute;
+            @apply top-1 bottom-1 left-0 right-0;
+        }
+    }
+}

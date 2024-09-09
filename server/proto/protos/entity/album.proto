@@ -4,14 +4,14 @@ package nl.svsticky.chroma;
 import "entity/photo.proto";
 
 message Album {
-  string id = 1;
-  string name = 2;
-  int64 createdAt = 3;
-  optional string coverPhotoId = 4;
-  bool isDraft = 5;
-  AlbumUser createdBy = 6;
-  optional AlbumUser publishedBy = 7;
-  optional int64 publishedAt = 8;
+  optional string id = 1;
+  optional string name = 2;
+  optional Photo coverPhoto = 3;
+  optional int64 createdAt = 4;
+  optional AlbumUser createdBy = 5;
+  optional bool published = 6;
+  optional int64 publishedAt = 7;
+  optional AlbumUser publishedBy = 8;
 }
 
 enum UserType {
@@ -23,9 +23,4 @@ message AlbumUser {
   UserType type = 1;
   optional string name = 2;
   int32 id = 3;
-}
-
-message AlbumWithCoverPhoto {
-  Album album = 1;
-  optional Photo coverPhoto = 2;
 }

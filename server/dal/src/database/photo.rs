@@ -1,130 +1,35 @@
+use crate::database::photo_album::PhotoAlbum;
+use crate::database::photo_exif::PhotoExif;
+use crate::database::photo_url::PhotoUrl;
+use crate::database::{Database, DbResult};
+use futures::future::{join_all, OptionFuture};
 use rand::Rng;
-use sqlx::{FromRow, Type};
-use strum_macros::Display;
+use sqlx::{FromRow, Postgres, QueryBuilder};
 
-use proto::photo_respone::Response;
-use proto::PhotoRespone;
-
-use crate::database::{Album, Database, DbResult};
-use crate::storage_engine::Storage;
-use crate::DalError;
-
-#[derive(Clone)]
-pub struct Photo<'a> {
-    db: &'a Database,
+#[derive(Debug, Clone)]
+pub struct Photo {
     pub id: String,
-    pub album_id: String,
-    pub created_at: i64,
+    pub hash: Option<String>,
+    pub uploaded_at: i64,
+    pub uploaded_by: i32,
+    pub captured_at: Option<i64>,
+    pub linked_albums: Vec<PhotoAlbum>,
+    pub media_urls: Vec<PhotoUrl>,
+    pub exif_fields: Vec<PhotoExif>,
 }
 
 #[derive(FromRow)]
-struct _Photo {
+pub struct PhotoRow {
     pub id: String,
-    pub album_id: String,
-    pub created_at: i64,
+    pub hash: Option<String>,
+    pub uploaded_at: i64,
+    pub uploaded_by: i32,
+    pub captured_at: Option<i64>,
 }
 
-#[derive(Debug, Clone, Type, Display, PartialEq, Eq)]
-#[sqlx(type_name = "photo_quality")]
-pub enum PhotoQuality {
-    Original,
-    W400,
-    W1600,
-}
-
-impl PhotoQuality {
-    pub fn width(&self) -> Option<u32> {
-        match self {
-            Self::Original => None,
-            Self::W400 => Some(400),
-            Self::W1600 => Some(1600),
-        }
-    }
-}
-
-#[derive(FromRow, Debug)]
-pub struct PhotoS3Url {
-    pub photo_id: String,
-    pub s3_url: String,
-    pub quality: PhotoQuality,
-}
-
-impl _Photo {
-    pub fn into_photo(self, db: &Database) -> Photo {
-        Photo {
-            db,
-            id: self.id,
-            album_id: self.album_id,
-            created_at: self.created_at,
-        }
-    }
-}
-
-impl<'a> Photo<'a> {
+impl Photo {
     pub const ID_PREFIX: &'static str = "PH_";
     pub const MAX_ID_LEN: usize = 32;
-
-    pub async fn photo_to_proto_url(
-        &self,
-        storage: &Storage,
-        quality_preference: &PhotoQuality,
-    ) -> Result<proto::Photo, DalError> {
-        let has_pref = self.is_quality_created(quality_preference).await?;
-        let quality = if has_pref {
-            quality_preference.clone()
-        } else {
-            PhotoQuality::Original
-        };
-
-        // Check if we already have a URL for the picture
-        let url =
-            if let Some(s3_url) = PhotoS3Url::get_for_photo(self.db, &self.id, &quality).await? {
-                s3_url.s3_url
-            } else {
-                let url = storage.get_photo_url_by_id(&self.id, &quality).await?;
-                let _ = PhotoS3Url::new(self.db, self.id.clone(), url.clone(), quality).await;
-                url
-            };
-
-        Ok(proto::Photo {
-            id: self.id.clone(),
-            album_id: self.album_id.clone(),
-            created_at: self.created_at,
-            data_type: proto::PhotoResponseType::Url as i32,
-            data: Some(PhotoRespone {
-                response: Some(Response::Url(url)),
-            }),
-        })
-    }
-
-    /// Convert a [Photo] to a [proto::Photo].
-    /// Retrieves the photo's content from S3.
-    ///
-    /// # Errors
-    ///
-    pub async fn photo_to_proto_bytes(
-        self,
-        storage: &Storage,
-        quality_preference: PhotoQuality,
-    ) -> Result<proto::Photo, DalError> {
-        let has_pref = self.is_quality_created(&quality_preference).await?;
-        let quality = if has_pref {
-            quality_preference
-        } else {
-            PhotoQuality::Original
-        };
-
-        let photo_bytes = storage.get_photo_bytes_by_id(&self.id, &quality).await?;
-        Ok(proto::Photo {
-            id: self.id,
-            album_id: self.album_id,
-            created_at: self.created_at,
-            data_type: proto::PhotoResponseType::InResponse as i32,
-            data: Some(PhotoRespone {
-                response: Some(Response::Bytes(photo_bytes)),
-            }),
-        })
-    }
 
     fn generate_id() -> String {
         let random: String = rand::thread_rng()
@@ -135,125 +40,190 @@ impl<'a> Photo<'a> {
         format!("{}{random}", Self::ID_PREFIX)
     }
 
-    pub async fn create(db: &'a Database, album: &Album, created_at: i64) -> DbResult<Photo<'a>> {
+    fn new(
+        photo_row: PhotoRow,
+        linked_albums: Vec<PhotoAlbum>,
+        media_urls: Vec<PhotoUrl>,
+        exif_fields: Vec<PhotoExif>,
+    ) -> Photo {
+        Photo {
+            id: photo_row.id,
+            hash: photo_row.hash,
+            uploaded_at: photo_row.uploaded_at,
+            uploaded_by: photo_row.uploaded_by,
+            captured_at: photo_row.captured_at,
+            linked_albums,
+            media_urls,
+            exif_fields,
+        }
+    }
+
+    pub async fn create(db: &Database, hash: String, captured_at: Option<i64>) -> DbResult<Photo> {
         let id = Self::generate_id();
 
-        sqlx::query("INSERT INTO photo_metadata (id, album_id, created_at) VALUES ($1, $2, $3)")
-            .bind(&id)
-            .bind(&album.id)
-            .bind(created_at)
-            .execute(&**db)
-            .await?;
-
-        Ok(Self {
-            db,
-            id,
-            album_id: album.id.clone(),
-            created_at,
-        })
-    }
-
-    pub async fn get_by_id<S: AsRef<str>>(db: &'a Database, id: S) -> DbResult<Option<Photo<'a>>> {
-        let photo: Option<_Photo> =
-            sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata WHERE id = $1")
-                .bind(id.as_ref())
-                .fetch_optional(&**db)
-                .await?;
-
-        Ok(photo.map(|photo| photo.into_photo(db)))
-    }
-
-    pub async fn delete(self) -> DbResult<()> {
-        let mut tx = self.db.begin().await?;
-        // Remove the photo from the album cover
-        sqlx::query(
-            "UPDATE album_metadata SET cover_photo_id = NULL WHERE id = $1 AND cover_photo_id = $2",
+        let photo_row = sqlx::query_as::<Postgres, PhotoRow>(
+            "INSERT INTO photos \
+                (id, hash, uploaded_by, captured_at) \
+            VALUES \
+                ($1, $2, 1, $3) \
+            RETURNING \
+                id, hash, uploaded_at, uploaded_by, captured_at",
         )
-        .bind(&self.album_id)
-        .bind(&self.id)
-        .execute(&mut tx)
+        .bind(id)
+        .bind(hash)
+        .bind(captured_at)
+        .fetch_one(&**db)
         .await?;
 
-        // Remove the photo metadata
-        sqlx::query("DELETE FROM photo_metadata WHERE id = $1")
-            .bind(&self.id)
-            .execute(&mut tx)
-            .await?;
+        Ok(Self::new(photo_row, vec![], vec![], vec![]))
+    }
 
-        tx.commit().await?;
+    pub async fn get(db: &Database, id: &str) -> DbResult<Option<Photo>> {
+        OptionFuture::from(
+            sqlx::query_as::<Postgres, PhotoRow>("SELECT * FROM photos WHERE id = $1")
+                .bind(id)
+                .fetch_optional(&**db)
+                .await?
+                .map(|photo| async {
+                    let albums = PhotoAlbum::list(db, &photo.id).await?;
+                    let urls = PhotoUrl::list(db, &photo.id).await?;
+                    let exif = PhotoExif::list(db, &photo.id).await?;
+
+                    Ok(Self::new(photo, albums, urls, exif))
+                }),
+        )
+        .await
+        .map_or(Ok(None), |v| v.map(Some))
+    }
+
+    pub async fn get_many<S: AsRef<str> + Sync>(db: &Database, ids: &[S]) -> DbResult<Vec<Photo>> {
+        // Create a new query builder
+        let mut query_builder: QueryBuilder<Postgres> =
+            QueryBuilder::new("SELECT * FROM photos WHERE id IN (");
+
+        // Separate the entries by a comma
+        let mut separated = query_builder.separated(", ");
+
+        // Add all the id's to the query
+        for id in ids.iter() {
+            separated.push_bind(id.as_ref());
+        }
+
+        // End the 'IN' clause
+        separated.push_unseparated(")");
+
+        // Build and execute the query
+        join_all(
+            query_builder
+                .build_query_as::<PhotoRow>()
+                .fetch_all(&**db)
+                .await?
+                .into_iter()
+                .map(|photo| async {
+                    let albums = PhotoAlbum::list(db, &photo.id).await?;
+                    let urls = PhotoUrl::list(db, &photo.id).await?;
+                    let exif = PhotoExif::list(db, &photo.id).await?;
+
+                    Ok(Self::new(photo, albums, urls, exif))
+                }),
+        )
+        .await
+        .into_iter()
+        .collect::<DbResult<Vec<_>>>()
+    }
+
+    pub async fn search<S: AsRef<str> + Sync>(
+        db: &Database,
+        album_id: &Option<S>,
+    ) -> DbResult<Vec<Photo>> {
+        join_all(
+            sqlx::query_as::<Postgres, PhotoRow>(if album_id.is_some() {
+                "SELECT \
+                    photos.* \
+                FROM \
+                    photos \
+                INNER JOIN \
+                    photo_albums \
+                ON \
+                    photos.id = photo_albums.photo_id \
+                WHERE \
+                    photo_albums.album_id = $1"
+            } else {
+                "SELECT * FROM photos"
+            })
+            .bind(album_id.as_ref().map(|v| v.as_ref()))
+            .fetch_all(&**db)
+            .await?
+            .into_iter()
+            .map(|photo| async {
+                let albums = PhotoAlbum::list(db, &photo.id).await?;
+                let urls = PhotoUrl::list(db, &photo.id).await?;
+                let exif = PhotoExif::list(db, &photo.id).await?;
+
+                Ok(Self::new(photo, albums, urls, exif))
+            }),
+        )
+        .await
+        .into_iter()
+        .collect::<DbResult<Vec<_>>>()
+    }
+
+    pub async fn delete(db: &Database, id: &str) -> DbResult<()> {
+        sqlx::query("DELETE FROM photos WHERE id = $1")
+            .bind(id)
+            .execute(&**db)
+            .await?;
 
         Ok(())
     }
 
-    pub async fn list(db: &'a Database) -> DbResult<Vec<Photo<'a>>> {
-        let selfs: Vec<_Photo> =
-            sqlx::query_as("SELECT id, album_id, created_at FROM photo_metadata")
-                .fetch_all(&**db)
-                .await?;
-        Ok(selfs
-            .into_iter()
-            .map(|photo| photo.into_photo(db))
-            .collect())
-    }
+    pub async fn delete_many<S: AsRef<str> + Sync>(db: &Database, ids: &[S]) -> DbResult<()> {
+        // Create a new query builder
+        let mut query_builder: QueryBuilder<Postgres> =
+            QueryBuilder::new("DELETE FROM photos WHERE id IN (");
 
-    pub async fn list_in_album<S: AsRef<str>>(
-        db: &'a Database,
-        album_id: S,
-    ) -> DbResult<Vec<Photo<'a>>> {
-        let selfs: Vec<_Photo> = sqlx::query_as(
-            "SELECT id, album_id, created_at FROM photo_metadata WHERE album_id = $1",
-        )
-        .bind(album_id.as_ref())
-        .fetch_all(&**db)
-        .await?;
-        Ok(selfs
-            .into_iter()
-            .map(|photo| photo.into_photo(db))
-            .collect())
-    }
+        // Separate the entries by a comma
+        let mut separated = query_builder.separated(", ");
 
-    /// Check whether an image quality has been created yet.
-    ///
-    /// # Errors
-    ///
-    /// If a database error occurs
-    pub async fn is_quality_created(&self, quality: &PhotoQuality) -> DbResult<bool> {
-        PhotoS3Url::get_for_photo(self.db, &self.id, quality)
-            .await
-            .map(|maybe_url| maybe_url.is_some())
+        // Add all the id's to the query
+        for id in ids.iter() {
+            separated.push_bind(id.as_ref());
+        }
+
+        // End the 'IN' clause
+        separated.push_unseparated(")");
+
+        // Build and execute the query
+        query_builder.build().execute(&**db).await?;
+
+        Ok(())
     }
 }
 
-impl PhotoS3Url {
-    pub async fn new(
-        driver: &Database,
-        photo_id: String,
-        s3_url: String,
-        photo_quality: PhotoQuality,
-    ) -> DbResult<Self> {
-        sqlx::query("INSERT INTO photo_s3_urls (photo_id, s3_url, quality) VALUES ($1, $2, $3)")
-            .bind(&photo_id)
-            .bind(&s3_url)
-            .bind(&photo_quality)
-            .execute(&**driver)
-            .await?;
-
-        Ok(Self {
-            photo_id,
-            s3_url,
-            quality: photo_quality,
-        })
-    }
-
-    pub async fn get_for_photo(
-        driver: &Database,
-        photo_id: &str,
-        quality: &PhotoQuality,
-    ) -> DbResult<Option<Self>> {
-        sqlx::query_as("SELECT * FROM photo_s3_urls WHERE photo_id = $1 AND quality = $2")
-            .bind(photo_id)
-            .bind(quality)
-            .fetch_optional(&**driver)
-            .await
+impl From<Photo> for proto::Photo {
+    fn from(photo: Photo) -> proto::Photo {
+        proto::Photo {
+            id: Some(photo.id),
+            uploaded_at: Some(photo.uploaded_at),
+            uploaded_by: None,
+            captured_at: photo.captured_at,
+            linked: Some(proto::PhotoLinks {
+                albums: photo
+                    .linked_albums
+                    .into_iter()
+                    .map(|album| album.into())
+                    .collect(),
+            }),
+            media: Some(proto::PhotoMedia {
+                urls: photo.media_urls.into_iter().map(|url| url.into()).collect(),
+            }),
+            metadata: Some(proto::PhotoMetadata {
+                exif: photo
+                    .exif_fields
+                    .into_iter()
+                    .map(|exif| exif.into())
+                    .collect(),
+            }),
+        }
     }
 }

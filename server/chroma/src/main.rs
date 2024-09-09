@@ -3,7 +3,7 @@ extern crate core;
 use std::time::Duration;
 
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer};
+use actix_web::{middleware, web, App, HttpServer};
 use anyhow::{anyhow, bail, Result};
 use cabbage::KoalaApi;
 use dotenv::dotenv;
@@ -21,7 +21,7 @@ use dal::storage_engine::{S3Config, Storage};
 
 use crate::config::Config;
 use crate::exit::Exit;
-use crate::routes::appdata::{AlbumIdCache, AppData, Ratelimits, SessionIdCache, WebData};
+use crate::routes::appdata::{AlbumIdCache, AppData, RateLimits, SessionIdCache, WebData};
 use crate::routes::routable::Routable;
 
 mod config;
@@ -74,7 +74,7 @@ async fn main() -> Exit {
         db,
         storage,
         config,
-        ratelimits: Ratelimits::new(),
+        rate_limits: RateLimits::new(),
     };
 
     // Run the webserver using the AppData until stopped or crash
@@ -137,6 +137,7 @@ async fn start_webserver(app_data: AppData) -> Result<()> {
     info!("starting web server");
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::NormalizePath::trim())
             .wrap(Cors::permissive())
             .wrap(TracingLogger::<NoiselessRootSpanBuilder>::new())
             .app_data(WebData::new(app_data.clone()))

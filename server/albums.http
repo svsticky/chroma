@@ -1,0 +1,51 @@
+### Create album
+POST http://localhost:8000/api/v1/albums/
+Authorization: m7AScmjLKdxhuOloj6P4YiWI9ZB3XDmr
+Content-Type: application/json
+
+{
+  "name": "Test album",
+  "published": true
+}
+
+### Get all albums
+GET http://localhost:8000/api/v1/albums/
+Authorization: m7AScmjLKdxhuOloj6P4YiWI9ZB3XDmr
+
+> {%
+    client.global.set("album_id", response.body.albums.at(-1).id);
+%}
+
+### Get album
+GET http://localhost:8000/api/v1/albums/{{album_id}}
+Authorization: m7AScmjLKdxhuOloj6P4YiWI9ZB3XDmr
+
+### Non-existent album
+GET http://localhost:8000/api/v1/albums/non_existent
+Authorization: m7AScmjLKdxhuOloj6P4YiWI9ZB3XDmr
+
+### Update album with cover photo
+PATCH http://localhost:8000/api/v1/albums/{{album_id}}?update_mask=name,published
+Authorization: m7AScmjLKdxhuOloj6P4YiWI9ZB3XDmr
+Content-Type: application/json
+
+{
+  "name": "Something something",
+  "published": true
+}
+
+### Remove cover photo and unpublish
+PATCH http://localhost:8000/api/v1/albums/{{album_id}}?update_mask=cover_photo,published
+Authorization: m7AScmjLKdxhuOloj6P4YiWI9ZB3XDmr
+Content-Type: application/json
+
+{
+  "cover_photo": {
+    "id": null
+  },
+  "published": false
+}
+
+### Delete album
+DELETE http://localhost:8000/api/v1/albums/{{album_id}}
+Authorization: m7AScmjLKdxhuOloj6P4YiWI9ZB3XDmr
